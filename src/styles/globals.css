@@ -352,6 +352,48 @@ textarea:focus {
   white-space: pre-wrap;
 }
 
+.codex-request-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  border: 1px solid rgba(234, 206, 153, 0.2);
+  border-radius: 8px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.codex-request-box p {
+  margin-bottom: 0;
+}
+
+.inline-button {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.answer-box {
+  margin-top: 20px;
+}
+
+.compact-heading {
+  margin-bottom: 12px;
+}
+
+.answer-markdown {
+  min-height: 180px;
+  max-height: 620px;
+  overflow: auto;
+  border: 1px solid rgba(234, 206, 153, 0.2);
+  border-radius: 8px;
+  padding: 18px;
+  color: rgba(247, 239, 229, 0.9);
+  background: rgba(0, 0, 0, 0.18);
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 20px, 640px);
@@ -368,6 +410,10 @@ textarea:focus {
   }
 
   .section-heading {
+    display: grid;
+  }
+
+  .codex-request-box {
     display: grid;
   }
 
