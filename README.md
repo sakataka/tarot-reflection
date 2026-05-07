@@ -22,12 +22,12 @@ Codex App Server連携まで使う場合:
 bun run web
 ```
 
-`bun run web` はビルド後、Bunのローカルサーバーを `http://127.0.0.1:4174/` で起動します。`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。
+`bun run web` はビルド後、Bunのローカルサーバーを `http://127.0.0.1:4192/` で起動します。`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。
 
 ポートを変える場合:
 
 ```sh
-PORT=4181 bun run server
+PORT=4193 bun run server
 ```
 
 ## Codex連携

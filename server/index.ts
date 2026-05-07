@@ -1,7 +1,7 @@
 import { relative, resolve, sep } from "node:path";
 import { askCodexAppServer } from "./codexAppServer";
 
-const port = Number(process.env.PORT ?? 4174);
+const port = Number(process.env.PORT ?? 4192);
 const distDir = resolve(import.meta.dir, "..", "dist");
 
 type ApiPayload = Record<string, unknown>;
