@@ -10,25 +10,31 @@
 bun install
 ```
 
-フロントエンドだけ確認する場合:
+通常はこちらを使います。画面表示とCodex App Server連携APIが同じ `4192` 番で動きます。
 
 ```sh
 bun run dev
 ```
 
-Codex App Server連携まで使う場合:
+起動後、次を開きます。
 
-```sh
-bun run web
-```
+http://127.0.0.1:4192/
 
-`bun run web` はビルド後、Bunのローカルサーバーを `http://127.0.0.1:4192/` で起動します。`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。
+`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。
 
 ポートを変える場合:
 
 ```sh
 PORT=4193 bun run server
 ```
+
+フロントエンドだけをViteで確認する場合:
+
+```sh
+bun run dev:frontend
+```
+
+この場合、`Codexに聞く` を使うには別ターミナルで `bun run server` も起動してください。
 
 ## Codex連携
 

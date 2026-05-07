@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bun run build && bun run server",
+    "dev:frontend": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "server": "bun run server/index.ts",
-    "web": "bun run build && bun run server",
+    "web": "bun run dev",
     "test": "bun test"
   },
   "dependencies": {
