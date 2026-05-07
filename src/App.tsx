@@ -97,7 +97,7 @@ const App = () => {
 
       <div className="reset-row">
         <button className="secondary-button" type="button" onClick={handleReset}>
-          もう一度占う / リセット
+          もう一度、卓を整える
         </button>
       </div>
     </main>

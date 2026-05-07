@@ -22,8 +22,8 @@ export const CardBackGrid = ({
     <section className="panel">
       <div className="section-heading">
         <div>
-          <p className="app-kicker">Choose cards</p>
-          <h2>裏向きカードから選ぶ</h2>
+          <p className="app-kicker">The table is ready</p>
+          <h2>伏せられたカードを選ぶ</h2>
         </div>
         <p>
           {selectedCards.length} / {requiredCount} 枚選択済み
@@ -53,7 +53,7 @@ export const CardBackGrid = ({
 
       <div className="actions">
         <button className="primary-button" type="button" disabled={!isComplete} onClick={onReveal}>
-          結果を見る
+          カードを開く
         </button>
       </div>
     </section>

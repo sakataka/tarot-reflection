@@ -1,11 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { invokeBackend, type CodexInterpretationResponse } from "../backendClient";
 import type { Reading } from "../types/tarot";
+import { renderMarkdown } from "../utils/markdown";
 import { generatePrompt } from "../utils/prompt";
 
 type PromptBoxProps = {
   reading: Reading;
 };
+
+const requestedReadings = new Set<string>();
 
 export const PromptBox = ({ reading }: PromptBoxProps) => {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -14,6 +17,7 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
   const [error, setError] = useState("");
   const [isAskingCodex, setIsAskingCodex] = useState(false);
   const prompt = useMemo(() => generatePrompt(reading), [reading]);
+  const renderedAnswer = useMemo(() => renderMarkdown(answer), [answer]);
 
   const copyPrompt = async () => {
     try {
@@ -24,7 +28,7 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
     }
   };
 
-  const askCodex = async () => {
+  const askFortuneTeller = async () => {
     setIsAskingCodex(true);
     setError("");
     setAnswer("");
@@ -34,7 +38,7 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
       const response = await invokeBackend<CodexInterpretationResponse>("interpret", { prompt });
       setAnswer(response.answer);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "Codexから回答を取得できませんでした。");
+      setError(caughtError instanceof Error ? caughtError.message : "水晶が曇りました。少し時間を置いて、もう一度お試しください。");
     } finally {
       setIsAskingCodex(false);
     }
@@ -49,58 +53,65 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
     }
   };
 
+  useEffect(() => {
+    if (requestedReadings.has(reading.createdAt)) {
+      return;
+    }
+
+    requestedReadings.add(reading.createdAt);
+    void askFortuneTeller();
+  }, [reading.createdAt]);
+
   return (
-    <section className="panel prompt-panel">
+    <section className="panel oracle-panel">
       <div className="section-heading">
         <div>
-          <p className="app-kicker">AI prompt</p>
-          <h2>解釈用プロンプト</h2>
+          <p className="app-kicker">The oracle speaks</p>
+          <h2>占い師の言葉</h2>
         </div>
-        <button className="secondary-button" type="button" onClick={copyPrompt}>
-          {copyState === "copied" ? "コピー済み" : "プロンプトをコピー"}
-        </button>
+        {answer ? (
+          <button className="secondary-button" type="button" onClick={copyAnswer}>
+            {answerCopyState === "copied" ? "写し取りました" : "言葉を写す"}
+          </button>
+        ) : null}
       </div>
-      {copyState === "failed" ? (
-        <p className="copy-fallback">コピーに失敗しました。下のテキストを手動で選択してください。</p>
-      ) : null}
-      <textarea className="prompt-textarea" value={prompt} readOnly rows={18} />
 
-      <div className="codex-request-box">
-        <div>
-          <h3>Codex App Serverに聞く</h3>
-          <p>
-            ローカルBunサーバーが `codex app-server` を子プロセスとして起動し、このプロンプトを渡します。
-            APIキーはフロントエンドに置きません。
-          </p>
+      {isAskingCodex ? (
+        <div className="thinking-box" aria-live="polite">
+          <span className="thinking-flame" />
+          <div>
+            <h3>カードの声を聞いています</h3>
+            <p>占い師が、開かれたカードとあなたの問いを静かに結び直しています。</p>
+          </div>
         </div>
-        <button className="primary-button inline-button" type="button" disabled={isAskingCodex} onClick={askCodex}>
-          {isAskingCodex ? "Codexに質問中" : "Codexに聞く"}
-        </button>
-      </div>
+      ) : null}
 
       {error ? <p className="copy-fallback">{error}</p> : null}
 
       {answer ? (
         <div className="answer-box">
-          <div className="section-heading compact-heading">
-            <div>
-              <p className="app-kicker">Codex answer</p>
-              <h2>AI解釈</h2>
-            </div>
-            <button className="secondary-button" type="button" onClick={copyAnswer}>
-              {answerCopyState === "copied" ? "コピー済み" : "回答をコピー"}
-            </button>
-          </div>
           {answerCopyState === "failed" ? (
-            <p className="copy-fallback">回答のコピーに失敗しました。下の本文を手動で選択してください。</p>
+            <p className="copy-fallback">言葉を写せませんでした。本文を手動で選択してください。</p>
           ) : null}
-          <div className="answer-markdown">{answer}</div>
+          <div className="answer-markdown" dangerouslySetInnerHTML={{ __html: renderedAnswer }} />
         </div>
       ) : (
         <div className="future-box">
-          Codex回答はここに表示されます。Codex CLIにログインしていない場合やローカルサーバー未起動の場合は、上のプロンプトをコピーして手動で使えます。
+          まだ言葉は降りてきていません。卓の上のカードが、少しずつ意味を帯びていきます。
         </div>
       )}
+
+      <details className="hidden-prompt">
+        <summary>控えを開く</summary>
+        <p>うまく言葉が届かない時だけ、この控えを写して使えます。</p>
+        <button className="secondary-button" type="button" onClick={copyPrompt}>
+          {copyState === "copied" ? "控えを写しました" : "控えを写す"}
+        </button>
+        {copyState === "failed" ? (
+          <p className="copy-fallback">控えを写せませんでした。下のテキストを手動で選択してください。</p>
+        ) : null}
+        <textarea className="prompt-textarea" value={prompt} readOnly rows={12} />
+      </details>
     </section>
   );
 };

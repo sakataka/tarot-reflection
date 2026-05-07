@@ -2,7 +2,7 @@
   color: #f7efe5;
   background: #130f1c;
   font-family:
-    Inter, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
+    "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Times New Roman", serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -23,6 +23,16 @@ body {
 button,
 textarea {
   font: inherit;
+}
+
+button,
+.field,
+.spread-option small,
+.card-meta,
+.meaning-copy,
+.prompt-textarea {
+  font-family:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
 }
 
 button {
@@ -61,6 +71,8 @@ button:disabled {
   margin: 0 0 8px;
   color: #e2b86d;
   font-size: 0.78rem;
+  font-family:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
   font-weight: 800;
   letter-spacing: 0;
   text-transform: uppercase;
@@ -391,7 +403,77 @@ textarea:focus {
   color: rgba(247, 239, 229, 0.9);
   background: rgba(0, 0, 0, 0.18);
   line-height: 1.75;
-  white-space: pre-wrap;
+}
+
+.answer-markdown h2,
+.answer-markdown h3,
+.answer-markdown h4 {
+  margin: 22px 0 10px;
+  color: #f4c76d;
+}
+
+.answer-markdown p {
+  margin-bottom: 14px;
+  color: rgba(247, 239, 229, 0.9);
+}
+
+.answer-markdown ul,
+.answer-markdown ol {
+  margin: 0 0 16px;
+  padding-left: 1.4rem;
+  color: rgba(247, 239, 229, 0.9);
+  line-height: 1.8;
+}
+
+.thinking-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  border: 1px solid rgba(234, 206, 153, 0.22);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.thinking-box p {
+  margin-bottom: 0;
+}
+
+.thinking-flame {
+  width: 30px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 18px 18px 18px 4px;
+  background: linear-gradient(160deg, #ffe4a3, #f2a85f 55%, #6f3d85);
+  box-shadow: 0 0 22px rgba(244, 199, 109, 0.45);
+  transform: rotate(45deg);
+  animation: candle-flicker 1.8s ease-in-out infinite;
+}
+
+.hidden-prompt {
+  margin-top: 18px;
+  color: rgba(247, 239, 229, 0.72);
+}
+
+.hidden-prompt summary {
+  cursor: pointer;
+  color: rgba(247, 239, 229, 0.74);
+}
+
+.hidden-prompt .secondary-button {
+  margin-bottom: 12px;
+}
+
+@keyframes candle-flicker {
+  0%,
+  100% {
+    transform: rotate(45deg) scale(1);
+  }
+
+  50% {
+    transform: rotate(42deg) scale(0.94, 1.08);
+  }
 }
 
 @media (max-width: 760px) {

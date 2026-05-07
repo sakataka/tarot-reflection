@@ -14,8 +14,8 @@ export const ReadingResult = ({ reading }: ReadingResultProps) => (
   <section className="panel">
     <div className="section-heading">
       <div>
-        <p className="app-kicker">Reading</p>
-        <h2>{reading.spread.name}</h2>
+        <p className="app-kicker">Cards revealed</p>
+        <h2>開かれたカード</h2>
       </div>
       <p>{new Date(reading.createdAt).toLocaleString("ja-JP")}</p>
     </div>
