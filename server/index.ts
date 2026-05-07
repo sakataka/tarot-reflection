@@ -1,8 +1,8 @@
-import { join, normalize } from "node:path";
+import { relative, resolve, sep } from "node:path";
 import { askCodexAppServer } from "./codexAppServer";
 
 const port = Number(process.env.PORT ?? 4174);
-const distDir = join(import.meta.dir, "..", "dist");
+const distDir = resolve(import.meta.dir, "..", "dist");
 
 type ApiPayload = Record<string, unknown>;
 
@@ -49,10 +49,11 @@ function jsonResponse(payload: ApiPayload, status = 200) {
 }
 
 async function serveStatic(pathname: string) {
-  const requestPath = pathname === "/" ? "/index.html" : pathname;
-  const filePath = normalize(join(distDir, requestPath));
+  const requestPath = pathname === "/" ? "index.html" : decodeURIComponent(pathname).replace(/^\/+/, "");
+  const filePath = resolve(distDir, requestPath);
+  const relativePath = relative(distDir, filePath);
 
-  if (!filePath.startsWith(distDir)) {
+  if (relativePath.startsWith("..") || relativePath.includes(`..${sep}`) || relativePath === "..") {
     return new Response("Not found", { status: 404 });
   }
 
@@ -61,7 +62,7 @@ async function serveStatic(pathname: string) {
     return new Response(file);
   }
 
-  const indexFile = Bun.file(join(distDir, "index.html"));
+  const indexFile = Bun.file(resolve(distDir, "index.html"));
   if (await indexFile.exists()) {
     return new Response(indexFile);
   }
