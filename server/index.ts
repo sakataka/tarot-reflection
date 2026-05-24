@@ -1,5 +1,6 @@
 import { relative, resolve, sep } from "node:path";
 import { askCodexAppServer } from "./codexAppServer";
+import { buildPromptFromInterpretationInput } from "./interpretationRequest";
 
 const port = Number(process.env.PORT ?? 4192);
 const distDir = resolve(import.meta.dir, "..", "dist");
@@ -14,8 +15,8 @@ Bun.serve({
 
     if (url.pathname === "/api/interpret") {
       return handleApi(request, async () => {
-        const body = (await request.json().catch(() => null)) as { prompt?: unknown } | null;
-        const prompt = typeof body?.prompt === "string" ? body.prompt : "";
+        const body = await request.json().catch(() => null);
+        const prompt = buildPromptFromInterpretationInput(body);
         const answer = await askCodexAppServer(prompt);
         return { answer };
       });

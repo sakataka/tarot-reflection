@@ -35,7 +35,14 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
     setAnswerCopyState("idle");
 
     try {
-      const response = await invokeBackend<CodexInterpretationResponse>("interpret", { prompt });
+      const response = await invokeBackend<CodexInterpretationResponse>("interpret", {
+        question: reading.question,
+        spreadId: reading.spread.id,
+        cards: reading.cards.map((readingCard) => ({
+          cardId: readingCard.card.id,
+          orientation: readingCard.orientation,
+        })),
+      });
       setAnswer(response.answer);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "水晶が曇りました。少し時間を置いて、もう一度お試しください。");
