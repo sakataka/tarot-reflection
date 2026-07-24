@@ -99,7 +99,7 @@ const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((su
         keywords: [...rank.reversed, `${suitLabel.theme}の見直し`],
         shortMeaning: `${suitLabel.theme}に関して、${rank.reversed.join("・")}に注意が必要な状態を示す。`,
       },
-      imagePath: `/cards/${suitLabel.imagePrefix}_${padMinor(rank.number)}.png`,
+      imagePath: `/cards/minor_${suitLabel.imagePrefix}.webp`,
     };
   }),
 );

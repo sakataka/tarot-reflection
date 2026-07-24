@@ -38,6 +38,18 @@ describe("tarot deck", () => {
 
     expect(missingImages).toEqual([]);
   });
+
+  test("shares one production image per minor arcana suit", () => {
+    const minorImagePaths = new Set(
+      tarotDeck.filter((card) => card.arcana === "minor").map((card) => card.imagePath),
+    );
+    const missingImages = [...minorImagePaths].filter(
+      (imagePath) => !existsSync(resolve(import.meta.dir, "../../public", imagePath.replace(/^\//, ""))),
+    );
+
+    expect(minorImagePaths.size).toBe(4);
+    expect(missingImages).toEqual([]);
+  });
 });
 
 describe("reading helpers", () => {

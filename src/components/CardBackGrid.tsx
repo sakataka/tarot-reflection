@@ -34,15 +34,18 @@ export const CardBackGrid = ({
       </div>
 
       <div className="tarot-table">
-        <div className="table-orbit table-orbit-one" />
-        <div className="table-orbit table-orbit-two" />
-        <div className="card-rail" aria-label="裏向きカード一覧">
+        <div className="oracle-invitation">
+          <p>占い師が、あなたの前にカードを広げました</p>
+          <span aria-hidden="true">✦</span>
+        </div>
+        <div className="card-field" aria-label="裏向きカード一覧">
           {cards.map((drawnCard, index) => {
             const selected = selectedById.get(drawnCard.card.id);
             const disabled = !selected && selectedCards.length >= requiredCount;
-            const centerOffset = index - (cards.length - 1) / 2;
+            const column = index % 13;
             const style = {
-              "--card-tilt": `${Math.max(-7, Math.min(7, centerOffset * 0.2))}deg`,
+              "--card-tilt": `${(column - 6) * 0.45}deg`,
+              "--card-delay": `${index * 7}ms`,
             } as CSSProperties;
 
             return (
@@ -62,7 +65,6 @@ export const CardBackGrid = ({
             );
           })}
         </div>
-        <p className="rail-hint">横に動かして、すべてのカードを見渡せます</p>
       </div>
 
       <div className="reveal-action">

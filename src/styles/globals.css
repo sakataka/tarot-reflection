@@ -551,65 +551,71 @@ textarea:focus {
 .tarot-table {
   position: relative;
   overflow: hidden;
-  min-height: 500px;
+  min-height: 820px;
   border: 1px solid rgba(201, 167, 106, 0.28);
-  border-radius: 50% 50% 5px 5px / 18% 18% 5px 5px;
-  padding: 100px 0 24px;
+  border-radius: 180px 180px 5px 5px / 90px 90px 5px 5px;
   background:
-    radial-gradient(ellipse at 50% 20%, rgba(112, 94, 137, 0.25), transparent 34%),
+    linear-gradient(180deg, rgba(7, 9, 18, 0.08) 0%, rgba(7, 10, 22, 0.1) 32%, rgba(8, 12, 28, 0.76) 62%, #090d1b 100%),
+    url("/cards/selection_oracle.webp") top center / cover no-repeat,
     radial-gradient(ellipse at center, rgba(28, 37, 72, 0.92), #0b1020 74%),
     #0b1020;
-  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.55), 0 30px 80px rgba(0, 0, 0, 0.22);
+  box-shadow: inset 0 -80px 110px rgba(0, 0, 0, 0.48), 0 30px 80px rgba(0, 0, 0, 0.22);
 }
 
-.table-orbit {
-  position: absolute;
-  top: 24px;
-  left: 50%;
-  border: 1px solid rgba(201, 167, 106, 0.14);
-  border-radius: 50%;
-  transform: translateX(-50%);
-  pointer-events: none;
-}
-
-.table-orbit-one {
-  width: 78%;
-  height: 330px;
-}
-
-.table-orbit-two {
-  top: 82px;
-  width: 48%;
-  height: 220px;
-}
-
-.card-rail {
+.oracle-invitation {
   display: flex;
-  position: relative;
+  position: absolute;
+  top: 276px;
+  left: 50%;
   z-index: 2;
-  overflow-x: auto;
-  overflow-y: hidden;
   align-items: center;
-  gap: 9px;
-  padding: 44px max(50%, 570px) 70px;
-  scroll-behavior: smooth;
-  scrollbar-color: rgba(201, 167, 106, 0.34) transparent;
-  scrollbar-width: thin;
+  gap: 14px;
+  border: 1px solid rgba(226, 196, 134, 0.28);
+  border-right: 0;
+  border-left: 0;
+  padding: 8px 28px;
+  color: rgba(243, 233, 210, 0.82);
+  background: rgba(8, 11, 22, 0.54);
+  font-family: var(--sans);
+  transform: translateX(-50%);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.oracle-invitation p {
+  margin: 0;
+  color: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+}
+
+.oracle-invitation span {
+  color: var(--gold-bright);
+}
+
+.card-field {
+  display: grid;
+  position: relative;
+  z-index: 3;
+  grid-template-columns: repeat(13, 52px);
+  justify-content: center;
+  gap: 10px 12px;
+  padding: 350px 42px 46px;
 }
 
 .card-back {
   position: relative;
-  width: 84px;
-  height: 126px;
-  flex: 0 0 84px;
-  margin-left: 0;
+  width: 52px;
+  height: 78px;
   border: 1px solid rgba(226, 196, 134, 0.66);
-  border-radius: 4px;
-  padding: 3px;
+  border-radius: 3px;
+  padding: 2px;
   background: #0b1020;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.38);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.42);
+  animation: card-deal-in 420ms both;
+  animation-delay: var(--card-delay);
   transform: rotate(var(--card-tilt));
-  transform-origin: 50% 135%;
+  transform-origin: 50% 125%;
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
@@ -625,8 +631,8 @@ textarea:focus {
 .card-back.is-selected {
   z-index: 4;
   border-color: #f0d596;
-  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(201, 167, 106, 0.22);
-  transform: translateY(-30px) rotate(0);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.58), 0 0 24px rgba(201, 167, 106, 0.3);
+  transform: translateY(-10px) scale(1.14) rotate(0);
 }
 
 .card-back:disabled:not(.is-selected) {
@@ -637,26 +643,30 @@ textarea:focus {
 .selection-badge {
   display: grid;
   position: absolute;
-  top: -14px;
-  right: -14px;
-  width: 32px;
-  height: 32px;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
   place-items: center;
   border: 2px solid #0b1020;
   border-radius: 50%;
   color: #17121a;
   background: var(--gold-bright);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 900;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
 }
 
-.rail-hint {
-  position: relative;
-  z-index: 2;
-  margin: 6px 0 0;
-  color: rgba(243, 233, 210, 0.38);
-  font-size: 0.68rem;
+@keyframes card-deal-in {
+  from {
+    opacity: 0;
+    transform: translateY(-34px) scale(0.92) rotate(var(--card-tilt));
+  }
+
+  to {
+    opacity: 1;
+    transform: rotate(var(--card-tilt));
+  }
 }
 
 .reveal-action {
@@ -742,10 +752,15 @@ textarea:focus {
   box-shadow: 0 22px 46px rgba(0, 0, 0, 0.38);
 }
 
+.card-face-content,
 .card-face img,
 .fallback-card {
   width: 100%;
   height: 100%;
+}
+
+.card-face-content {
+  position: relative;
   transition: transform 300ms ease;
 }
 
@@ -754,9 +769,96 @@ textarea:focus {
   object-fit: cover;
 }
 
-.card-face.is-reversed img,
-.card-face.is-reversed .fallback-card {
+.card-face.is-reversed .card-face-content {
   transform: rotate(180deg);
+}
+
+.minor-card-face {
+  border-color: rgba(226, 196, 134, 0.78);
+}
+
+.minor-rank-overlay {
+  --suit-accent: #d7bd81;
+  position: absolute;
+  inset: 0;
+  color: #f5e7c7;
+  font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.96), 0 0 12px rgba(6, 8, 16, 0.86);
+  pointer-events: none;
+}
+
+.minor-rank-overlay.wands {
+  --suit-accent: #e0ad68;
+}
+
+.minor-rank-overlay.cups {
+  --suit-accent: #c8d6e3;
+}
+
+.minor-rank-overlay.swords {
+  --suit-accent: #d8d9dd;
+}
+
+.minor-rank-overlay.pentacles {
+  --suit-accent: #c8b878;
+}
+
+.minor-corner {
+  display: grid;
+  position: absolute;
+  left: 14px;
+  justify-items: center;
+  color: var(--suit-accent);
+  line-height: 1;
+}
+
+.minor-corner-top {
+  top: 16px;
+}
+
+.minor-corner-bottom {
+  right: 14px;
+  bottom: 16px;
+  left: auto;
+  transform: rotate(180deg);
+}
+
+.minor-corner strong {
+  font-size: 1.28rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.minor-corner span {
+  margin-top: 4px;
+  font-size: 0.42rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+.minor-rank-center {
+  display: grid;
+  position: absolute;
+  right: 20%;
+  bottom: 12%;
+  left: 20%;
+  min-height: 18%;
+  place-items: center;
+  border: 1px solid rgba(226, 196, 134, 0.3);
+  background: rgba(7, 9, 18, 0.58);
+  color: var(--suit-accent);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.36);
+  font-size: clamp(2.1rem, 5vw, 3.25rem);
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.minor-rank-overlay.is-court .minor-rank-center {
+  right: 10%;
+  left: 10%;
+  min-height: 14%;
+  font-size: clamp(1rem, 2.6vw, 1.45rem);
+  letter-spacing: 0.12em;
 }
 
 .fallback-card {
@@ -1057,23 +1159,32 @@ textarea:focus {
   }
 
   .tarot-table {
-    min-height: 430px;
+    min-height: 920px;
     margin-inline: -14px;
-    padding-top: 78px;
     border-right: 0;
     border-left: 0;
-    border-radius: 42% 42% 0 0 / 12% 12% 0 0;
+    border-radius: 90px 90px 0 0 / 50px 50px 0 0;
+    background-position: center, top center, center, center;
+    background-repeat: no-repeat;
+    background-size: 100% 100%, auto 340px, 100% 100%, auto;
   }
 
-  .card-rail {
-    padding-right: max(50%, 270px);
-    padding-left: max(50%, 270px);
+  .oracle-invitation {
+    top: 250px;
+    max-width: calc(100% - 36px);
+    padding-inline: 18px;
+    white-space: normal;
+  }
+
+  .card-field {
+    grid-template-columns: repeat(10, 44px);
+    gap: 8px;
+    padding: 326px 16px 38px;
   }
 
   .card-back {
-    width: 68px;
-    height: 102px;
-    flex-basis: 68px;
+    width: 44px;
+    height: 66px;
   }
 
   .oracle-panel {
@@ -1146,6 +1257,42 @@ textarea:focus {
 
   .primary-button {
     width: min(100%, 310px);
+  }
+
+  .tarot-table {
+    min-height: 980px;
+    background-size: 100% 100%, auto 330px, 100% 100%, auto;
+  }
+
+  .oracle-invitation {
+    top: 236px;
+    width: calc(100% - 46px);
+    justify-content: center;
+    padding-inline: 10px;
+  }
+
+  .oracle-invitation p {
+    font-size: 0.64rem;
+  }
+
+  .card-field {
+    grid-template-columns: repeat(8, 38px);
+    gap: 7px 6px;
+    padding: 306px 12px 36px;
+  }
+
+  .card-back {
+    width: 38px;
+    height: 57px;
+    padding: 1px;
+  }
+
+  .selection-badge {
+    top: -8px;
+    right: -8px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.6rem;
   }
 
   .section-heading h1,
