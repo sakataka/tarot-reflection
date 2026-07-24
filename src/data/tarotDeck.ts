@@ -78,7 +78,7 @@ const majorArcana: TarotCard[] = majorSeeds.map((seed) => ({
     keywords: seed.reversed,
     shortMeaning: seed.reversedMeaning,
   },
-  imagePath: `/cards/major_${padMajor(seed.number)}_${seed.slug}.png`,
+  imagePath: `/cards/major_${padMajor(seed.number)}_${seed.slug}.webp`,
 }));
 
 const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((suit) =>

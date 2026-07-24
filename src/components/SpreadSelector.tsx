@@ -17,7 +17,15 @@ export const SpreadSelector = ({ spreads, selectedSpreadId, onChange }: SpreadSe
         aria-checked={spread.id === selectedSpreadId}
         onClick={() => onChange(spread.id)}
       >
-        <span>{spread.name}</span>
+        <span className="spread-preview" aria-hidden="true">
+          {spread.positions.map((position) => (
+            <i key={position.id} />
+          ))}
+        </span>
+        <span className="spread-title">
+          <strong>{spread.name}</strong>
+          {spread.id === "three-card" ? <em>おすすめ</em> : null}
+        </span>
         <small>{spread.description}</small>
       </button>
     ))}

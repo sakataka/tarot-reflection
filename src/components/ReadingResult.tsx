@@ -11,13 +11,14 @@ type ReadingResultProps = {
 };
 
 export const ReadingResult = ({ reading }: ReadingResultProps) => (
-  <section className="panel">
-    <div className="section-heading">
+  <section className="reading-panel">
+    <div className="reading-heading">
       <div>
-        <p className="app-kicker">Cards revealed</p>
-        <h2>開かれたカード</h2>
+        <p className="section-number">03</p>
+        <h1>カードが映す、今のあなた</h1>
+        <p className="reading-question">「{reading.question}」</p>
       </div>
-      <p>{new Date(reading.createdAt).toLocaleString("ja-JP")}</p>
+      <p className="reading-date">{new Date(reading.createdAt).toLocaleString("ja-JP")}</p>
     </div>
 
     <div className="reading-grid">
@@ -26,7 +27,7 @@ export const ReadingResult = ({ reading }: ReadingResultProps) => (
           readingCard.orientation === "upright" ? readingCard.card.upright : readingCard.card.reversed;
 
         return (
-          <div className="reading-card" key={readingCard.position.id}>
+          <article className="reading-card" key={readingCard.position.id}>
             <div className="position-copy">
               <p className="position-name">{readingCard.position.name}</p>
               <p>{readingCard.position.role}</p>
@@ -37,7 +38,7 @@ export const ReadingResult = ({ reading }: ReadingResultProps) => (
               <p className="keyword-list">{meaning.keywords.join(" / ")}</p>
               <p>{meaning.shortMeaning}</p>
             </div>
-          </div>
+          </article>
         );
       })}
     </div>

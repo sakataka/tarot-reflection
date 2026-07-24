@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { tarotDeck } from "../data/tarotDeck";
 import { spreads } from "../data/spreads";
 import type { SelectedCard } from "../types/tarot";
@@ -26,6 +28,15 @@ describe("tarot deck", () => {
     expect(tarotDeck.filter((card) => card.suit === "cups")).toHaveLength(14);
     expect(tarotDeck.filter((card) => card.suit === "swords")).toHaveLength(14);
     expect(tarotDeck.filter((card) => card.suit === "pentacles")).toHaveLength(14);
+  });
+
+  test("has a production image for every major arcana card", () => {
+    const majorCards = tarotDeck.filter((card) => card.arcana === "major");
+    const missingImages = majorCards
+      .map((card) => card.imagePath)
+      .filter((imagePath) => !existsSync(resolve(import.meta.dir, "../../public", imagePath.replace(/^\//, ""))));
+
+    expect(missingImages).toEqual([]);
   });
 });
 

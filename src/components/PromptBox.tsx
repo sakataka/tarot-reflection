@@ -70,11 +70,12 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
   }, [reading.createdAt]);
 
   return (
-    <section className="panel oracle-panel">
+    <section className="oracle-panel">
       <div className="section-heading">
         <div>
-          <p className="app-kicker">The oracle speaks</p>
-          <h2>占い師の言葉</h2>
+          <p className="section-number">✦</p>
+          <h2>カードから届いた言葉</h2>
+          <p>正解を決める言葉ではなく、今の自分を見つめるための手がかりです。</p>
         </div>
         {answer ? (
           <button className="secondary-button" type="button" onClick={copyAnswer}>

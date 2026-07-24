@@ -38,6 +38,9 @@ export const CardView = ({ card, orientation }: CardViewProps) => {
         )}
       </div>
       <div className="card-meta">
+        <p className="card-number">
+          {card.arcana === "major" ? String(card.number ?? 0).padStart(2, "0") : card.suit?.slice(0, 1).toUpperCase()}
+        </p>
         <h3>{card.nameJa}</h3>
         <p>
           {card.nameEn} / {orientationLabel[orientation]}
