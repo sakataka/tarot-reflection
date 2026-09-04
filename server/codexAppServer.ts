@@ -36,6 +36,8 @@ class LineReader {
   }
 }
 
+const CODEX_MODEL = "gpt-6-astra";
+const CODEX_EFFORT = "medium";
 const encoder = new TextEncoder();
 
 export async function askCodexAppServer(prompt: string): Promise<string> {
@@ -74,7 +76,7 @@ export async function askCodexAppServer(prompt: string): Promise<string> {
       },
     });
     await send(writer, { method: "initialized", params: {} });
-    await send(writer, { method: "thread/start", id: 1, params: {} });
+    await send(writer, { method: "thread/start", id: 1, params: { model: CODEX_MODEL } });
 
     const threadId = await waitForThreadId(reader);
     const firstTurn = await runTurn(reader, writer, 2, threadId, prompt);
@@ -130,6 +132,8 @@ async function runTurn(
     id: requestId,
     params: {
       threadId,
+      model: CODEX_MODEL,
+      effort: CODEX_EFFORT,
       input: [{ type: "text", text: prompt }],
     },
   });

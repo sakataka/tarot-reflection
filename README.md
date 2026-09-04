@@ -20,7 +20,7 @@ bun run dev
 
 http://127.0.0.1:4192/
 
-`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。
+`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。モデルは `gpt-6-astra`、推論強度は `medium` に固定しています。
 
 ポートを変える場合:
 
