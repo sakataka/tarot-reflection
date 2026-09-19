@@ -1,4 +1,3 @@
-import type { CSSProperties } from "react";
 import type { DrawnCard, SelectedCard } from "../types/tarot";
 
 type CardBackGridProps = {
@@ -24,8 +23,8 @@ export const CardBackGrid = ({
       <div className="section-heading">
         <div>
           <p className="section-number">02</p>
-          <h1>心が惹かれるカードを選ぶ</h1>
-          <p>考えすぎず、最初に目が留まったカードへ手を伸ばしてください。</p>
+          <h1>カードを選ぶ</h1>
+          <p>気になるカードを選んでください。選んだ順に並べます。</p>
         </div>
         <div className="selection-counter" aria-live="polite">
           <strong>{selectedCards.length}</strong>
@@ -35,18 +34,12 @@ export const CardBackGrid = ({
 
       <div className="tarot-table">
         <div className="oracle-invitation">
-          <p>占い師が、あなたの前にカードを広げました</p>
-          <span aria-hidden="true">✦</span>
+          <p>選択したカードをもう一度押すと、選び直せます。</p>
         </div>
         <div className="card-field" aria-label="裏向きカード一覧">
           {cards.map((drawnCard, index) => {
             const selected = selectedById.get(drawnCard.card.id);
             const disabled = !selected && selectedCards.length >= requiredCount;
-            const column = index % 13;
-            const style = {
-              "--card-tilt": `${(column - 6) * 0.45}deg`,
-              "--card-delay": `${index * 7}ms`,
-            } as CSSProperties;
 
             return (
               <button
@@ -56,7 +49,6 @@ export const CardBackGrid = ({
                 disabled={disabled}
                 aria-label={`${index + 1}番目の裏向きカード${selected ? `、${selected.selectedOrder}枚目として選択中` : ""}`}
                 aria-pressed={Boolean(selected)}
-                style={style}
                 onClick={() => onToggleCard(drawnCard)}
               >
                 <span className="card-back-art" />
@@ -71,7 +63,6 @@ export const CardBackGrid = ({
         <p>{isComplete ? "カードが揃いました" : `あと ${requiredCount - selectedCards.length} 枚選んでください`}</p>
         <button className="primary-button" type="button" disabled={!isComplete} onClick={onReveal}>
           <span>カードを開く</span>
-          <span aria-hidden="true">✦</span>
         </button>
       </div>
     </section>

@@ -45,7 +45,9 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
       });
       setAnswer(response.answer);
     } catch (caughtError) {
-      setError(caughtError instanceof Error ? caughtError.message : "水晶が曇りました。少し時間を置いて、もう一度お試しください。");
+      setError(caughtError instanceof TypeError
+        ? "読み解きに接続できませんでした。通信状態を確認して、もう一度お試しください。"
+        : caughtError instanceof Error ? caughtError.message : "読み解きを取得できませんでした。少し時間を置いて、もう一度お試しください。");
     } finally {
       setIsAskingCodex(false);
     }
@@ -74,12 +76,12 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
       <div className="section-heading">
         <div>
           <p className="section-number">✦</p>
-          <h2>カードから届いた言葉</h2>
+          <h2>カードの読み解き</h2>
           <p>正解を決める言葉ではなく、今の自分を見つめるための手がかりです。</p>
         </div>
         {answer ? (
           <button className="secondary-button" type="button" onClick={copyAnswer}>
-            {answerCopyState === "copied" ? "写し取りました" : "言葉を写す"}
+            {answerCopyState === "copied" ? "コピーしました" : "結果をコピー"}
           </button>
         ) : null}
       </div>
@@ -88,35 +90,38 @@ export const PromptBox = ({ reading }: PromptBoxProps) => {
         <div className="thinking-box" aria-live="polite">
           <span className="thinking-flame" />
           <div>
-            <h3>カードの声を聞いています</h3>
-            <p>占い師が、開かれたカードとあなたの問いを静かに結び直しています。</p>
+            <h3>カードを読み解いています</h3>
+            <p>カードの象徴と相談内容をもとに、考える手がかりをまとめています。</p>
           </div>
         </div>
       ) : null}
 
-      {error ? <p className="copy-fallback">{error}</p> : null}
+      {error ? (
+        <div role="alert">
+          <p className="copy-fallback">{error}</p>
+          <button className="secondary-button" type="button" disabled={isAskingCodex} onClick={askFortuneTeller}>
+            もう一度読み解く
+          </button>
+        </div>
+      ) : null}
 
       {answer ? (
         <div className="answer-box">
           {answerCopyState === "failed" ? (
-            <p className="copy-fallback">言葉を写せませんでした。本文を手動で選択してください。</p>
+            <p className="copy-fallback">コピーできませんでした。本文を手動で選択してください。</p>
           ) : null}
           <div className="answer-markdown" dangerouslySetInnerHTML={{ __html: renderedAnswer }} />
         </div>
-      ) : (
-        <div className="future-box">
-          まだ言葉は降りてきていません。卓の上のカードが、少しずつ意味を帯びていきます。
-        </div>
-      )}
+      ) : null}
 
       <details className="hidden-prompt">
-        <summary>控えを開く</summary>
-        <p>うまく言葉が届かない時だけ、この控えを写して使えます。</p>
+        <summary>手動で読み解くためのプロンプト</summary>
+        <p>読み解きを取得できない場合は、このプロンプトをコピーして使えます。</p>
         <button className="secondary-button" type="button" onClick={copyPrompt}>
-          {copyState === "copied" ? "控えを写しました" : "控えを写す"}
+          {copyState === "copied" ? "コピーしました" : "プロンプトをコピー"}
         </button>
         {copyState === "failed" ? (
-          <p className="copy-fallback">控えを写せませんでした。下のテキストを手動で選択してください。</p>
+          <p className="copy-fallback">コピーできませんでした。下のテキストを手動で選択してください。</p>
         ) : null}
         <textarea className="prompt-textarea" value={prompt} readOnly rows={12} />
       </details>

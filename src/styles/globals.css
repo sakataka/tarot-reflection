@@ -1,1321 +1,175 @@
 :root {
-  color: #f3e9d2;
-  background: #090b16;
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Times New Roman", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans", sans-serif;
+  color: #18181b;
+  background: #fafafa;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --ink: #090b16;
-  --indigo: #11172b;
-  --indigo-soft: #171d34;
-  --gold: #c9a76a;
-  --gold-bright: #e2c486;
-  --parchment: #f3e9d2;
-  --muted: rgba(243, 233, 210, 0.68);
-  --violet: #8b719d;
-  --sans: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, system-ui, sans-serif;
+  --muted: #71717a;
+  --line: #e4e4e7;
+  --primary: #2f6fdb;
+  --surface: #fff;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, textarea { font: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+button, textarea, summary { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #87b3fa; outline-offset: 3px; }
+h1, h2, h3, p { margin: 0; }
+h1 { font-size: clamp(23px, 3vw, 30px); line-height: 1.5; letter-spacing: -.035em; font-weight: 650; }
+h2 { font-size: 21px; line-height: 1.5; }
+h3 { font-size: 16px; }
+p { line-height: 1.8; color: var(--muted); }
+.site-header { border-bottom: 1px solid var(--line); background: var(--surface); display: flex; align-items: center; gap: 32px; padding: 18px max(24px, calc((100% - 1080px) / 2)); }
+.brand { border: 0; background: none; padding: 0; display: flex; gap: 10px; align-items: center; white-space: nowrap; font-size: 15px; font-weight: 650; color: inherit; }
+.brand-moon { width: 28px; height: 28px; border: 1px solid var(--line); border-radius: 7px; display: grid; place-items: center; color: #32445f; }
+.ritual-steps { display: flex; gap: 24px; margin-left: auto; }
+.ritual-step { display: flex; align-items: center; gap: 7px; color: var(--muted); }
+.ritual-step > span { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 50%; background: #f4f4f5; font-size: 11px; }
+.ritual-step small { font-size: 12px; white-space: nowrap; }
+.ritual-step.is-active { color: var(--primary); font-weight: 600; }
+.ritual-step.is-active > span { background: #e8f0ff; }
+.header-reset { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 8px 0; white-space: nowrap; }
+.header-spacer { display: none; }
+.app-shell { width: min(100% - 48px, 1080px); margin: auto; padding: 40px 0 56px; }
+.intro-panel { max-width: 800px; margin: auto; }
+.intro-landscape { width: 100%; height: 176px; display: block; object-fit: cover; object-position: center 65%; border-radius: 8px; margin-bottom: 28px; }
+.intro-copy p { font-size: 14px; margin-top: 8px; }
+.field { display: grid; gap: 10px; margin-top: 28px; }
+.field-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.field-heading strong { font-size: 14px; font-weight: 600; }
+.field-heading small, .field-note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+textarea { width: 100%; min-height: 120px; resize: vertical; border: 1px solid #d4d4d8; border-radius: 8px; padding: 14px 16px; color: inherit; background: var(--surface); line-height: 1.8; font-size: 16px; }
+textarea::placeholder { color: #8b8b94; }
+textarea:focus { border-color: var(--primary); }
+.spread-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.spread-option { position: relative; display: grid; align-content: start; gap: 10px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; color: inherit; background: var(--surface); text-align: left; }
+.spread-option:hover { border-color: #a1a1aa; }
+.spread-option.is-selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: #f7faff; }
+.spread-preview { display: flex; align-items: center; height: 32px; gap: 3px; }
+.spread-preview i { width: 16px; height: 26px; border: 1px solid #596477; border-radius: 2px; background: url('/cards/card_back.webp') center / cover; }
+.spread-option:last-child .spread-preview i { width: 12px; height: 22px; }
+.spread-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.spread-title strong { font-size: 14px; }
+.spread-title em { color: var(--primary); font-size: 10px; font-style: normal; }
+.spread-option > small { color: var(--muted); font-size: 12px; line-height: 1.7; }
+.intro-action { display: flex; align-items: center; gap: 16px; margin-top: 28px; }
+.intro-action small { color: var(--muted); font-size: 12px; }
+.primary-button, .secondary-button { display: inline-flex; align-items: center; justify-content: center; gap: 24px; border: 1px solid transparent; border-radius: 7px; min-height: 44px; padding: 10px 20px; font-size: 14px; font-weight: 600; }
+.primary-button { background: var(--primary); color: white; }
+.primary-button:not(:disabled):hover { background: #245bb8; }
+.secondary-button { background: var(--surface); border-color: var(--line); color: inherit; }
+.secondary-button:hover { background: #f4f4f5; }
+.section-heading, .reading-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+.section-heading p, .reading-heading p { font-size: 14px; margin-top: 8px; }
+.section-number { display: none; }
+.selection-counter { display: flex; align-items: baseline; gap: 5px; white-space: nowrap; color: var(--primary); }
+.selection-counter strong { font-size: 26px; font-weight: 600; }
+.selection-counter span { font-size: 13px; }
+.tarot-table { background: #f0f2f5; border: 1px solid var(--line); border-radius: 8px; padding: 24px; }
+.oracle-invitation { margin-bottom: 20px; font-size: 12px; }
+.card-field { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 12px; }
+.card-back { position: relative; width: 100%; aspect-ratio: 2 / 3; border: 2px solid transparent; border-radius: 5px; background: #192535; padding: 0; transition: transform .15s, box-shadow .15s; }
+.card-back-art { display: block; width: 100%; height: 100%; border-radius: 3px; background: url('/cards/card_back.webp') center / cover; }
+.card-back:not(:disabled):hover { transform: translateY(-3px); }
+.card-back.is-selected { border-color: #fff; box-shadow: 0 0 0 3px var(--primary); transform: translateY(-3px); }
+.card-back:disabled:not(.is-selected) { opacity: .55; }
+.selection-badge { position: absolute; top: -8px; right: -8px; width: 24px; height: 24px; display: grid; place-items: center; background: var(--primary); color: white; border: 2px solid white; border-radius: 50%; font-size: 12px; font-weight: 700; }
+.reveal-action { position: sticky; bottom: 0; z-index: 4; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 0; margin-top: 12px; background: #fafafaf5; border-top: 1px solid var(--line); }
+.reveal-action p { font-size: 14px; }
+.reading-question { overflow-wrap: anywhere; }
+.reading-date { white-space: nowrap; font-size: 12px !important; }
+.reading-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.reading-grid:has(> :only-child) { grid-template-columns: minmax(0, 360px); justify-content: center; }
+.reading-card { min-width: 0; padding: 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.position-copy { min-height: 76px; }
+.position-name { color: #18181b; font-size: 14px; font-weight: 650; }
+.position-copy p:last-child { font-size: 12px; margin-top: 4px; }
+.tarot-card { margin: 0; }
+.card-face { aspect-ratio: 2 / 3; overflow: hidden; border-radius: 5px; background: #142033; }
+.card-face-content { position: relative; width: 100%; height: 100%; }
+.card-face img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.card-face.is-reversed .card-face-content { transform: rotate(180deg); }
+.minor-rank-overlay { position: absolute; inset: 0; color: #f1ddb1; font-family: Georgia, serif; text-shadow: 0 1px 4px #000; }
+.minor-corner { position: absolute; display: grid; justify-items: center; gap: 3px; padding: 6px; background: #101b2cc9; border-radius: 3px; }
+.minor-corner-top { top: 7%; left: 8%; }
+.minor-corner-bottom { right: 8%; bottom: 7%; transform: rotate(180deg); }
+.minor-corner strong { font-size: 18px; }
+.minor-corner span { font-size: 8px; letter-spacing: .1em; }
+.minor-rank-center { display: none; }
+.fallback-card { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #f3e9d2; padding: 20px; text-align: center; }
+.fallback-card em { font-size: 12px; }
+.card-meta { padding-top: 16px; }
+.card-number { display: none; }
+.card-meta h3 { font-size: 17px; }
+.card-meta p { font-size: 11px; margin-top: 4px; }
+.meaning-copy { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.meaning-copy p { font-size: 13px; }
+.meaning-copy .orientation { display: inline-block; background: #f4f4f5; border-radius: 4px; padding: 2px 7px; margin-bottom: 8px; font-size: 11px; }
+.meaning-copy .keyword-list { color: #3f3f46; margin-bottom: 6px; font-weight: 550; }
+.oracle-panel { margin-top: 32px; padding: 28px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.oracle-panel .section-heading { margin-bottom: 20px; }
+.oracle-panel .secondary-button { flex-shrink: 0; }
+.thinking-box { display: flex; align-items: center; gap: 14px; background: #f7f8fa; border-radius: 8px; padding: 20px; }
+.thinking-box h3 { font-size: 14px; }
+.thinking-box p, .future-box, .copy-fallback { font-size: 13px; }
+.thinking-flame { width: 18px; height: 18px; flex-shrink: 0; border: 2px solid #dce9ff; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.copy-fallback { color: #a63232; margin: 12px 0; }
+.future-box { color: var(--muted); line-height: 1.8; }
+.answer-markdown { font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; }
+.answer-markdown p { color: #3f3f46; margin: 12px 0; }
+.answer-markdown h2, .answer-markdown h3, .answer-markdown h4 { margin: 24px 0 12px; font-size: 17px; }
+.answer-markdown ul, .answer-markdown ol { padding-left: 24px; }
+.hidden-prompt { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
+.hidden-prompt summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.hidden-prompt p { font-size: 13px; margin: 12px 0; }
+.hidden-prompt .secondary-button { margin-bottom: 12px; }
+.prompt-textarea { font-size: 12px; }
+.reset-row { text-align: center; margin-top: 28px; }
+.text-button { border: 0; background: none; padding: 12px; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+@media (max-width: 760px) {
+  .site-header { flex-wrap: wrap; gap: 16px; padding: 16px 20px; }
+  .ritual-steps { order: 3; width: 100%; justify-content: space-between; gap: 8px; }
+  .header-reset { margin-left: auto; }
+  .app-shell { width: calc(100% - 32px); padding-top: 24px; }
+  .intro-landscape { height: 140px; margin-bottom: 24px; }
+  .field-heading { flex-wrap: wrap; gap: 4px 12px; }
+  .field-heading small { font-size: 11px; }
+  .spread-selector { grid-template-columns: 1fr; gap: 10px; }
+  .spread-option { grid-template-columns: 54px 1fr; gap: 4px 14px; padding: 14px; }
+  .spread-preview { grid-row: span 2; height: 100%; max-width: 54px; overflow: hidden; }
+  .spread-preview i { flex-shrink: 0; }
+  .spread-option:last-child .spread-preview { flex-wrap: wrap; align-content: center; gap: 2px; }
+  .spread-option:last-child .spread-preview i { width: 8px; height: 14px; }
+  .spread-title strong { font-size: 14px; }
+  .intro-action { flex-direction: column; align-items: stretch; gap: 10px; }
+  .intro-action small { text-align: center; }
+  .section-heading, .reading-heading { gap: 14px; }
+  .section-heading p, .reading-heading p { font-size: 13px; }
+  .tarot-table { padding: 16px; }
+  .card-field { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px 9px; }
+  .card-back { min-height: 44px; }
+  .reading-heading { flex-direction: column; }
+  .reading-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .reading-card { padding: 12px; }
+  .position-copy { min-height: 90px; }
+  .card-meta h3 { font-size: 15px; }
+  .oracle-panel { padding: 20px; }
+  .oracle-panel .section-heading { flex-direction: column; }
+  .reveal-action p { font-size: 12px; }
+  .reveal-action .primary-button { gap: 12px; padding: 10px 16px; }
+}
+@media (max-width: 380px) {
+  .card-field { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .tarot-table { padding: 14px; }
+  .ritual-step small { font-size: 11px; }
+  .reading-grid { grid-template-columns: 1fr; }
+  .reading-card { padding: 20px; }
+  .position-copy { min-height: auto; margin-bottom: 16px; }
+  .tarot-card { max-width: 250px; margin: auto; }
 }
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  overflow-x: hidden;
-  min-width: 320px;
-  min-height: 100%;
-  background: var(--ink);
-}
-
-body {
-  overflow-x: hidden;
-  min-width: 320px;
-  min-height: 100vh;
-  margin: 0;
-  background:
-    radial-gradient(circle at 50% -16rem, rgba(62, 74, 124, 0.28), transparent 42rem),
-    radial-gradient(circle at 10% 50%, rgba(75, 45, 92, 0.11), transparent 30rem),
-    linear-gradient(180deg, #080b14 0%, #0b1020 58%, #080a13 100%);
-}
-
-body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    radial-gradient(circle, rgba(226, 196, 134, 0.52) 0 1px, transparent 1.2px),
-    radial-gradient(circle, rgba(226, 196, 134, 0.26) 0 1px, transparent 1.2px);
-  background-position: 0 0, 43px 67px;
-  background-size: 127px 131px, 173px 181px;
-  content: "";
-  opacity: 0.2;
-}
-
-button,
-textarea {
-  font: inherit;
-}
-
-button,
-.field,
-.spread-option small,
-.card-meta,
-.meaning-copy,
-.prompt-textarea,
-.ritual-steps,
-.header-reset,
-.reading-date,
-.selection-counter,
-.rail-hint,
-.reveal-action {
-  font-family: var(--sans);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:disabled {
-  cursor: not-allowed;
-}
-
-button:focus-visible,
-textarea:focus-visible,
-summary:focus-visible {
-  outline: 2px solid var(--gold-bright);
-  outline-offset: 4px;
-}
-
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 14px;
-  font-size: clamp(2.35rem, 5.2vw, 4.7rem);
-  font-weight: 500;
-  letter-spacing: -0.045em;
-  line-height: 1.16;
-}
-
-h2 {
-  margin-bottom: 8px;
-  font-size: clamp(1.7rem, 3vw, 2.65rem);
-  font-weight: 500;
-}
-
-h3 {
-  margin-bottom: 5px;
-}
-
-p {
-  color: var(--muted);
-  line-height: 1.8;
-}
-
-.app {
-  min-height: 100vh;
-}
-
-.site-header {
-  display: grid;
-  position: relative;
-  z-index: 10;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  min-height: 84px;
-  border-bottom: 1px solid rgba(201, 167, 106, 0.18);
-  padding: 0 max(24px, calc((100vw - 1280px) / 2));
-  background: rgba(8, 11, 20, 0.86);
-  backdrop-filter: blur(18px);
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  justify-self: start;
-  gap: 10px;
-  border: 0;
-  padding: 8px 0;
-  color: var(--gold-bright);
-  background: none;
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.brand-moon {
-  display: grid;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border: 1px solid rgba(201, 167, 106, 0.55);
-  border-radius: 50%;
-  font-size: 1rem;
-}
-
-.ritual-steps {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0;
-}
-
-.ritual-step {
-  display: grid;
-  position: relative;
-  min-width: 108px;
-  justify-items: center;
-  gap: 5px;
-  color: rgba(243, 233, 210, 0.34);
-}
-
-.ritual-step:not(:last-child)::after {
-  position: absolute;
-  top: 14px;
-  left: calc(50% + 20px);
-  width: calc(100% - 40px);
-  height: 1px;
-  background: rgba(201, 167, 106, 0.22);
-  content: "";
-}
-
-.ritual-step > span {
-  display: grid;
-  position: relative;
-  z-index: 1;
-  width: 29px;
-  height: 29px;
-  place-items: center;
-  border: 1px solid rgba(201, 167, 106, 0.26);
-  border-radius: 50%;
-  background: #0a0d18;
-  font-size: 0.72rem;
-  font-weight: 800;
-}
-
-.ritual-step small {
-  font-size: 0.7rem;
-}
-
-.ritual-step.is-active {
-  color: var(--gold-bright);
-}
-
-.ritual-step.is-active > span {
-  color: #12101a;
-  border-color: var(--gold-bright);
-  background: var(--gold-bright);
-  box-shadow: 0 0 22px rgba(201, 167, 106, 0.22);
-}
-
-.ritual-step.is-done {
-  color: rgba(226, 196, 134, 0.62);
-}
-
-.header-reset {
-  justify-self: end;
-  border: 0;
-  border-bottom: 1px solid rgba(201, 167, 106, 0.42);
-  padding: 7px 0;
-  color: var(--muted);
-  background: none;
-  font-size: 0.78rem;
-}
-
-.header-spacer {
-  width: 1px;
-}
-
-.app-shell {
-  width: min(1180px, calc(100% - 40px));
-  margin: 0 auto;
-  padding: 66px 0 70px;
-}
-
-.intro-panel {
-  position: relative;
-  max-width: 1040px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.intro-panel::before,
-.intro-panel::after {
-  position: absolute;
-  top: 30px;
-  width: 150px;
-  height: 280px;
-  background:
-    radial-gradient(ellipse at center, rgba(201, 167, 106, 0.35) 0 1px, transparent 2px),
-    linear-gradient(65deg, transparent 49.4%, rgba(201, 167, 106, 0.18) 50%, transparent 50.6%);
-  background-size: 20px 26px, 100% 100%;
-  content: "";
-  opacity: 0.42;
-  pointer-events: none;
-}
-
-.intro-panel::before {
-  right: calc(100% + 34px);
-  transform: rotate(-8deg);
-}
-
-.intro-panel::after {
-  left: calc(100% + 34px);
-  transform: scaleX(-1) rotate(-8deg);
-}
-
-.intro-copy {
-  width: min(820px, 100%);
-  margin: 0 auto 42px;
-}
-
-.intro-copy h1 {
-  text-shadow: 0 8px 40px rgba(0, 0, 0, 0.36);
-}
-
-.intro-copy h1::before {
-  display: block;
-  width: min(340px, 70%);
-  height: 26px;
-  margin: 0 auto 22px;
-  background:
-    radial-gradient(circle at 50% 50%, var(--gold-bright) 0 4px, transparent 4.5px),
-    linear-gradient(90deg, transparent, rgba(201, 167, 106, 0.8) 34%, transparent 34.5% 65.5%, rgba(201, 167, 106, 0.8) 66%, transparent);
-  content: "☾  ◐  ●  ◑  ☽";
-  color: var(--gold);
-  font-size: 0.78rem;
-  letter-spacing: 1.1em;
-  line-height: 26px;
-  text-align: center;
-}
-
-.intro-copy p {
-  margin-bottom: 0;
-  font-size: 1.02rem;
-}
-
-.field {
-  display: grid;
-  gap: 10px;
-  margin-top: 28px;
-  color: var(--parchment);
-  text-align: left;
-}
-
-.field-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.field-heading strong {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, serif;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-}
-
-.field-heading small,
-.field-note {
-  color: rgba(243, 233, 210, 0.48);
-  font-size: 0.72rem;
-}
-
-textarea {
-  width: 100%;
-  min-height: 150px;
-  resize: vertical;
-  border: 1px solid rgba(201, 167, 106, 0.42);
-  border-radius: 3px;
-  padding: 22px 24px;
-  color: var(--parchment);
-  background:
-    linear-gradient(120deg, rgba(255, 255, 255, 0.025), transparent 45%),
-    rgba(13, 18, 33, 0.82);
-  box-shadow:
-    inset 0 0 0 4px rgba(201, 167, 106, 0.025),
-    0 20px 60px rgba(0, 0, 0, 0.16);
-  outline: none;
-  line-height: 1.8;
-}
-
-textarea::placeholder {
-  color: rgba(243, 233, 210, 0.33);
-}
-
-textarea:focus {
-  border-color: var(--gold-bright);
-  box-shadow: 0 0 0 3px rgba(201, 167, 106, 0.1), 0 20px 60px rgba(0, 0, 0, 0.22);
-}
-
-.spread-field {
-  margin-top: 40px;
-}
-
-.spread-selector {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.spread-option {
-  display: grid;
-  min-height: 164px;
-  align-content: start;
-  gap: 9px;
-  border: 1px solid rgba(201, 167, 106, 0.24);
-  border-radius: 3px;
-  padding: 20px;
-  color: var(--parchment);
-  background: rgba(19, 24, 43, 0.62);
-  text-align: left;
-  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
-}
-
-.spread-option:hover {
-  border-color: rgba(201, 167, 106, 0.58);
-  transform: translateY(-2px);
-}
-
-.spread-option.is-selected {
-  border-color: var(--gold-bright);
-  background:
-    radial-gradient(circle at 50% 0, rgba(139, 113, 157, 0.18), transparent 70%),
-    rgba(19, 24, 43, 0.92);
-  box-shadow: inset 0 0 0 3px rgba(201, 167, 106, 0.06);
-}
-
-.spread-preview {
-  display: flex;
-  height: 42px;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.spread-preview i {
-  width: 18px;
-  height: 29px;
-  border: 1px solid rgba(201, 167, 106, 0.72);
-  border-radius: 2px;
-  background: url("/cards/card_back.webp") center / cover;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
-}
-
-.spread-option:last-child .spread-preview {
-  gap: 2px;
-}
-
-.spread-option:last-child .spread-preview i {
-  width: 13px;
-  height: 23px;
-}
-
-.spread-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.spread-title strong {
-  font-size: 1rem;
-}
-
-.spread-title em {
-  color: var(--gold-bright);
-  font-size: 0.65rem;
-  font-style: normal;
-  font-weight: 600;
-}
-
-.spread-option > small {
-  color: rgba(243, 233, 210, 0.56);
-  font-size: 0.72rem;
-  line-height: 1.65;
-}
-
-.intro-action,
-.reveal-action {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
-  margin-top: 38px;
-}
-
-.intro-action small {
-  color: rgba(243, 233, 210, 0.44);
-  font-family: var(--sans);
-  font-size: 0.7rem;
-}
-
-.primary-button,
-.secondary-button {
-  border-radius: 2px;
-  min-height: 50px;
-  padding: 0 22px;
-  font-weight: 700;
-}
-
-.primary-button {
-  display: inline-flex;
-  min-width: 260px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 30px;
-  border: 1px solid #e3c98b;
-  color: #17121a;
-  background:
-    linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.34), transparent),
-    linear-gradient(180deg, #ddc183, #b99253);
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28), inset 0 0 0 3px rgba(61, 39, 19, 0.15);
-  transition: filter 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-}
-
-.primary-button:not(:disabled):hover {
-  filter: brightness(1.08);
-  transform: translateY(-2px);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.36), 0 0 24px rgba(201, 167, 106, 0.14);
-}
-
-.primary-button:disabled {
-  color: rgba(23, 18, 26, 0.58);
-  filter: saturate(0.45);
-  opacity: 0.52;
-}
-
-.secondary-button {
-  border: 1px solid rgba(201, 167, 106, 0.34);
-  color: var(--parchment);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.section-number {
-  margin-bottom: 8px;
-  color: var(--gold);
-  font-family: var(--sans);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-
-.table-panel {
-  text-align: center;
-}
-
-.section-heading,
-.reading-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 30px;
-  margin-bottom: 34px;
-  text-align: left;
-}
-
-.section-heading h1,
-.reading-heading h1 {
-  margin-bottom: 8px;
-  font-size: clamp(2rem, 4vw, 3.7rem);
-}
-
-.section-heading p,
-.reading-heading p {
-  margin-bottom: 0;
-}
-
-.selection-counter {
-  display: flex;
-  min-width: 92px;
-  align-items: baseline;
-  justify-content: flex-end;
-  gap: 5px;
-  color: var(--gold);
-}
-
-.selection-counter strong {
-  font-family: "Times New Roman", serif;
-  font-size: 2.6rem;
-  font-weight: 400;
-}
-
-.selection-counter span {
-  font-size: 0.74rem;
-}
-
-.tarot-table {
-  position: relative;
-  overflow: hidden;
-  min-height: 820px;
-  border: 1px solid rgba(201, 167, 106, 0.28);
-  border-radius: 180px 180px 5px 5px / 90px 90px 5px 5px;
-  background:
-    linear-gradient(180deg, rgba(7, 9, 18, 0.08) 0%, rgba(7, 10, 22, 0.1) 32%, rgba(8, 12, 28, 0.76) 62%, #090d1b 100%),
-    url("/cards/selection_oracle.webp") top center / cover no-repeat,
-    radial-gradient(ellipse at center, rgba(28, 37, 72, 0.92), #0b1020 74%),
-    #0b1020;
-  box-shadow: inset 0 -80px 110px rgba(0, 0, 0, 0.48), 0 30px 80px rgba(0, 0, 0, 0.22);
-}
-
-.oracle-invitation {
-  display: flex;
-  position: absolute;
-  top: 276px;
-  left: 50%;
-  z-index: 2;
-  align-items: center;
-  gap: 14px;
-  border: 1px solid rgba(226, 196, 134, 0.28);
-  border-right: 0;
-  border-left: 0;
-  padding: 8px 28px;
-  color: rgba(243, 233, 210, 0.82);
-  background: rgba(8, 11, 22, 0.54);
-  font-family: var(--sans);
-  transform: translateX(-50%);
-  backdrop-filter: blur(8px);
-  white-space: nowrap;
-}
-
-.oracle-invitation p {
-  margin: 0;
-  color: inherit;
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-}
-
-.oracle-invitation span {
-  color: var(--gold-bright);
-}
-
-.card-field {
-  display: grid;
-  position: relative;
-  z-index: 3;
-  grid-template-columns: repeat(13, 52px);
-  justify-content: center;
-  gap: 10px 12px;
-  padding: 350px 42px 46px;
-}
-
-.card-back {
-  position: relative;
-  width: 52px;
-  height: 78px;
-  border: 1px solid rgba(226, 196, 134, 0.66);
-  border-radius: 3px;
-  padding: 2px;
-  background: #0b1020;
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.42);
-  animation: card-deal-in 420ms both;
-  animation-delay: var(--card-delay);
-  transform: rotate(var(--card-tilt));
-  transform-origin: 50% 125%;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
-}
-
-.card-back-art {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 2px;
-  background: url("/cards/card_back.webp") center / cover no-repeat;
-}
-
-.card-back:not(:disabled):hover,
-.card-back.is-selected {
-  z-index: 4;
-  border-color: #f0d596;
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.58), 0 0 24px rgba(201, 167, 106, 0.3);
-  transform: translateY(-10px) scale(1.14) rotate(0);
-}
-
-.card-back:disabled:not(.is-selected) {
-  filter: saturate(0.45);
-  opacity: 0.42;
-}
-
-.selection-badge {
-  display: grid;
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border: 2px solid #0b1020;
-  border-radius: 50%;
-  color: #17121a;
-  background: var(--gold-bright);
-  font-size: 0.68rem;
-  font-weight: 900;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.38);
-}
-
-@keyframes card-deal-in {
-  from {
-    opacity: 0;
-    transform: translateY(-34px) scale(0.92) rotate(var(--card-tilt));
-  }
-
-  to {
-    opacity: 1;
-    transform: rotate(var(--card-tilt));
-  }
-}
-
-.reveal-action {
-  margin-top: 28px;
-}
-
-.reveal-action p {
-  margin-bottom: 0;
-  color: rgba(243, 233, 210, 0.52);
-  font-size: 0.74rem;
-}
-
-.reading-panel {
-  position: relative;
-}
-
-.reading-heading {
-  padding-bottom: 28px;
-  border-bottom: 1px solid rgba(201, 167, 106, 0.2);
-}
-
-.reading-question {
-  max-width: 780px;
-  color: rgba(243, 233, 210, 0.72);
-  font-size: 1.02rem;
-}
-
-.reading-date {
-  flex: 0 0 auto;
-  color: rgba(243, 233, 210, 0.38);
-  font-size: 0.68rem;
-}
-
-.reading-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 22px;
-  align-items: start;
-}
-
-.reading-card {
-  border-top: 1px solid rgba(201, 167, 106, 0.32);
-  padding: 24px 20px 26px;
-  background: linear-gradient(180deg, rgba(25, 31, 55, 0.64), rgba(14, 18, 32, 0.34));
-}
-
-.position-name {
-  margin-bottom: 3px;
-  color: var(--gold-bright);
-  font-size: 1.04rem;
-  font-weight: 700;
-}
-
-.position-copy {
-  min-height: 68px;
-  text-align: center;
-}
-
-.position-copy p,
-.meaning-copy p,
-.card-meta p {
-  margin-bottom: 8px;
-}
-
-.position-copy p:last-child {
-  color: rgba(243, 233, 210, 0.48);
-  font-size: 0.76rem;
-}
-
-.tarot-card {
-  display: grid;
-  gap: 12px;
-  width: min(100%, 250px);
-  margin: 15px auto 20px;
-}
-
-.card-face {
-  overflow: hidden;
-  aspect-ratio: 2 / 3;
-  border: 1px solid rgba(226, 196, 134, 0.62);
-  border-radius: 6px;
-  background: #10162a;
-  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.38);
-}
-
-.card-face-content,
-.card-face img,
-.fallback-card {
-  width: 100%;
-  height: 100%;
-}
-
-.card-face-content {
-  position: relative;
-  transition: transform 300ms ease;
-}
-
-.card-face img {
-  display: block;
-  object-fit: cover;
-}
-
-.card-face.is-reversed .card-face-content {
-  transform: rotate(180deg);
-}
-
-.minor-card-face {
-  border-color: rgba(226, 196, 134, 0.78);
-}
-
-.minor-rank-overlay {
-  --suit-accent: #d7bd81;
-  position: absolute;
-  inset: 0;
-  color: #f5e7c7;
-  font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.96), 0 0 12px rgba(6, 8, 16, 0.86);
-  pointer-events: none;
-}
-
-.minor-rank-overlay.wands {
-  --suit-accent: #e0ad68;
-}
-
-.minor-rank-overlay.cups {
-  --suit-accent: #c8d6e3;
-}
-
-.minor-rank-overlay.swords {
-  --suit-accent: #d8d9dd;
-}
-
-.minor-rank-overlay.pentacles {
-  --suit-accent: #c8b878;
-}
-
-.minor-corner {
-  display: grid;
-  position: absolute;
-  left: 14px;
-  justify-items: center;
-  color: var(--suit-accent);
-  line-height: 1;
-}
-
-.minor-corner-top {
-  top: 16px;
-}
-
-.minor-corner-bottom {
-  right: 14px;
-  bottom: 16px;
-  left: auto;
-  transform: rotate(180deg);
-}
-
-.minor-corner strong {
-  font-size: 1.28rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-.minor-corner span {
-  margin-top: 4px;
-  font-size: 0.42rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-.minor-rank-center {
-  display: grid;
-  position: absolute;
-  right: 20%;
-  bottom: 12%;
-  left: 20%;
-  min-height: 18%;
-  place-items: center;
-  border: 1px solid rgba(226, 196, 134, 0.3);
-  background: rgba(7, 9, 18, 0.58);
-  color: var(--suit-accent);
-  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.36);
-  font-size: clamp(2.1rem, 5vw, 3.25rem);
-  line-height: 1;
-  letter-spacing: 0.08em;
-}
-
-.minor-rank-overlay.is-court .minor-rank-center {
-  right: 10%;
-  left: 10%;
-  min-height: 14%;
-  font-size: clamp(1rem, 2.6vw, 1.45rem);
-  letter-spacing: 0.12em;
-}
-
-.fallback-card {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 10px;
-  padding: 18px;
-  text-align: center;
-  background:
-    radial-gradient(circle at center, rgba(201, 167, 106, 0.14), transparent 36%),
-    linear-gradient(160deg, #1a203a, #20162e);
-}
-
-.fallback-card span,
-.card-number {
-  color: var(--gold);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-
-.fallback-card strong {
-  font-size: 1.2rem;
-}
-
-.fallback-card small,
-.fallback-card em {
-  color: rgba(243, 233, 210, 0.66);
-  font-style: normal;
-}
-
-.card-meta {
-  text-align: center;
-}
-
-.card-number {
-  margin-bottom: 4px !important;
-}
-
-.card-meta h3 {
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, serif;
-  font-size: 1.15rem;
-  font-weight: 500;
-}
-
-.card-meta p:last-child {
-  color: rgba(243, 233, 210, 0.46);
-  font-size: 0.7rem;
-}
-
-.meaning-copy {
-  border-top: 1px solid rgba(201, 167, 106, 0.14);
-  padding-top: 18px;
-}
-
-.meaning-copy p {
-  font-size: 0.78rem;
-}
-
-.orientation {
-  color: var(--gold-bright);
-  font-weight: 800;
-}
-
-.keyword-list {
-  color: var(--parchment);
-  font-weight: 700;
-}
-
-.oracle-panel {
-  position: relative;
-  margin-top: 58px;
-  border: 1px solid rgba(201, 167, 106, 0.26);
-  padding: 38px;
-  background:
-    radial-gradient(circle at 12% 0, rgba(139, 113, 157, 0.12), transparent 34%),
-    rgba(12, 16, 29, 0.78);
-}
-
-.oracle-panel::before {
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  width: 18px;
-  height: 18px;
-  border: 1px solid rgba(201, 167, 106, 0.52);
-  background: #0b0f1c;
-  content: "";
-  transform: translateX(-50%) rotate(45deg);
-}
-
-.oracle-panel .section-heading {
-  margin-bottom: 20px;
-}
-
-.notice,
-.future-box,
-.copy-fallback {
-  margin-top: 18px;
-  border-left: 2px solid var(--gold);
-  padding: 13px 15px;
-  color: rgba(243, 233, 210, 0.74);
-  background: rgba(201, 167, 106, 0.07);
-  line-height: 1.75;
-}
-
-.prompt-textarea {
-  min-height: 380px;
-  white-space: pre-wrap;
-}
-
-.codex-request-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  margin-top: 18px;
-  border-top: 1px solid rgba(201, 167, 106, 0.18);
-  padding: 20px 0 0;
-}
-
-.codex-request-box p {
-  margin-bottom: 0;
-}
-
-.inline-button {
-  flex: 0 0 auto;
-  margin-top: 0;
-}
-
-.answer-box {
-  margin-top: 20px;
-}
-
-.compact-heading {
-  margin-bottom: 12px;
-}
-
-.answer-markdown {
-  min-height: 180px;
-  max-height: 620px;
-  overflow: auto;
-  padding: 24px 8px;
-  color: rgba(243, 233, 210, 0.9);
-  line-height: 1.9;
-}
-
-.answer-markdown h2,
-.answer-markdown h3,
-.answer-markdown h4 {
-  margin: 26px 0 12px;
-  color: var(--gold-bright);
-  font-weight: 500;
-}
-
-.answer-markdown p {
-  margin-bottom: 15px;
-  color: rgba(243, 233, 210, 0.88);
-}
-
-.answer-markdown ul,
-.answer-markdown ol {
-  margin: 0 0 16px;
-  padding-left: 1.4rem;
-  color: rgba(243, 233, 210, 0.88);
-  line-height: 1.9;
-}
-
-.thinking-box {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: 18px;
-  border-top: 1px solid rgba(201, 167, 106, 0.18);
-  padding: 26px 0;
-}
-
-.thinking-box p {
-  margin-bottom: 0;
-}
-
-.thinking-flame {
-  width: 27px;
-  height: 39px;
-  flex: 0 0 auto;
-  border-radius: 18px 18px 18px 4px;
-  background: linear-gradient(160deg, #fff2c2, #d7a75b 55%, #754d86);
-  box-shadow: 0 0 28px rgba(226, 196, 134, 0.48);
-  transform: rotate(45deg);
-  animation: candle-flicker 1.8s ease-in-out infinite;
-}
-
-.hidden-prompt {
-  margin-top: 22px;
-  color: rgba(243, 233, 210, 0.62);
-  font-family: var(--sans);
-}
-
-.hidden-prompt summary {
-  cursor: pointer;
-  color: rgba(243, 233, 210, 0.58);
-  font-size: 0.74rem;
-}
-
-.hidden-prompt .secondary-button {
-  margin-bottom: 12px;
-}
-
-.reset-row {
-  display: flex;
-  justify-content: center;
-  margin-top: 34px;
-}
-
-.text-button {
-  border: 0;
-  border-bottom: 1px solid rgba(201, 167, 106, 0.34);
-  padding: 8px 2px;
-  color: rgba(243, 233, 210, 0.54);
-  background: none;
-  font-family: var(--sans);
-  font-size: 0.75rem;
-}
-
-@keyframes candle-flicker {
-  0%,
-  100% {
-    transform: rotate(45deg) scale(1);
-  }
-
-  50% {
-    transform: rotate(42deg) scale(0.94, 1.08);
-  }
-}
-
-@media (max-width: 820px) {
-  .site-header {
-    grid-template-columns: auto 1fr auto;
-    min-height: 70px;
-    padding: 0 18px;
-  }
-
-  .brand {
-    font-size: 0;
-  }
-
-  .brand-moon {
-    font-size: 1rem;
-  }
-
-  .ritual-step {
-    min-width: 74px;
-  }
-
-  .ritual-step small {
-    display: none;
-  }
-
-  .ritual-step:not(:last-child)::after {
-    width: calc(100% - 34px);
-    left: calc(50% + 17px);
-  }
-
-  .app-shell {
-    width: min(100% - 28px, 640px);
-    padding-top: 38px;
-  }
-
-  .spread-selector,
-  .reading-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .spread-option {
-    min-height: 118px;
-    grid-template-columns: 74px 1fr;
-    align-items: center;
-    column-gap: 14px;
-  }
-
-  .spread-preview {
-    grid-row: span 2;
-  }
-
-  .spread-title,
-  .spread-option > small {
-    grid-column: 2;
-  }
-
-  .section-heading,
-  .reading-heading {
-    display: grid;
-  }
-
-  .selection-counter {
-    justify-content: flex-start;
-  }
-
-  .tarot-table {
-    min-height: 920px;
-    margin-inline: -14px;
-    border-right: 0;
-    border-left: 0;
-    border-radius: 90px 90px 0 0 / 50px 50px 0 0;
-    background-position: center, top center, center, center;
-    background-repeat: no-repeat;
-    background-size: 100% 100%, auto 340px, 100% 100%, auto;
-  }
-
-  .oracle-invitation {
-    top: 250px;
-    max-width: calc(100% - 36px);
-    padding-inline: 18px;
-    white-space: normal;
-  }
-
-  .card-field {
-    grid-template-columns: repeat(10, 44px);
-    gap: 8px;
-    padding: 326px 16px 38px;
-  }
-
-  .card-back {
-    width: 44px;
-    height: 66px;
-  }
-
-  .oracle-panel {
-    margin-right: -14px;
-    margin-left: -14px;
-    padding: 28px 20px;
-  }
-
-  .codex-request-box {
-    display: grid;
-  }
-}
-
-@media (max-width: 480px) {
-  .site-header {
-    padding: 0 12px;
-  }
-
-  .header-reset {
-    font-size: 0.68rem;
-  }
-
-  .ritual-step {
-    min-width: 54px;
-  }
-
-  .app-shell {
-    width: min(100% - 24px, 420px);
-    padding-top: 30px;
-  }
-
-  h1 {
-    font-size: clamp(2.1rem, 11vw, 3rem);
-  }
-
-  .intro-copy {
-    margin-bottom: 30px;
-  }
-
-  .intro-copy h1::before {
-    letter-spacing: 0.7em;
-  }
-
-  .intro-copy p {
-    font-size: 0.88rem;
-  }
-
-  .field-heading {
-    align-items: flex-start;
-  }
-
-  .field-heading > small {
-    max-width: 170px;
-    text-align: right;
-  }
-
-  textarea {
-    min-height: 138px;
-    padding: 17px;
-  }
-
-  .spread-option {
-    min-height: 112px;
-    padding: 15px;
-  }
-
-  .intro-action {
-    margin-top: 30px;
-  }
-
-  .primary-button {
-    width: min(100%, 310px);
-  }
-
-  .tarot-table {
-    min-height: 980px;
-    background-size: 100% 100%, auto 330px, 100% 100%, auto;
-  }
-
-  .oracle-invitation {
-    top: 236px;
-    width: calc(100% - 46px);
-    justify-content: center;
-    padding-inline: 10px;
-  }
-
-  .oracle-invitation p {
-    font-size: 0.64rem;
-  }
-
-  .card-field {
-    grid-template-columns: repeat(8, 38px);
-    gap: 7px 6px;
-    padding: 306px 12px 36px;
-  }
-
-  .card-back {
-    width: 38px;
-    height: 57px;
-    padding: 1px;
-  }
-
-  .selection-badge {
-    top: -8px;
-    right: -8px;
-    width: 20px;
-    height: 20px;
-    font-size: 0.6rem;
-  }
-
-  .section-heading h1,
-  .reading-heading h1 {
-    font-size: 2.25rem;
-  }
-
-  .reading-card {
-    padding-inline: 10px;
-  }
-
-  .tarot-card {
-    width: min(82vw, 270px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

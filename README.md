@@ -20,7 +20,7 @@ bun run dev
 
 http://127.0.0.1:4192/
 
-`Codexに聞く` はこのサーバーから `codex app-server` を子プロセスとして起動します。モデルは `gpt-6-astra`、推論強度は `medium` に固定しています。
+カードを開くと、このサーバーから `codex app-server` を子プロセスとして起動し、読み解きを取得します。モデルは `gpt-6-astra`、推論強度は `medium` に固定しています。
 
 ポートを変える場合:
 
@@ -34,7 +34,7 @@ PORT=4193 bun run server
 bun run dev:frontend
 ```
 
-この場合、`Codexに聞く` を使うには別ターミナルで `bun run server` も起動してください。
+この場合、カードの読み解きを使うには別ターミナルで `bun run server` も起動してください。
 
 ## Codex連携
 
@@ -48,3 +48,9 @@ bun run dev:frontend
 bun test
 bun run build
 ```
+
+## UIと画像
+
+LocalWebに合わせた白基調のシンプルなUIと、月明かり・藍色・金色をそろえたカード画像を使用しています。大アルカナ22点、小アルカナのスート別画像4点、裏面、導入の風景の全28点を `public/cards/` に保存しています。小アルカナ56枚はスートの画像にランクを重ねて区別します。
+
+制作方針と再制作用のプロンプトは [画像の制作方針](docs/image-direction.md) を参照してください。

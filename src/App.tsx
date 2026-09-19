@@ -76,13 +76,13 @@ const App = () => {
       <header className="site-header">
         <button className="brand" type="button" onClick={handleReset} aria-label="最初の画面へ戻る">
           <span className="brand-moon" aria-hidden="true">◐</span>
-          <span>Moonlit Tarot</span>
+          <span>Tarot Reflection</span>
         </button>
         <nav className="ritual-steps" aria-label="リーディングの進行">
-          {["問いを置く", "カードを選ぶ", "言葉を受け取る"].map((label, index) => {
+          {["相談を書く", "カードを選ぶ", "結果を読む"].map((label, index) => {
             const step = index + 1;
             return (
-              <div className={step === activeStep ? "ritual-step is-active" : step < activeStep ? "ritual-step is-done" : "ritual-step"} key={label}>
+              <div className={step === activeStep ? "ritual-step is-active" : step < activeStep ? "ritual-step is-done" : "ritual-step"} key={label} aria-current={step === activeStep ? "step" : undefined}>
                 <span>{step < activeStep ? "✓" : step}</span>
                 <small>{label}</small>
               </div>
@@ -128,7 +128,7 @@ const App = () => {
 
         {activeStep > 1 ? (
           <div className="reset-row">
-            <button className="text-button" type="button" onClick={handleReset}>卓を片づけて、別の問いを置く</button>
+            <button className="text-button" type="button" onClick={handleReset}>別の相談でカードを引く</button>
           </div>
         ) : null}
       </main>

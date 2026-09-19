@@ -21,14 +21,15 @@ export const QuestionForm = ({
   onShuffle,
 }: QuestionFormProps) => (
   <section className="intro-panel">
+    <img className="intro-landscape" src="/cards/selection_oracle.webp" alt="月明かりに照らされた静かな庭と水辺" />
     <div className="intro-copy">
-      <h1>今夜のカードに、胸の内をたずねる</h1>
+      <h1>カードを通して、気持ちを整理する</h1>
       <p>心にあるモヤモヤや気がかりを、ひとつだけ書き出してみましょう。</p>
     </div>
 
     <label className="field">
       <span className="field-heading">
-        <strong>問いかけ</strong>
+        <strong>相談したいこと</strong>
         <small>{question.length} / 300</small>
       </span>
       <textarea
@@ -43,8 +44,8 @@ export const QuestionForm = ({
 
     <div className="field spread-field">
       <span className="field-heading">
-        <strong>スプレッドを選ぶ</strong>
-        <small>カードの枚数で、読み解く深さが変わります</small>
+        <strong>カードの並べ方</strong>
+        <small>相談に合わせて選んでください</small>
       </span>
       <SpreadSelector spreads={spreads} selectedSpreadId={selectedSpreadId} onChange={onSpreadChange} />
     </div>
@@ -52,9 +53,9 @@ export const QuestionForm = ({
     <div className="intro-action">
       <button className="primary-button" type="button" disabled={!canShuffle} onClick={onShuffle}>
         <span>カードを混ぜる</span>
-        <span aria-hidden="true">✦</span>
+        <span aria-hidden="true">→</span>
       </button>
-      <small>{canShuffle ? "深呼吸をして、準備ができたら進みましょう" : "問いを置くと、カードを混ぜられます"}</small>
+      <small>{canShuffle ? "選んだカードをもとに、相談を読み解きます" : "相談を書くと進めます"}</small>
     </div>
   </section>
 );
