@@ -11,11 +11,11 @@
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-button, textarea { font: inherit; }
+button, textarea, input { font: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: .45; }
-button, textarea, summary { -webkit-tap-highlight-color: transparent; }
-button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid #87b3fa; outline-offset: 3px; }
+button, textarea, input, summary { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px solid #87b3fa; outline-offset: 3px; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: clamp(23px, 3vw, 30px); line-height: 1.5; letter-spacing: -.035em; font-weight: 650; }
 h2 { font-size: 21px; line-height: 1.5; }
@@ -30,8 +30,11 @@ p { line-height: 1.8; color: var(--muted); }
 .ritual-step small { font-size: 12px; white-space: nowrap; }
 .ritual-step.is-active { color: var(--primary); font-weight: 600; }
 .ritual-step.is-active > span { background: #e8f0ff; }
-.header-reset { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 8px 0; white-space: nowrap; }
-.header-spacer { display: none; }
+.ritual-steps.is-hidden { visibility: hidden; }
+.header-actions { display: flex; align-items: center; gap: 16px; }
+.header-reset, .header-catalog { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 8px 0; white-space: nowrap; }
+.header-catalog { color: #3f3f46; font-weight: 600; }
+.header-catalog:hover, .header-catalog.is-active { color: var(--primary); }
 .app-shell { width: min(100% - 48px, 1080px); margin: auto; padding: 40px 0 56px; }
 .intro-panel { max-width: 800px; margin: auto; }
 .intro-landscape { width: 100%; height: 176px; display: block; object-fit: cover; object-position: center 65%; border-radius: 8px; margin-bottom: 28px; }
@@ -122,6 +125,41 @@ textarea:focus { border-color: var(--primary); }
 .answer-markdown p { color: #3f3f46; margin: 12px 0; }
 .answer-markdown h2, .answer-markdown h3, .answer-markdown h4 { margin: 24px 0 12px; font-size: 17px; }
 .answer-markdown ul, .answer-markdown ol { padding-left: 24px; }
+.answer-markdown li { margin: 6px 0; color: #3f3f46; line-height: 1.8; }
+.catalog-panel { max-width: 1080px; margin: auto; }
+.catalog-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 28px; }
+.catalog-heading p { margin-top: 8px; font-size: 14px; }
+.catalog-heading .secondary-button { flex-shrink: 0; white-space: nowrap; }
+.catalog-controls { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+.catalog-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.catalog-filter { min-height: 36px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: #52525b; font-size: 12px; }
+.catalog-filter:hover { border-color: #a1a1aa; }
+.catalog-filter.is-active { border-color: var(--primary); background: #eef4ff; color: var(--primary); font-weight: 600; }
+.catalog-search { display: grid; gap: 6px; min-width: 210px; }
+.catalog-search span { color: var(--muted); font-size: 11px; }
+.catalog-search input { width: 100%; min-height: 38px; border: 1px solid #d4d4d8; border-radius: 7px; padding: 8px 11px; background: var(--surface); color: inherit; font-size: 13px; }
+.catalog-search input:focus { border-color: var(--primary); }
+.catalog-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; align-items: start; padding-top: 24px; }
+.catalog-count { margin-bottom: 12px; font-size: 12px; }
+.catalog-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.catalog-tile { min-width: 0; display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: inherit; text-align: left; content-visibility: auto; contain-intrinsic-size: 64px; }
+.catalog-tile:hover { border-color: #a1a1aa; }
+.catalog-tile.is-selected { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); background: #f7faff; }
+.catalog-tile img { width: 42px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 3px; background: #142033; }
+.catalog-tile span { min-width: 0; display: grid; gap: 3px; }
+.catalog-tile strong, .catalog-tile small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.catalog-tile strong { font-size: 12px; font-weight: 600; }
+.catalog-tile small { color: var(--muted); font-size: 9px; }
+.catalog-empty { padding: 32px 0; font-size: 13px; }
+.catalog-detail { position: sticky; top: 24px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.catalog-detail .tarot-card { max-width: 190px; margin: 12px auto 0; }
+.catalog-detail .card-meta { text-align: center; }
+.catalog-kicker { color: var(--primary); font-size: 11px; font-weight: 600; }
+.catalog-meanings { display: grid; gap: 16px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); }
+.catalog-meanings section + section { padding-top: 16px; border-top: 1px solid var(--line); }
+.catalog-meanings h2 { font-size: 14px; }
+.catalog-meanings p { margin-top: 6px; font-size: 12px; }
+.catalog-meanings .catalog-keywords { color: #3f3f46; font-weight: 600; }
 .hidden-prompt { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 20px; }
 .hidden-prompt summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .hidden-prompt p { font-size: 13px; margin: 12px 0; }
@@ -133,6 +171,8 @@ textarea:focus { border-color: var(--primary); }
   .site-header { flex-wrap: wrap; gap: 16px; padding: 16px 20px; }
   .ritual-steps { order: 3; width: 100%; justify-content: space-between; gap: 8px; }
   .header-reset { margin-left: auto; }
+  .header-actions { margin-left: auto; }
+  .ritual-steps.is-hidden { display: none; }
   .app-shell { width: calc(100% - 32px); padding-top: 24px; }
   .intro-landscape { height: 140px; margin-bottom: 24px; }
   .field-heading { flex-wrap: wrap; gap: 4px 12px; }
@@ -160,6 +200,15 @@ textarea:focus { border-color: var(--primary); }
   .oracle-panel .section-heading { flex-direction: column; }
   .reveal-action p { font-size: 12px; }
   .reveal-action .primary-button { gap: 12px; padding: 10px 16px; }
+  .catalog-heading { align-items: stretch; }
+  .catalog-controls { align-items: stretch; flex-direction: column; gap: 14px; }
+  .catalog-search { width: 100%; min-width: 0; }
+  .catalog-layout { grid-template-columns: 1fr; gap: 20px; }
+  .catalog-detail { position: static; order: -1; display: grid; grid-template-columns: minmax(130px, 180px) minmax(0, 1fr); gap: 0 20px; }
+  .catalog-detail .catalog-kicker { grid-column: 1 / -1; }
+  .catalog-detail .tarot-card { width: 100%; margin: 12px 0 0; }
+  .catalog-meanings { margin-top: 12px; padding-top: 0; border-top: 0; }
+  .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 380px) {
   .card-field { grid-template-columns: repeat(5, minmax(0, 1fr)); }
@@ -169,6 +218,10 @@ textarea:focus { border-color: var(--primary); }
   .reading-card { padding: 20px; }
   .position-copy { min-height: auto; margin-bottom: 16px; }
   .tarot-card { max-width: 250px; margin: auto; }
+  .catalog-heading { flex-direction: column; }
+  .catalog-detail { display: block; }
+  .catalog-detail .tarot-card { max-width: 180px; margin: 12px auto 0; }
+  .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

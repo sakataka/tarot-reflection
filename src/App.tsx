@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CardBackGrid } from "./components/CardBackGrid";
+import { CardCatalog } from "./components/CardCatalog";
 import { PromptBox } from "./components/PromptBox";
 import { QuestionForm } from "./components/QuestionForm";
 import { ReadingResult } from "./components/ReadingResult";
@@ -13,6 +14,7 @@ const App = () => {
   const [shuffledCards, setShuffledCards] = useState<DrawnCard[]>([]);
   const [selectedCards, setSelectedCards] = useState<SelectedCard[]>([]);
   const [reading, setReading] = useState<Reading | null>(null);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
 
   const selectedSpread = useMemo(
     () => spreads.find((spread) => spread.id === selectedSpreadId) ?? defaultSpread,
@@ -74,11 +76,11 @@ const App = () => {
   return (
     <div className="app">
       <header className="site-header">
-        <button className="brand" type="button" onClick={handleReset} aria-label="最初の画面へ戻る">
+        <button className="brand" type="button" onClick={() => { handleReset(); setIsCatalogOpen(false); }} aria-label="最初の画面へ戻る">
           <span className="brand-moon" aria-hidden="true">◐</span>
           <span>Tarot Reflection</span>
         </button>
-        <nav className="ritual-steps" aria-label="リーディングの進行">
+        <nav className={isCatalogOpen ? "ritual-steps is-hidden" : "ritual-steps"} aria-label="リーディングの進行">
           {["相談を書く", "カードを選ぶ", "結果を読む"].map((label, index) => {
             const step = index + 1;
             return (
@@ -89,15 +91,25 @@ const App = () => {
             );
           })}
         </nav>
-        {activeStep > 1 ? (
-          <button className="header-reset" type="button" onClick={handleReset}>最初から</button>
-        ) : (
-          <span className="header-spacer" />
-        )}
+        <div className="header-actions">
+          <button
+            className={isCatalogOpen ? "header-catalog is-active" : "header-catalog"}
+            type="button"
+            aria-pressed={isCatalogOpen}
+            onClick={() => setIsCatalogOpen((current) => !current)}
+          >
+            {isCatalogOpen ? "占いに戻る" : "カード図鑑"}
+          </button>
+          {activeStep > 1 && !isCatalogOpen ? (
+            <button className="header-reset" type="button" onClick={handleReset}>最初から</button>
+          ) : null}
+        </div>
       </header>
 
       <main className="app-shell">
-        {activeStep === 1 ? (
+        {isCatalogOpen ? (
+          <CardCatalog onClose={() => setIsCatalogOpen(false)} />
+        ) : activeStep === 1 ? (
           <QuestionForm
             question={question}
             spreads={spreads}
@@ -109,7 +121,7 @@ const App = () => {
           />
         ) : null}
 
-        {shuffledCards.length > 0 && !reading ? (
+        {!isCatalogOpen && shuffledCards.length > 0 && !reading ? (
           <CardBackGrid
             cards={shuffledCards}
             selectedCards={selectedCards}
@@ -119,14 +131,14 @@ const App = () => {
           />
         ) : null}
 
-        {reading ? (
+        {!isCatalogOpen && reading ? (
           <>
             <ReadingResult reading={reading} />
             <PromptBox reading={reading} />
           </>
         ) : null}
 
-        {activeStep > 1 ? (
+        {!isCatalogOpen && activeStep > 1 ? (
           <div className="reset-row">
             <button className="text-button" type="button" onClick={handleReset}>別の相談でカードを引く</button>
           </div>

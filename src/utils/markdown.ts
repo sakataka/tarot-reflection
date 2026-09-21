@@ -7,39 +7,58 @@ const escapeHtml = (value: string) =>
     .replaceAll("'", "&#39;");
 
 export const renderMarkdown = (markdown: string) => {
-  const blocks = markdown.trim().split(/\n{2,}/);
+  const output: string[] = [];
+  const lines = markdown.trim().replaceAll("\r\n", "\n").split("\n");
+  let paragraph: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let listItems: string[] = [];
 
-  return blocks
-    .map((block) => {
-      const trimmed = block.trim();
-      if (!trimmed) {
-        return "";
+  const flushParagraph = () => {
+    if (paragraph.length > 0) {
+      output.push(`<p>${paragraph.map(inlineMarkdown).join("<br />")}</p>`);
+      paragraph = [];
+    }
+  };
+
+  const flushList = () => {
+    if (listType) {
+      output.push(`<${listType}>${listItems.map((item) => `<li>${inlineMarkdown(item)}</li>`).join("")}</${listType}>`);
+      listType = null;
+      listItems = [];
+    }
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    const heading = /^(#{1,3})\s+(.+?)\s*#*$/.exec(line);
+    const unorderedItem = /^[-*]\s+(.+)$/.exec(line);
+    const orderedItem = /^\d+[.)]\s+(.+)$/.exec(line);
+
+    if (!line) {
+      flushParagraph();
+      flushList();
+    } else if (heading) {
+      flushParagraph();
+      flushList();
+      const level = Number(heading[1].length) + 1;
+      output.push(`<h${level}>${inlineMarkdown(heading[2])}</h${level}>`);
+    } else if (unorderedItem || orderedItem) {
+      flushParagraph();
+      const type = unorderedItem ? "ul" : "ol";
+      if (listType !== type) {
+        flushList();
+        listType = type;
       }
+      listItems.push((unorderedItem ?? orderedItem)?.[1] ?? "");
+    } else {
+      flushList();
+      paragraph.push(line);
+    }
+  }
 
-      if (trimmed.startsWith("### ")) {
-        return `<h4>${escapeHtml(trimmed.slice(4))}</h4>`;
-      }
-
-      if (trimmed.startsWith("## ")) {
-        return `<h3>${escapeHtml(trimmed.slice(3))}</h3>`;
-      }
-
-      if (trimmed.startsWith("# ")) {
-        return `<h2>${escapeHtml(trimmed.slice(2))}</h2>`;
-      }
-
-      const lines = trimmed.split("\n");
-      if (lines.every((line) => /^[-*]\s+/.test(line))) {
-        return `<ul>${lines.map((line) => `<li>${inlineMarkdown(line.replace(/^[-*]\s+/, ""))}</li>`).join("")}</ul>`;
-      }
-
-      if (lines.every((line) => /^\d+\.\s+/.test(line))) {
-        return `<ol>${lines.map((line) => `<li>${inlineMarkdown(line.replace(/^\d+\.\s+/, ""))}</li>`).join("")}</ol>`;
-      }
-
-      return `<p>${inlineMarkdown(trimmed).replaceAll("\n", "<br />")}</p>`;
-    })
-    .join("");
+  flushParagraph();
+  flushList();
+  return output.join("");
 };
 
 const inlineMarkdown = (value: string) =>
