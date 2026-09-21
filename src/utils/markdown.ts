@@ -11,7 +11,7 @@ export const renderMarkdown = (markdown: string) => {
   const lines = markdown.trim().replaceAll("\r\n", "\n").split("\n");
   let paragraph: string[] = [];
   let listType: "ul" | "ol" | null = null;
-  let listItems: string[] = [];
+  let listItems: string[][] = [];
 
   const flushParagraph = () => {
     if (paragraph.length > 0) {
@@ -22,7 +22,7 @@ export const renderMarkdown = (markdown: string) => {
 
   const flushList = () => {
     if (listType) {
-      output.push(`<${listType}>${listItems.map((item) => `<li>${inlineMarkdown(item)}</li>`).join("")}</${listType}>`);
+      output.push(`<${listType}>${listItems.map((item) => `<li>${item.map(inlineMarkdown).join("<br />")}</li>`).join("")}</${listType}>`);
       listType = null;
       listItems = [];
     }
@@ -36,7 +36,6 @@ export const renderMarkdown = (markdown: string) => {
 
     if (!line) {
       flushParagraph();
-      flushList();
     } else if (heading) {
       flushParagraph();
       flushList();
@@ -49,7 +48,9 @@ export const renderMarkdown = (markdown: string) => {
         flushList();
         listType = type;
       }
-      listItems.push((unorderedItem ?? orderedItem)?.[1] ?? "");
+      listItems.push([(unorderedItem ?? orderedItem)?.[1] ?? ""]);
+    } else if (listType && /^\s+/.test(rawLine) && listItems.length > 0) {
+      listItems[listItems.length - 1].push(line);
     } else {
       flushList();
       paragraph.push(line);

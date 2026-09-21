@@ -12,6 +12,14 @@ describe("renderMarkdown", () => {
       .toBe("<ol><li><strong>深呼吸する</strong></li><li>予定をひとつ減らす</li></ol>");
   });
 
+  test("keeps indented explanations and blank lines inside one ordered list", () => {
+    const markdown = "1. **目印を書く**  \n   終わりが分かる形にします。\n\n2. **十五分だけ始める**  \n   使うものだけ開きます。";
+
+    expect(renderMarkdown(markdown)).toBe(
+      "<ol><li><strong>目印を書く</strong><br />終わりが分かる形にします。</li><li><strong>十五分だけ始める</strong><br />使うものだけ開きます。</li></ol>",
+    );
+  });
+
   test("escapes HTML before applying supported markdown", () => {
     expect(renderMarkdown("<script>alert('x')</script>"))
       .toBe("<p>&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;</p>");
