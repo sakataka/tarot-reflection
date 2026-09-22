@@ -36,7 +36,7 @@ class LineReader {
   }
 }
 
-const CODEX_MODEL = "gpt-6-astra";
+const CODEX_MODEL = "gpt-6-sol";
 const CODEX_EFFORT = "medium";
 const encoder = new TextEncoder();
 
