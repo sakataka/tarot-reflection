@@ -1,4 +1,4 @@
-// 効果音は外部素材を使わず Web Audio で合成する。初期状態はオフで、ユーザー操作後にだけ鳴らす。
+// 効果音は外部素材を使わず Web Audio で合成する。初期状態はオンで、ユーザー操作後にだけ鳴らす。
 
 const storageKey = "tarot-reflection:sound";
 
@@ -8,9 +8,9 @@ let enabled = readStoredPreference();
 
 function readStoredPreference() {
   try {
-    return globalThis.localStorage?.getItem(storageKey) === "on";
+    return globalThis.localStorage?.getItem(storageKey) !== "off";
   } catch {
-    return false;
+    return true;
   }
 }
 

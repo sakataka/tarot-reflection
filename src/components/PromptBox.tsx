@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { invokeBackend, type CodexInterpretationResponse } from "../backendClient";
 import type { Reading } from "../types/tarot";
 import { renderMarkdown } from "../utils/markdown";
-import { generatePrompt } from "../utils/prompt";
 import { playChime } from "../utils/sound";
 
 type PromptBoxProps = {
@@ -20,25 +19,14 @@ const waitingWords = [
 ];
 
 export const PromptBox = ({ reading, isReady }: PromptBoxProps) => {
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [answerCopyState, setAnswerCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [isAskingCodex, setIsAskingCodex] = useState(false);
-  const prompt = useMemo(() => generatePrompt(reading), [reading]);
   const renderedAnswer = useMemo(() => renderMarkdown(answer), [answer]);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const showAnswer = isReady && Boolean(answer);
   const isWaiting = !error && !showAnswer;
-
-  const copyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setCopyState("copied");
-    } catch {
-      setCopyState("failed");
-    }
-  };
 
   const askFortuneTeller = async () => {
     setIsAskingCodex(true);
@@ -137,17 +125,6 @@ export const PromptBox = ({ reading, isReady }: PromptBoxProps) => {
         </div>
       ) : null}
 
-      <details className="hidden-prompt">
-        <summary>手動で読み解くためのプロンプト</summary>
-        <p>占い師を呼べないときは、このプロンプトをコピーしてお使いください。</p>
-        <button className="secondary-button" type="button" onClick={copyPrompt}>
-          {copyState === "copied" ? "コピーしました" : "プロンプトをコピー"}
-        </button>
-        {copyState === "failed" ? (
-          <p className="copy-fallback">コピーできませんでした。下のテキストを手動で選択してください。</p>
-        ) : null}
-        <textarea className="prompt-textarea" value={prompt} readOnly rows={12} />
-      </details>
     </section>
   );
 };
