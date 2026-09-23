@@ -4,7 +4,7 @@ export const spreads: Spread[] = [
   {
     id: "one-card",
     name: "1枚引き",
-    description: "今見るべきことを一枚の象徴で整理します。",
+    description: "一枚だけ引いて、いまのあなたに必要なひとことを受け取ります。",
     positions: [
       {
         id: "theme",
@@ -16,7 +16,7 @@ export const spreads: Spread[] = [
   {
     id: "three-card",
     name: "3枚引き",
-    description: "過去・現在・未来の流れを見る基本的なスプレッドです。",
+    description: "過去・現在・未来。流れのなかに、いまを置いて見つめます。",
     positions: [
       {
         id: "past",
@@ -38,7 +38,7 @@ export const spreads: Spread[] = [
   {
     id: "horseshoe-seven",
     name: "7枚ホースシュー",
-    description: "状況の背景から助言までをゆるやかにたどるスプレッドです。",
+    description: "蹄鉄の形に七枚。背景から行く先まで、じっくりとたどります。",
     positions: [
       {
         id: "past",

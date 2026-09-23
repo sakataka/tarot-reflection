@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { CardBackGrid } from "./components/CardBackGrid";
 import { CardCatalog } from "./components/CardCatalog";
-import { PromptBox } from "./components/PromptBox";
 import { QuestionForm } from "./components/QuestionForm";
-import { ReadingResult } from "./components/ReadingResult";
+import { ReadingStage } from "./components/ReadingStage";
 import { defaultSpread, spreads } from "./data/spreads";
 import type { DrawnCard, Reading, SelectedCard } from "./types/tarot";
+import { isSoundEnabled, playPick, playPlace, setSoundEnabled } from "./utils/sound";
 import { createReading, shuffleDeckForReading } from "./utils/tarot";
 
 const App = () => {
@@ -15,6 +15,8 @@ const App = () => {
   const [selectedCards, setSelectedCards] = useState<SelectedCard[]>([]);
   const [reading, setReading] = useState<Reading | null>(null);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [shuffleCount, setShuffleCount] = useState(0);
+  const [soundOn, setSoundOn] = useState(isSoundEnabled);
 
   const selectedSpread = useMemo(
     () => spreads.find((spread) => spread.id === selectedSpreadId) ?? defaultSpread,
@@ -23,38 +25,43 @@ const App = () => {
 
   const handleShuffle = () => {
     setShuffledCards(shuffleDeckForReading());
+    setShuffleCount((count) => count + 1);
     setSelectedCards([]);
     setReading(null);
   };
 
   const handleToggleCard = (drawnCard: DrawnCard) => {
-    setSelectedCards((currentSelectedCards) => {
-      const existing = currentSelectedCards.find((selectedCard) => selectedCard.card.id === drawnCard.card.id);
+    const existing = selectedCards.find((selectedCard) => selectedCard.card.id === drawnCard.card.id);
 
-      if (existing) {
-        return currentSelectedCards
+    if (existing) {
+      playPlace();
+      setSelectedCards(
+        selectedCards
           .filter((selectedCard) => selectedCard.card.id !== drawnCard.card.id)
           .map((selectedCard, index) => ({
             ...selectedCard,
             selectedOrder: index + 1,
-          }));
-      }
+          })),
+      );
+      return;
+    }
 
-      if (currentSelectedCards.length >= selectedSpread.positions.length) {
-        return currentSelectedCards;
-      }
+    if (selectedCards.length >= selectedSpread.positions.length) {
+      return;
+    }
 
-      return [
-        ...currentSelectedCards,
-        {
-          ...drawnCard,
-          selectedOrder: currentSelectedCards.length + 1,
-        },
-      ];
-    });
+    playPick();
+    setSelectedCards([
+      ...selectedCards,
+      {
+        ...drawnCard,
+        selectedOrder: selectedCards.length + 1,
+      },
+    ]);
   };
 
   const handleReveal = () => {
+    playPlace();
     setReading(createReading(question, selectedSpread, selectedCards));
   };
 
@@ -64,6 +71,13 @@ const App = () => {
     setShuffledCards([]);
     setSelectedCards([]);
     setReading(null);
+  };
+
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundEnabled(next);
+    setSoundOn(next);
+    if (next) playPick();
   };
 
   const canShuffle = question.trim().length > 0;
@@ -77,21 +91,32 @@ const App = () => {
     <div className="app">
       <header className="site-header">
         <button className="brand" type="button" onClick={() => { handleReset(); setIsCatalogOpen(false); }} aria-label="最初の画面へ戻る">
-          <span className="brand-moon" aria-hidden="true">◐</span>
+          <span className="brand-moon" aria-hidden="true">☾</span>
           <span>Tarot Reflection</span>
         </button>
         <nav className={isCatalogOpen ? "ritual-steps is-hidden" : "ritual-steps"} aria-label="リーディングの進行">
-          {["相談を書く", "カードを選ぶ", "結果を読む"].map((label, index) => {
+          {["問いを置く", "カードを引く", "言葉を受け取る"].map((label, index) => {
             const step = index + 1;
             return (
               <div className={step === activeStep ? "ritual-step is-active" : step < activeStep ? "ritual-step is-done" : "ritual-step"} key={label} aria-current={step === activeStep ? "step" : undefined}>
-                <span>{step < activeStep ? "✓" : step}</span>
+                <span>{["I", "II", "III"][index]}</span>
                 <small>{label}</small>
               </div>
             );
           })}
         </nav>
         <div className="header-actions">
+          <button
+            className={soundOn ? "header-sound is-on" : "header-sound"}
+            type="button"
+            aria-pressed={soundOn}
+            aria-label={soundOn ? "効果音を消す" : "効果音を鳴らす"}
+            title={soundOn ? "効果音：オン" : "効果音：オフ"}
+            onClick={toggleSound}
+          >
+            <span aria-hidden="true">♪</span>
+            <small>{soundOn ? "音あり" : "音なし"}</small>
+          </button>
           <button
             className={isCatalogOpen ? "header-catalog is-active" : "header-catalog"}
             type="button"
@@ -123,24 +148,23 @@ const App = () => {
 
         {!isCatalogOpen && shuffledCards.length > 0 && !reading ? (
           <CardBackGrid
+            key={shuffleCount}
             cards={shuffledCards}
             selectedCards={selectedCards}
             requiredCount={selectedSpread.positions.length}
             onToggleCard={handleToggleCard}
             onReveal={handleReveal}
+            onReshuffle={handleShuffle}
           />
         ) : null}
 
         {!isCatalogOpen && reading ? (
-          <>
-            <ReadingResult reading={reading} />
-            <PromptBox reading={reading} />
-          </>
+          <ReadingStage reading={reading} />
         ) : null}
 
         {!isCatalogOpen && activeStep > 1 ? (
           <div className="reset-row">
-            <button className="text-button" type="button" onClick={handleReset}>別の相談でカードを引く</button>
+            <button className="text-button" type="button" onClick={handleReset}>別の問いでカードを引く</button>
           </div>
         ) : null}
       </main>

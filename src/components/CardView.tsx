@@ -33,9 +33,10 @@ const minorRankLabel: Record<number, string> = {
 type CardViewProps = {
   card: TarotCard;
   orientation: Orientation;
+  faceDown?: boolean;
 };
 
-export const CardView = ({ card, orientation }: CardViewProps) => {
+export const CardView = ({ card, orientation, faceDown = false }: CardViewProps) => {
   const [imageFailed, setImageFailed] = useState(false);
   const meaning = orientation === "upright" ? card.upright : card.reversed;
   const shouldShowImage = !imageFailed;
@@ -44,39 +45,42 @@ export const CardView = ({ card, orientation }: CardViewProps) => {
   const rankLabel = minorRankLabel[card.number ?? 0] ?? "";
 
   return (
-    <article className="tarot-card">
-      <div className={`${orientation === "reversed" ? "card-face is-reversed" : "card-face"}${isMinor ? " minor-card-face" : ""}`}>
-        <div className="card-face-content">
-          {shouldShowImage ? (
-            <>
-              <img src={card.imagePath} alt={`${card.nameJa}のカード画像`} onError={() => setImageFailed(true)} />
-              {isMinor ? (
-                <div className={`minor-rank-overlay ${minorSuit}${(card.number ?? 0) > 10 ? " is-court" : ""}`} aria-hidden="true">
-                  <div className="minor-corner minor-corner-top">
-                    <strong>{rankLabel}</strong>
-                    <span>{suitLabel[minorSuit]}</span>
+    <article className={faceDown ? "tarot-card is-face-down" : "tarot-card"}>
+      <div className="card-flip">
+        <div className="card-flip-back" aria-hidden="true" />
+        <div aria-hidden={faceDown} className={`${orientation === "reversed" ? "card-face is-reversed" : "card-face"}${isMinor ? " minor-card-face" : ""}`}>
+          <div className="card-face-content">
+            {shouldShowImage ? (
+              <>
+                <img src={card.imagePath} alt={`${card.nameJa}のカード画像`} onError={() => setImageFailed(true)} />
+                {isMinor ? (
+                  <div className={`minor-rank-overlay ${minorSuit}${(card.number ?? 0) > 10 ? " is-court" : ""}`} aria-hidden="true">
+                    <div className="minor-corner minor-corner-top">
+                      <strong>{rankLabel}</strong>
+                      <span>{suitLabel[minorSuit]}</span>
+                    </div>
+                    <div className="minor-rank-center">
+                      <span>{rankLabel}</span>
+                    </div>
+                    <div className="minor-corner minor-corner-bottom">
+                      <strong>{rankLabel}</strong>
+                      <span>{suitLabel[minorSuit]}</span>
+                    </div>
                   </div>
-                  <div className="minor-rank-center">
-                    <span>{rankLabel}</span>
-                  </div>
-                  <div className="minor-corner minor-corner-bottom">
-                    <strong>{rankLabel}</strong>
-                    <span>{suitLabel[minorSuit]}</span>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <div className={`fallback-card ${card.suit ?? "major"}`}>
-              <span>{card.arcana === "major" ? "Major" : suitLabel[card.suit ?? "wands"]}</span>
-              <strong>{card.nameJa}</strong>
-              <small>{card.nameEn}</small>
-              <em>{meaning.keywords.slice(0, 3).join(" / ")}</em>
-            </div>
-          )}
+                ) : null}
+              </>
+            ) : (
+              <div className={`fallback-card ${card.suit ?? "major"}`}>
+                <span>{card.arcana === "major" ? "Major" : suitLabel[card.suit ?? "wands"]}</span>
+                <strong>{card.nameJa}</strong>
+                <small>{card.nameEn}</small>
+                <em>{meaning.keywords.slice(0, 3).join(" / ")}</em>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      <div className="card-meta">
+      <div className="card-meta" aria-hidden={faceDown}>
         <p className="card-number">
           {card.arcana === "major" ? String(card.number ?? 0).padStart(2, "0") : card.suit?.slice(0, 1).toUpperCase()}
         </p>
