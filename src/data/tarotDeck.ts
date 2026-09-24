@@ -78,7 +78,7 @@ const majorArcana: TarotCard[] = majorSeeds.map((seed) => ({
     keywords: seed.reversed,
     shortMeaning: seed.reversedMeaning,
   },
-  imagePath: `/cards/major_${padMajor(seed.number)}_${seed.slug}.webp`,
+  imagePath: `cards/major_${padMajor(seed.number)}_${seed.slug}.webp`,
 }));
 
 const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((suit) =>
@@ -99,7 +99,7 @@ const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((su
         keywords: [...rank.reversed, `${suitLabel.theme}の見直し`],
         shortMeaning: `${suitLabel.theme}に関して、${rank.reversed.join("・")}に注意が必要な状態を示す。`,
       },
-      imagePath: `/cards/minor_${suitLabel.imagePrefix}.webp`,
+      imagePath: `cards/minor_${suitLabel.imagePrefix}.webp`,
     };
   }),
 );

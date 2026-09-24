@@ -41,7 +41,7 @@ export async function streamBackend(
   args: BackendCommandArgs,
   { onDelta, signal }: { onDelta: (text: string) => void; signal?: AbortSignal },
 ): Promise<void> {
-  const response = await fetch(`/api/${command}`, {
+  const response = await fetch(`api/${command}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

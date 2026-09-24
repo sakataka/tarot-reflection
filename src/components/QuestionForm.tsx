@@ -22,7 +22,7 @@ export const QuestionForm = ({
 }: QuestionFormProps) => (
   <section className="intro-panel">
     <div className="intro-landscape">
-      <img src="/cards/selection_oracle.webp" alt="月明かりに照らされた静かな庭と水辺" />
+      <img src="cards/selection_oracle.webp" alt="月明かりに照らされた静かな庭と水辺" />
     </div>
     <div className="intro-copy">
       <p className="moon-phases" aria-hidden="true">
