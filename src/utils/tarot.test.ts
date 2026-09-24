@@ -5,7 +5,7 @@ import { tarotDeck } from "../data/tarotDeck";
 import { spreads } from "../data/spreads";
 import type { SelectedCard } from "../types/tarot";
 import type { RandomSource } from "./random";
-import { buildReadingCards, shuffleDeckForReading, validateDeck } from "./tarot";
+import { buildReadingCards, cutDeck, shuffleDeckForReading, validateDeck } from "./tarot";
 
 const deterministicRandom =
   (values: number[]): RandomSource => {
@@ -87,5 +87,15 @@ describe("reading helpers", () => {
   test("rejects selected card counts that do not match the spread", () => {
     expect(() => buildReadingCards(spreads[2], [{ card: tarotDeck[0], orientation: "upright", selectedOrder: 1 }]))
       .toThrow("Selected card count must be 7.");
+  });
+});
+
+describe("cutDeck", () => {
+  test("puts the chosen pile on top and keeps the rest in order", () => {
+    const cards = [1, 2, 3, 4, 5, 6, 7];
+    expect(cutDeck(cards, 1)).toEqual([4, 5, 6, 1, 2, 3, 7]);
+    expect(cutDeck(cards, 2)).toEqual([7, 1, 2, 3, 4, 5, 6]);
+    expect(cutDeck(tarotDeck, 0)).toEqual([...tarotDeck]);
+    expect(new Set(cutDeck(tarotDeck, 2)).size).toBe(78);
   });
 });

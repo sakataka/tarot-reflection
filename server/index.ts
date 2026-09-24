@@ -7,19 +7,14 @@ const distDir = resolve(import.meta.dir, "..", "dist");
 
 type ApiPayload = Record<string, unknown>;
 
-Bun.serve({
+const server = Bun.serve({
   hostname: "127.0.0.1",
   port,
   async fetch(request) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/api/interpret") {
-      return handleApi(request, async () => {
-        const body = await request.json().catch(() => null);
-        const prompt = buildPromptFromInterpretationInput(body);
-        const answer = await askCodexAppServer(prompt);
-        return { answer };
-      });
+    if (url.pathname === "/api/interpret/stream") {
+      return handleInterpretStream(request);
     }
 
     if (url.pathname.startsWith("/api/")) {
@@ -30,19 +25,59 @@ Bun.serve({
   },
 });
 
-console.log(`Tarot Reflection local server listening on http://127.0.0.1:${port}/`);
+console.log(`Tarot Reflection local server listening on http://127.0.0.1:${server.port}/`);
 
-async function handleApi(request: Request, handler: () => Promise<ApiPayload>) {
+// 占い師の語りを NDJSON で一行ずつ返す。{type:"delta"} を重ね、最後に done か error が届く。
+async function handleInterpretStream(request: Request) {
   if (request.method !== "POST") {
     return jsonResponse({ error: "Method not allowed." }, 405);
   }
 
+  let prompt: string;
   try {
-    return jsonResponse(await handler());
+    prompt = buildPromptFromInterpretationInput(await request.json().catch(() => null));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "API request failed.";
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
   }
+
+  const abort = new AbortController();
+  request.signal.addEventListener("abort", () => abort.abort(), { once: true });
+  const encoder = new TextEncoder();
+
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const emit = (event: ApiPayload) => {
+        if (abort.signal.aborted) return;
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
+
+      // 考え込んでいるあいだも接続が切られないよう、ときどき合図を送る。
+      const heartbeat = setInterval(() => emit({ type: "wait" }), 5000);
+
+      try {
+        await askCodexAppServer(prompt, {
+          signal: abort.signal,
+          onDelta: (text) => emit({ type: "delta", text }),
+        });
+        emit({ type: "done" });
+      } catch (error) {
+        emit({ type: "error", message: error instanceof Error ? error.message : "API request failed." });
+      } finally {
+        clearInterval(heartbeat);
+        if (!abort.signal.aborted) controller.close();
+      }
+    },
+    cancel() {
+      abort.abort();
+    },
+  });
+
+  return new Response(body, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 function jsonResponse(payload: ApiPayload, status = 200) {

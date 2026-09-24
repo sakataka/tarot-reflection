@@ -11,6 +11,16 @@ export const shuffleDeckForReading = (
     orientation: randomOrientation(random),
   }));
 
+export const cutPileCount = 3;
+
+// 山を三つに分け、選ばれた山を一番上に載せ、残りをその下へ元の順で重ねる。
+export const cutDeck = <T,>(cards: readonly T[], pileIndex: number, pileCount = cutPileCount): T[] => {
+  const pileSize = Math.ceil(cards.length / pileCount);
+  const piles = Array.from({ length: pileCount }, (_, index) => cards.slice(index * pileSize, (index + 1) * pileSize));
+  const chosen = piles[pileIndex] ?? [];
+  return [...chosen, ...piles.filter((_, index) => index !== pileIndex).flat()];
+};
+
 export const buildReadingCards = (spread: Spread, selectedCards: readonly SelectedCard[]): ReadingCard[] => {
   if (selectedCards.length !== spread.positions.length) {
     throw new Error(`Selected card count must be ${spread.positions.length}.`);

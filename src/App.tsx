@@ -6,7 +6,7 @@ import { ReadingStage } from "./components/ReadingStage";
 import { defaultSpread, spreads } from "./data/spreads";
 import type { DrawnCard, Reading, SelectedCard } from "./types/tarot";
 import { isSoundEnabled, playPick, playPlace, setSoundEnabled } from "./utils/sound";
-import { createReading, shuffleDeckForReading } from "./utils/tarot";
+import { createReading, cutDeck, shuffleDeckForReading } from "./utils/tarot";
 
 const App = () => {
   const [question, setQuestion] = useState("");
@@ -28,6 +28,15 @@ const App = () => {
     setShuffleCount((count) => count + 1);
     setSelectedCards([]);
     setReading(null);
+  };
+
+  // 混ぜる手を止めた瞬間の並びで、山が決まる。
+  const handleStopShuffle = () => {
+    setShuffledCards(shuffleDeckForReading());
+  };
+
+  const handleCut = (pileIndex: number) => {
+    setShuffledCards((cards) => cutDeck(cards, pileIndex));
   };
 
   const handleToggleCard = (drawnCard: DrawnCard) => {
@@ -152,6 +161,8 @@ const App = () => {
             cards={shuffledCards}
             selectedCards={selectedCards}
             requiredCount={selectedSpread.positions.length}
+            onStopShuffle={handleStopShuffle}
+            onCut={handleCut}
             onToggleCard={handleToggleCard}
             onReveal={handleReveal}
             onReshuffle={handleShuffle}

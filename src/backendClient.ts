@@ -1,27 +1,5 @@
 type BackendCommandArgs = Record<string, unknown>;
 
-export type CodexInterpretationResponse = {
-  answer: string;
-};
-
-export async function invokeBackend<T = unknown>(command: string, args: BackendCommandArgs = {}): Promise<T> {
-  const response = await fetch(`/api/${command}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(args),
-  });
-  const responseText = await response.text();
-  const payload = parseJson(responseText);
-
-  if (!response.ok) {
-    throw new Error(extractBackendError(payload) || buildBackendError(response.status, responseText));
-  }
-
-  return payload as T;
-}
-
 function parseJson(responseText: string): unknown {
   if (!responseText.trim()) {
     return null;
@@ -53,4 +31,51 @@ function buildBackendError(status: number, responseText: string) {
   }
 
   return responseText.trim() || `API request failed: ${status}`;
+}
+
+type StreamEvent = { type: "delta"; text: string } | { type: "done" } | { type: "error"; message: string } | { type: "wait" };
+
+// 占い師の語りを届いた分から受け取る。onDelta は差分ごとに呼ばれ、最後まで届くと resolve する。
+export async function streamBackend(
+  command: string,
+  args: BackendCommandArgs,
+  { onDelta, signal }: { onDelta: (text: string) => void; signal?: AbortSignal },
+): Promise<void> {
+  const response = await fetch(`/api/${command}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(args),
+    signal,
+  });
+
+  if (!response.ok || !response.body) {
+    const responseText = await response.text();
+    throw new Error(extractBackendError(parseJson(responseText)) || buildBackendError(response.status, responseText));
+  }
+
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += value;
+
+    let lineEnd = buffer.indexOf("\n");
+    while (lineEnd >= 0) {
+      const line = buffer.slice(0, lineEnd).trim();
+      buffer = buffer.slice(lineEnd + 1);
+      lineEnd = buffer.indexOf("\n");
+      if (!line) continue;
+
+      const event = parseJson(line) as StreamEvent | null;
+      if (event?.type === "delta") onDelta(event.text);
+      else if (event?.type === "error") throw new Error(event.message);
+      else if (event?.type === "done") return;
+    }
+  }
+
+  throw new Error("占い師の言葉が途中で途切れました。");
 }

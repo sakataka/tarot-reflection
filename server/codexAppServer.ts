@@ -40,7 +40,13 @@ const CODEX_MODEL = "gpt-6-sol";
 const CODEX_EFFORT = "medium";
 const encoder = new TextEncoder();
 
-export async function askCodexAppServer(prompt: string): Promise<string> {
+type AskOptions = {
+  // 占い師の語りを、届いた分から順に画面へ流すための受け口。
+  onDelta?: (text: string) => void;
+  signal?: AbortSignal;
+};
+
+export async function askCodexAppServer(prompt: string, { onDelta, signal }: AskOptions = {}): Promise<string> {
   if (!prompt.trim()) {
     throw new Error("Codexに渡す質問文が空です。");
   }
@@ -55,6 +61,10 @@ export async function askCodexAppServer(prompt: string): Promise<string> {
     child.kill();
     throw new Error("Codex App Serverの標準入出力を開けませんでした。");
   }
+
+  // 画面を閉じた・別の問いへ移ったときは、途中でも子プロセスを止める。
+  const stopChild = () => child.kill();
+  signal?.addEventListener("abort", stopChild, { once: true });
 
   const stderrPromise = readStderr(child.stderr);
   const writer = child.stdin;
@@ -79,7 +89,7 @@ export async function askCodexAppServer(prompt: string): Promise<string> {
     await send(writer, { method: "thread/start", id: 1, params: { model: CODEX_MODEL } });
 
     const threadId = await waitForThreadId(reader);
-    const firstTurn = await runTurn(reader, writer, 2, threadId, prompt);
+    const firstTurn = await runTurn(reader, writer, 2, threadId, prompt, onDelta);
     await writer.end();
 
     child.kill();
@@ -99,6 +109,8 @@ export async function askCodexAppServer(prompt: string): Promise<string> {
     child.kill();
     await child.exited.catch(() => undefined);
     throw error;
+  } finally {
+    signal?.removeEventListener("abort", stopChild);
   }
 }
 
@@ -126,6 +138,7 @@ async function runTurn(
   requestId: number,
   threadId: string,
   prompt: string,
+  onDelta?: (text: string) => void,
 ): Promise<TurnOutput> {
   await send(writer, {
     method: "turn/start",
@@ -147,10 +160,14 @@ async function runTurn(
 
     const method = typeof message.method === "string" ? message.method : "";
     if (method === "item/agentMessage/delta") {
-      deltaAnswer += extractDelta(message);
+      const delta = extractDelta(message);
+      deltaAnswer += delta;
+      if (delta) onDelta?.(delta);
     } else if (method === "item/completed" && !deltaAnswer) {
       completedAnswer += extractCompletedAgentMessage(message);
     } else if (method === "turn/completed") {
+      // 差分が一度も届かなかった場合だけ、完成した本文をまとめて流す。
+      if (!deltaAnswer && completedAnswer) onDelta?.(completedAnswer);
       break;
     }
   }

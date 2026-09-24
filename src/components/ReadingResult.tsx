@@ -8,11 +8,11 @@ const orientationLabel = {
 
 type ReadingResultProps = {
   reading: Reading;
-  revealedCount: number;
+  revealed: boolean[];
   onRevealAll?: () => void;
 };
 
-export const ReadingResult = ({ reading, revealedCount, onRevealAll }: ReadingResultProps) => (
+export const ReadingResult = ({ reading, revealed, onRevealAll }: ReadingResultProps) => (
   <section className="reading-panel">
     <div className="reading-heading">
       <p className="ornament-kicker">あなたの問い</p>
@@ -28,13 +28,12 @@ export const ReadingResult = ({ reading, revealedCount, onRevealAll }: ReadingRe
       {reading.cards.map((readingCard, index) => {
         const meaning =
           readingCard.orientation === "upright" ? readingCard.card.upright : readingCard.card.reversed;
-        const isRevealed = index < revealedCount;
+        const isRevealed = revealed[index] ?? false;
 
         return (
           <article
             className={isRevealed ? "reading-card is-revealed" : "reading-card"}
             key={readingCard.position.id}
-            aria-live="polite"
           >
             <div className="position-copy">
               <p className="position-index">{["I", "II", "III", "IV", "V", "VI", "VII"][index]}</p>
@@ -54,7 +53,7 @@ export const ReadingResult = ({ reading, revealedCount, onRevealAll }: ReadingRe
 
     {onRevealAll ? (
       <div className="reveal-skip">
-        <button className="text-button" type="button" onClick={onRevealAll}>すべてのカードを表に返す</button>
+        <button className="text-button" type="button" onClick={onRevealAll}>語りを待たずに、すべて表に返す</button>
       </div>
     ) : null}
   </section>
