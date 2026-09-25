@@ -10,7 +10,7 @@
 bun install
 ```
 
-通常はこちらを使います。画面表示とCodex App Server連携APIが同じ `4192` 番で動きます。
+通常はこちらを使います。画面表示とCodex連携APIが同じ `4192` 番で動きます。
 
 ```sh
 bun run dev
@@ -20,7 +20,7 @@ bun run dev
 
 http://127.0.0.1:4192/
 
-カードを卓に置くと、このサーバーから `codex app-server` を子プロセスとして起動し、読み解きを `/api/interpret/stream` から少しずつ受け取ります。モデルは `gpt-6-sol`、推論強度は `medium` に固定しています。
+カードを卓に置くと、このサーバーから `codex exec --ephemeral --json` を起動し、読み解きを `/api/interpret/stream` で受け取ります。Codexのセッション履歴は保存されません。モデルは `gpt-6-sol`、推論強度は `medium` に固定しています。完成した本文が届いてから、画面上では語りとカードを順に表示します。
 
 ポートを変える場合:
 
@@ -40,6 +40,7 @@ bun run dev:frontend
 
 - フロントエンドにAPIキーは置きません。
 - 事前にCodex CLIへログインしておく必要があります。
+- ChatGPTログインを使用し、APIキーによる課金経路は使用しません。
 - 読み解きの取得に失敗した場合は、画面から再試行できます。
 
 ## 検証

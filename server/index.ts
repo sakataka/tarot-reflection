@@ -1,5 +1,5 @@
 import { relative, resolve, sep } from "node:path";
-import { askCodexAppServer } from "./codexAppServer";
+import { askCodex } from "./codexCli";
 import { buildPromptFromInterpretationInput } from "./interpretationRequest";
 
 const port = Number(process.env.PORT ?? 4192);
@@ -55,7 +55,7 @@ async function handleInterpretStream(request: Request) {
       const heartbeat = setInterval(() => emit({ type: "wait" }), 5000);
 
       try {
-        await askCodexAppServer(prompt, {
+        await askCodex(prompt, {
           signal: abort.signal,
           onDelta: (text) => emit({ type: "delta", text }),
         });
