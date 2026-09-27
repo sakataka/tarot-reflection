@@ -4,6 +4,8 @@ export type Arcana = "major" | "minor";
 
 export type Suit = "wands" | "cups" | "swords" | "pentacles";
 
+export type Element = "fire" | "water" | "air" | "earth";
+
 export type CardMeaning = {
   keywords: string[];
   shortMeaning: string;
@@ -19,6 +21,8 @@ export type TarotCard = {
   upright: CardMeaning;
   reversed: CardMeaning;
   imagePath: string;
+  // 小アルカナでスート共通の絵を使っているとき true。数字を絵の上に重ねて区別する。
+  sharedArt?: boolean;
 };
 
 export type SpreadPosition = {
@@ -53,5 +57,9 @@ export type Reading = {
   question: string;
   spread: Spread;
   cards: ReadingCard[];
+  // 混ぜている途中で表向きにこぼれたカード。卓の端に最初から表で置く。
+  jumper: ReadingCard | null;
+  // 引き終えた山の一番下のカード。最後に占い師がめくる。
+  root: ReadingCard | null;
   createdAt: string;
 };

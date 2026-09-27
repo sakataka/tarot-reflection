@@ -5,7 +5,7 @@ import { tarotDeck } from "../data/tarotDeck";
 import { spreads } from "../data/spreads";
 import type { SelectedCard } from "../types/tarot";
 import type { RandomSource } from "./random";
-import { buildReadingCards, cutDeck, shuffleDeckForReading, validateDeck } from "./tarot";
+import { buildReadingCards, createReading, cutDeck, findRootCard, settleShuffle, shuffleDeckForReading, tableCards, validateDeck } from "./tarot";
 
 const deterministicRandom =
   (values: number[]): RandomSource => {
@@ -39,16 +39,16 @@ describe("tarot deck", () => {
     expect(missingImages).toEqual([]);
   });
 
-  test("shares one production image per minor arcana suit", () => {
-    const minorImagePaths = new Set(
-      tarotDeck.filter((card) => card.arcana === "minor").map((card) => card.imagePath),
-    );
-    const missingImages = [...minorImagePaths].filter(
+  test("has a production image for every minor arcana card, shared per suit or its own", () => {
+    const minorCards = tarotDeck.filter((card) => card.arcana === "minor");
+    const missingImages = [...new Set(minorCards.map((card) => card.imagePath))].filter(
       (imagePath) => !existsSync(resolve(import.meta.dir, "../../public", imagePath.replace(/^\//, ""))),
     );
 
-    expect(minorImagePaths.size).toBe(4);
     expect(missingImages).toEqual([]);
+    for (const card of minorCards) {
+      expect(card.imagePath).toBe(card.sharedArt ? `cards/minor_${card.suit}.webp` : `cards/${card.id}.webp`);
+    }
   });
 });
 
@@ -87,6 +87,25 @@ describe("reading helpers", () => {
   test("rejects selected card counts that do not match the spread", () => {
     expect(() => buildReadingCards(spreads[2], [{ card: tarotDeck[0], orientation: "upright", selectedOrder: 1 }]))
       .toThrow("Selected card count must be 7.");
+  });
+});
+
+describe("table extras", () => {
+  test("sometimes drops a jumper out of the deck", () => {
+    const settled = settleShuffle(tarotDeck, deterministicRandom([0.1]));
+    expect(settled.jumper).not.toBeNull();
+    expect(settled.cards).toHaveLength(77);
+    expect(settled.cards.some((drawnCard) => drawnCard.card.id === settled.jumper?.card.id)).toBe(false);
+    expect(settleShuffle(tarotDeck, deterministicRandom([0.9])).jumper).toBeNull();
+  });
+
+  test("takes the bottom card of the deck, skipping drawn cards, and flips it last", () => {
+    const deck = shuffleDeckForReading(tarotDeck.slice(0, 5), deterministicRandom([0.3, 0.6]));
+    const selected: SelectedCard[] = [{ ...deck[4], selectedOrder: 1 }];
+    expect(findRootCard(deck, selected)?.card.id).toBe(deck[3].card.id);
+
+    const reading = createReading("問い", spreads[0], selected, { deck, createdAt: "2026-09-27T12:00:00.000Z" });
+    expect(tableCards(reading).map((readingCard) => readingCard.position.id)).toEqual(["theme", "root"]);
   });
 });
 

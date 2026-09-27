@@ -1,4 +1,4 @@
-import type { Spread } from "../types/tarot";
+import type { Spread, SpreadPosition } from "../types/tarot";
 
 export const spreads: Spread[] = [
   {
@@ -80,3 +80,16 @@ export const spreads: Spread[] = [
 ];
 
 export const defaultSpread = spreads[1];
+
+// スプレッドの外に置かれるカード。どの並べ方でも同じ役割で読む。
+export const jumperPosition: SpreadPosition = {
+  id: "jumper",
+  name: "こぼれたカード",
+  role: "混ぜている途中で自ら飛び出した、見落とさないでほしい知らせ",
+};
+
+export const rootPosition: SpreadPosition = {
+  id: "root",
+  name: "山の底",
+  role: "問いの底に静かに流れているもの",
+};

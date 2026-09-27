@@ -1,4 +1,6 @@
 import type { Spread } from "../types/tarot";
+import type { ReadingRecord } from "../utils/history";
+import type { MoonPhase } from "../utils/moment";
 import { SpreadSelector } from "./SpreadSelector";
 
 type QuestionFormProps = {
@@ -6,6 +8,10 @@ type QuestionFormProps = {
   spreads: Spread[];
   selectedSpreadId: string;
   canShuffle: boolean;
+  moon: MoonPhase;
+  isNight: boolean;
+  sameNightReading?: ReadingRecord;
+  onOpenRecord: (record: ReadingRecord) => void;
   onQuestionChange: (question: string) => void;
   onSpreadChange: (spreadId: string) => void;
   onShuffle: () => void;
@@ -16,6 +22,10 @@ export const QuestionForm = ({
   spreads,
   selectedSpreadId,
   canShuffle,
+  moon,
+  isNight,
+  sameNightReading,
+  onOpenRecord,
   onQuestionChange,
   onSpreadChange,
   onShuffle,
@@ -26,10 +36,13 @@ export const QuestionForm = ({
     </div>
     <div className="intro-copy">
       <p className="moon-phases" aria-hidden="true">
-        <span>☽</span><span>◐</span><span>●</span><span>◑</span><span>☾</span>
+        <span>☽</span><span>◐</span><span>{moon.glyph}</span><span>◑</span><span>☾</span>
       </p>
       <p className="ornament-kicker">Moonlit Tarot</p>
       <h1>今夜のカードに、<br className="mobile-break" />胸の内をたずねる</h1>
+      <p className="tonight-moon">
+        {isNight ? "今夜" : "今日"}は<strong>{moon.name}</strong>。{moon.mood}。
+      </p>
       <p>ようこそ。灯りを少し落としましょう。<br />いま心にかかっていることを、ひとつだけ聞かせてください。</p>
     </div>
 
@@ -56,13 +69,24 @@ export const QuestionForm = ({
       <SpreadSelector spreads={spreads} selectedSpreadId={selectedSpreadId} onChange={onSpreadChange} />
     </div>
 
+    {sameNightReading ? (
+      <div className="same-night" role="status">
+        <p>
+          その問いには、{isNight ? "今夜" : "今日"}すでにカードが答えています。同じ問いを同じ夜に二度たずねると、カードの声はかえって濁ってしまうもの。夜が明けるまで、受け取った言葉のほうを持ち帰ってください。
+        </p>
+        <button className="secondary-button" type="button" onClick={() => onOpenRecord(sameNightReading)}>
+          そのときの言葉を読み返す
+        </button>
+      </div>
+    ) : null}
+
     <div className="intro-action">
-      <button className="primary-button" type="button" disabled={!canShuffle} onClick={onShuffle}>
+      <button className="primary-button" type="button" disabled={!canShuffle || Boolean(sameNightReading)} onClick={onShuffle}>
         <span aria-hidden="true">✦</span>
         <span>カードを混ぜる</span>
         <span aria-hidden="true">✦</span>
       </button>
-      <small>{canShuffle ? "問いを胸に置いたまま、どうぞ" : "問いを書くと、カードを混ぜられます"}</small>
+      <small>{sameNightReading ? "別の問いなら、いつでもどうぞ" : canShuffle ? "問いを胸に置いたまま、どうぞ" : "問いを書くと、カードを混ぜられます"}</small>
     </div>
   </section>
 );

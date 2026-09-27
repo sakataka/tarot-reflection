@@ -1,11 +1,17 @@
 import { relative, resolve, sep } from "node:path";
 import { askCodex } from "./codexCli";
 import { buildPromptFromInterpretationInput } from "./interpretationRequest";
+import { createReadingStore } from "./readingStore";
 
 const port = Number(process.env.PORT ?? 4192);
 const distDir = resolve(import.meta.dir, "..", "dist");
 
 type ApiPayload = Record<string, unknown>;
+
+const store = createReadingStore();
+// 占い師が覚えている範囲。古すぎる話や、たくさんの話は持ち出さない。
+const memoryDays = 45;
+const memoryCount = 3;
 
 const server = Bun.serve({
   hostname: "127.0.0.1",
@@ -15,6 +21,17 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/interpret/stream") {
       return handleInterpretStream(request);
+    }
+
+    if (url.pathname === "/api/readings") {
+      return handleReadings(request);
+    }
+
+    const readingMatch = url.pathname.match(/^\/api\/readings\/([\w-]+)$/);
+    if (readingMatch && request.method === "DELETE") {
+      return (await store.remove(readingMatch[1]))
+        ? jsonResponse({ ok: true })
+        : jsonResponse({ error: "Reading not found." }, 404);
     }
 
     if (url.pathname.startsWith("/api/")) {
@@ -35,7 +52,11 @@ async function handleInterpretStream(request: Request) {
 
   let prompt: string;
   try {
-    prompt = buildPromptFromInterpretationInput(await request.json().catch(() => null));
+    const since = Date.now() - memoryDays * 86_400_000;
+    const pastReadings = (await store.list().catch(() => []))
+      .filter((record) => Date.parse(record.createdAt) >= since)
+      .slice(0, memoryCount);
+    prompt = buildPromptFromInterpretationInput(await request.json().catch(() => null), pastReadings);
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
   }
@@ -78,6 +99,20 @@ async function handleInterpretStream(request: Request) {
       "Cache-Control": "no-store",
     },
   });
+}
+
+async function handleReadings(request: Request) {
+  if (request.method === "GET") {
+    return jsonResponse({ readings: await store.list() });
+  }
+  if (request.method === "POST") {
+    try {
+      return jsonResponse({ reading: await store.add(await request.json().catch(() => null)) });
+    } catch (error) {
+      return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
+    }
+  }
+  return jsonResponse({ error: "Method not allowed." }, 405);
 }
 
 function jsonResponse(payload: ApiPayload, status = 200) {

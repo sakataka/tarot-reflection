@@ -59,9 +59,11 @@ export const CardView = ({ card, orientation, faceDown = false }: CardViewProps)
                       <strong>{rankLabel}</strong>
                       <span>{suitLabel[minorSuit]}</span>
                     </div>
-                    <div className="minor-rank-center">
-                      <span>{rankLabel}</span>
-                    </div>
+                    {card.sharedArt ? (
+                      <div className="minor-rank-center">
+                        <span>{rankLabel}</span>
+                      </div>
+                    ) : null}
                     <div className="minor-corner minor-corner-bottom">
                       <strong>{rankLabel}</strong>
                       <span>{suitLabel[minorSuit]}</span>

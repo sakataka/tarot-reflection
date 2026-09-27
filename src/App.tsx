@@ -1,20 +1,31 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { requestBackend } from "./backendClient";
 import { CardBackGrid } from "./components/CardBackGrid";
 import { CardCatalog } from "./components/CardCatalog";
 import { QuestionForm } from "./components/QuestionForm";
+import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
 import { defaultSpread, spreads } from "./data/spreads";
 import type { DrawnCard, Reading, SelectedCard } from "./types/tarot";
-import { isSoundEnabled, playPick, playPlace, setSoundEnabled } from "./utils/sound";
-import { createReading, cutDeck, shuffleDeckForReading } from "./utils/tarot";
+import { findSameNightReading, type ReadingRecord } from "./utils/history";
+import { moonPhase, timeBand } from "./utils/moment";
+import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "./utils/sound";
+import { createReading, cutDeck, settleShuffle, shuffleDeckForReading } from "./utils/tarot";
+
+type View = "reading" | "catalog" | "archive";
+const nightBands = new Set(["夕暮れ", "夜", "真夜中", "夜明け前"]);
 
 const App = () => {
   const [question, setQuestion] = useState("");
   const [selectedSpreadId, setSelectedSpreadId] = useState(defaultSpread.id);
   const [shuffledCards, setShuffledCards] = useState<DrawnCard[]>([]);
+  const [jumper, setJumper] = useState<DrawnCard | null>(null);
   const [selectedCards, setSelectedCards] = useState<SelectedCard[]>([]);
   const [reading, setReading] = useState<Reading | null>(null);
-  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [view, setView] = useState<View>("reading");
+  const [records, setRecords] = useState<ReadingRecord[]>([]);
+  const [recordsError, setRecordsError] = useState("");
+  const [archiveSelectedId, setArchiveSelectedId] = useState<string | null>(null);
   const [shuffleCount, setShuffleCount] = useState(0);
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
 
@@ -23,16 +34,31 @@ const App = () => {
     [selectedSpreadId],
   );
 
+  const loadRecords = useCallback(() => {
+    requestBackend<{ readings: ReadingRecord[] }>("readings")
+      .then(({ readings }) => {
+        setRecords(readings);
+        setRecordsError("");
+      })
+      .catch(() => setRecordsError("記録を読み込めませんでした。サーバーが起動しているか確かめてください。"));
+  }, []);
+
+  useEffect(loadRecords, [loadRecords]);
+
   const handleShuffle = () => {
     setShuffledCards(shuffleDeckForReading());
+    setJumper(null);
     setShuffleCount((count) => count + 1);
     setSelectedCards([]);
     setReading(null);
   };
 
-  // 混ぜる手を止めた瞬間の並びで、山が決まる。
+  // 混ぜる手を止めた瞬間の並びで、山が決まる。ときどき一枚がこぼれ落ちる。
   const handleStopShuffle = () => {
-    setShuffledCards(shuffleDeckForReading());
+    const settled = settleShuffle();
+    setShuffledCards(settled.cards);
+    setJumper(settled.jumper);
+    if (settled.jumper) playFlip();
   };
 
   const handleCut = (pileIndex: number) => {
@@ -71,15 +97,38 @@ const App = () => {
 
   const handleReveal = () => {
     playPlace();
-    setReading(createReading(question, selectedSpread, selectedCards));
+    setReading(createReading(question, selectedSpread, selectedCards, { deck: shuffledCards, jumper }));
   };
 
   const handleReset = () => {
     setQuestion("");
     setSelectedSpreadId(defaultSpread.id);
     setShuffledCards([]);
+    setJumper(null);
     setSelectedCards([]);
     setReading(null);
+  };
+
+  const handleSaved = (record: ReadingRecord) =>
+    setRecords((current) => [record, ...current.filter((item) => item.id !== record.id)]);
+
+  const openRecord = (record: ReadingRecord) => {
+    setArchiveSelectedId(record.id);
+    setView("archive");
+  };
+
+  const deleteRecord = (id: string) => {
+    requestBackend(`readings/${id}`, { method: "DELETE" })
+      .then(() => {
+        setRecords((current) => current.filter((record) => record.id !== id));
+        setArchiveSelectedId(null);
+      })
+      .catch(() => setRecordsError("記録を消せませんでした。もう一度お試しください。"));
+  };
+
+  const toggleView = (next: View) => {
+    setArchiveSelectedId(null);
+    setView((current) => (current === next ? "reading" : next));
   };
 
   const toggleSound = () => {
@@ -91,19 +140,25 @@ const App = () => {
 
   const canShuffle = question.trim().length > 0;
   const activeStep = reading ? 3 : shuffledCards.length > 0 ? 2 : 1;
+  const now = new Date();
+  const moon = moonPhase(now);
+  const isNight = nightBands.has(timeBand(now));
+  const sameNightReading = activeStep === 1 ? findSameNightReading(records, question, now) : undefined;
+  const isCatalogOpen = view === "catalog";
+  const isAsideOpen = view !== "reading";
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
-  }, [activeStep]);
+  }, [activeStep, view, archiveSelectedId]);
 
   return (
     <div className="app">
       <header className="site-header">
-        <button className="brand" type="button" onClick={() => { handleReset(); setIsCatalogOpen(false); }} aria-label="最初の画面へ戻る">
+        <button className="brand" type="button" onClick={() => { handleReset(); setView("reading"); }} aria-label="最初の画面へ戻る">
           <span className="brand-moon" aria-hidden="true">☾</span>
           <span>Tarot Reflection</span>
         </button>
-        <nav className={isCatalogOpen ? "ritual-steps is-hidden" : "ritual-steps"} aria-label="リーディングの進行">
+        <nav className={isAsideOpen ? "ritual-steps is-hidden" : "ritual-steps"} aria-label="リーディングの進行">
           {["問いを置く", "カードを引く", "言葉を受け取る"].map((label, index) => {
             const step = index + 1;
             return (
@@ -127,14 +182,22 @@ const App = () => {
             <small>{soundOn ? "音あり" : "音なし"}</small>
           </button>
           <button
+            className={view === "archive" ? "header-catalog is-active" : "header-catalog"}
+            type="button"
+            aria-pressed={view === "archive"}
+            onClick={() => toggleView("archive")}
+          >
+            {view === "archive" ? "占いに戻る" : "記録"}
+          </button>
+          <button
             className={isCatalogOpen ? "header-catalog is-active" : "header-catalog"}
             type="button"
             aria-pressed={isCatalogOpen}
-            onClick={() => setIsCatalogOpen((current) => !current)}
+            onClick={() => toggleView("catalog")}
           >
             {isCatalogOpen ? "占いに戻る" : "カード図鑑"}
           </button>
-          {activeStep > 1 && !isCatalogOpen ? (
+          {activeStep > 1 && !isAsideOpen ? (
             <button className="header-reset" type="button" onClick={handleReset}>最初から</button>
           ) : null}
         </div>
@@ -142,23 +205,36 @@ const App = () => {
 
       <main className="app-shell">
         {isCatalogOpen ? (
-          <CardCatalog onClose={() => setIsCatalogOpen(false)} />
+          <CardCatalog onClose={() => setView("reading")} />
+        ) : view === "archive" ? (
+          <ReadingArchive
+            records={records}
+            selectedId={archiveSelectedId}
+            error={recordsError}
+            onSelect={setArchiveSelectedId}
+            onDelete={deleteRecord}
+          />
         ) : activeStep === 1 ? (
           <QuestionForm
             question={question}
             spreads={spreads}
             selectedSpreadId={selectedSpread.id}
             canShuffle={canShuffle}
+            moon={moon}
+            isNight={isNight}
+            sameNightReading={sameNightReading}
+            onOpenRecord={openRecord}
             onQuestionChange={setQuestion}
             onSpreadChange={setSelectedSpreadId}
             onShuffle={handleShuffle}
           />
         ) : null}
 
-        {!isCatalogOpen && shuffledCards.length > 0 && !reading ? (
+        {!isAsideOpen && shuffledCards.length > 0 && !reading ? (
           <CardBackGrid
             key={shuffleCount}
             cards={shuffledCards}
+            jumper={jumper}
             selectedCards={selectedCards}
             requiredCount={selectedSpread.positions.length}
             onStopShuffle={handleStopShuffle}
@@ -169,11 +245,11 @@ const App = () => {
           />
         ) : null}
 
-        {!isCatalogOpen && reading ? (
-          <ReadingStage reading={reading} />
+        {!isAsideOpen && reading ? (
+          <ReadingStage reading={reading} onSaved={handleSaved} />
         ) : null}
 
-        {!isCatalogOpen && activeStep > 1 ? (
+        {!isAsideOpen && activeStep > 1 ? (
           <div className="reset-row">
             <button className="text-button" type="button" onClick={handleReset}>別の問いでカードを引く</button>
           </div>

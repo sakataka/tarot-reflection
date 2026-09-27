@@ -34,5 +34,28 @@ const suitImagery: Record<Suit, string> = {
   pentacles: "月夜の庭の葉や石や根のあいだに据えられた、五芒星を刻んだ大きな古い金貨",
 };
 
-export const describeCardImagery = (card: TarotCard) =>
-  card.arcana === "major" ? majorImagery[card.number ?? 0] ?? "" : card.suit ? suitImagery[card.suit] : "";
+// 個別の絵を持つ小アルカナ（docs/image-direction.md の主題と対応）。
+const minorImagery: Record<string, string> = {
+  wands_11: "岩の高みに立つ錆び薔薇色の外套の若い使者。若葉の芽吹く長い杖をまっすぐ持ち、その葉を珍しそうに見つめている",
+  wands_12: "前脚を上げる栗毛の馬に乗る騎士。若葉の杖を掲げ、外套がなびき、熾火と砂埃が渦を巻く",
+  wands_13: "獅子の彫られた石の玉座に座る女性。片手に若葉の杖、片手に向日葵。足元に小さな黒猫",
+  wands_14: "獅子とサラマンダーの彫られた玉座に斜めに座る壮年の王。花の咲く杖を持ち、遠くを見る。地面に小さなサラマンダー",
+  cups_11: "水際に立つ穏やかな若者。掲げた金の杯から小さな銀の魚が顔をのぞかせ、それを驚きと優しさで見ている",
+  cups_12: "浅い流れをゆっくり渡る白馬の騎士。捧げ物のように金の杯を前へ差し出している",
+  cups_13: "貝の彫られた玉座で水際に座る女性。両手で持つ蓋つきの金の杯をじっと見つめ、足元に小石と小さな波",
+  cups_14: "荒れる海に据えられた石の玉座に座る王。杯と短い笏を持ち、背後に小さな帆船と跳ねる魚",
+  swords_11: "風の吹く丘の上の若者。銀の剣を両手でまっすぐ立て、肩越しに振り返る。風になびく草と小さな鳥",
+  swords_12: "風に曲がる木々のあいだを、灰色の馬で前へ駆ける騎士。剣を前へ掲げ、外套も雲も風に裂かれている",
+  swords_13: "雲の中の高い玉座に横顔で座る澄んだ目の女性。片手で剣をまっすぐ立て、もう片方の手を開いて差し伸べる。はるか上に一羽の鳥",
+  swords_14: "正面を向いて座る厳かな王。剣をわずかに傾けて立て、玉座には蝶と三日月の彫刻。背後に糸杉と薄い雲",
+  pentacles_11: "月夜の緑の野に立つ若者。五芒星の金貨を両手で掲げ、熱心に見つめている。耕された畝と小さな林",
+  pentacles_12: "重たい黒い農耕馬の上で微動だにしない鎧の騎士。金貨を手にし、背後に耕したばかりの畑",
+  pentacles_13: "蔓薔薇のあずまやに座る女性。膝の上の金貨を抱くように見下ろし、草むらに小さな兎",
+  pentacles_14: "牡牛の頭が彫られた玉座に座る王。葡萄の蔓を刺繍した衣で、膝の金貨に手を置く。背後に城と葡萄畑",
+};
+
+export const describeCardImagery = (card: TarotCard) => {
+  if (card.arcana === "major") return majorImagery[card.number ?? 0] ?? "";
+  if (!card.sharedArt && minorImagery[card.id]) return minorImagery[card.id];
+  return card.suit ? suitImagery[card.suit] : "";
+};

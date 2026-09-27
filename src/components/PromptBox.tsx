@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { streamBackend } from "../backendClient";
+import { requestBackend, streamBackend } from "../backendClient";
 import type { Reading } from "../types/tarot";
+import { toCardRecord, type ReadingRecord } from "../utils/history";
 import {
   narrationToPlainText,
   parseNarration,
@@ -9,11 +10,13 @@ import {
   type NarrationSegment,
 } from "../utils/narration";
 import { playChime } from "../utils/sound";
+import { tableCards } from "../utils/tarot";
 
 type PromptBoxProps = {
   reading: Reading;
   revealed: boolean[];
   onRevealCard: (cardIndex: number) => void;
+  onSaved?: (record: ReadingRecord) => void;
 };
 
 const orientationLabel = {
@@ -41,8 +44,17 @@ const pauseBeforeClosing = 900;
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export const PromptBox = ({ reading, revealed, onRevealCard }: PromptBoxProps) => {
-  const cardCount = reading.cards.length;
+// 占い師に渡す卓の状態。カードはIDと向きだけを送る。
+const tablePayload = (reading: Reading) => ({
+  question: reading.question,
+  spreadId: reading.spread.id,
+  cards: reading.cards.map(toCardRecord),
+  jumper: reading.jumper ? toCardRecord(reading.jumper) : null,
+  root: reading.root ? toCardRecord(reading.root) : null,
+});
+
+export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBoxProps) => {
+  const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
   const [error, setError] = useState("");
@@ -61,6 +73,9 @@ export const PromptBox = ({ reading, revealed, onRevealCard }: PromptBoxProps) =
   live.current.revealed = revealed;
   const revealRef = useRef(onRevealCard);
   revealRef.current = onRevealCard;
+  const savedRef = useRef("");
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
 
   // 占い師を呼ぶ。問いが変わるか再試行のたびに、語りを最初から受け取り直す。
   useEffect(() => {
@@ -75,14 +90,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard }: PromptBoxProps) =
 
     streamBackend(
       "interpret/stream",
-      {
-        question: reading.question,
-        spreadId: reading.spread.id,
-        cards: reading.cards.map((readingCard) => ({
-          cardId: readingCard.card.id,
-          orientation: readingCard.orientation,
-        })),
-      },
+      tablePayload(reading),
       {
         signal: abort.signal,
         onDelta: (text) => setRaw((current) => current + text),
@@ -198,8 +206,23 @@ export const PromptBox = ({ reading, revealed, onRevealCard }: PromptBoxProps) =
     if (finished) playChime();
   }, [finished]);
 
+  // 語り終えた卓は記録に残す。次に来たとき、占い師が覚えていられるように。
+  useEffect(() => {
+    if (!streamDone || !raw.trim() || savedRef.current === reading.createdAt) return;
+    savedRef.current = reading.createdAt;
+    requestBackend<{ reading: ReadingRecord }>("readings", {
+      method: "POST",
+      body: { ...tablePayload(reading), narration: raw, createdAt: reading.createdAt },
+    })
+      .then(({ reading: record }) => onSavedRef.current?.(record))
+      .catch(() => {
+        // 記録に残せなくても、今夜の語りはそのまま読める。
+        savedRef.current = "";
+      });
+  }, [streamDone, raw, reading]);
+
   const cardLabel = (cardIndex: number) => {
-    const readingCard = reading.cards[cardIndex];
+    const readingCard = tableCards(reading)[cardIndex];
     return `${readingCard.position.name}・${readingCard.card.nameJa}（${orientationLabel[readingCard.orientation]}）`;
   };
 
@@ -293,15 +316,15 @@ export const PromptBox = ({ reading, revealed, onRevealCard }: PromptBoxProps) =
   );
 };
 
-const NarrationCardHeader = ({ reading, cardIndex }: { reading: Reading; cardIndex: number }) => {
-  const readingCard = reading.cards[cardIndex];
+export const NarrationCardHeader = ({ reading, cardIndex }: { reading: Reading; cardIndex: number }) => {
+  const readingCard = tableCards(reading)[cardIndex];
   return (
     <div className="narration-card">
       <span className={readingCard.orientation === "reversed" ? "narration-card-thumb is-reversed" : "narration-card-thumb"} aria-hidden="true">
         <img src={readingCard.card.imagePath} alt="" />
       </span>
       <span className="narration-card-label">
-        <small>{romanNumerals[cardIndex]}・{readingCard.position.name}</small>
+        <small>{cardIndex < reading.cards.length ? romanNumerals[cardIndex] : "☾"}・{readingCard.position.name}</small>
         <strong>{readingCard.card.nameJa}</strong>
         <em>{orientationLabel[readingCard.orientation]}</em>
       </span>

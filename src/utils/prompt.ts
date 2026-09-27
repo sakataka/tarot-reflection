@@ -1,5 +1,11 @@
 import { describeCardImagery } from "../data/cardImagery";
-import type { Reading } from "../types/tarot";
+import { spreads } from "../data/spreads";
+import { tarotDeck } from "../data/tarotDeck";
+import type { Reading, ReadingCard } from "../types/tarot";
+import type { ReadingRecord } from "./history";
+import { describeMoment } from "./moment";
+import { observeTable } from "./tableReading";
+import { tableCards } from "./tarot";
 
 const orientationLabel = {
   upright: "正位置",
@@ -7,24 +13,43 @@ const orientationLabel = {
 } as const;
 
 const lengthGuide: Record<number, string> = {
-  1: "全体で400〜600字ほど",
-  3: "全体で700〜1000字ほど",
-  7: "全体で1200〜1600字ほど",
+  1: "全体で600〜800字ほど",
+  3: "全体で900〜1200字ほど",
+  7: "全体で1400〜1800字ほど",
 };
 
-export const generatePrompt = (reading: Reading): string => {
-  const cards = reading.cards
-    .map((readingCard, index) => {
-      const meaning =
-        readingCard.orientation === "upright" ? readingCard.card.upright : readingCard.card.reversed;
-      const imagery = describeCardImagery(readingCard.card);
+const majorArcana = tarotDeck.filter((card) => card.arcana === "major");
 
-      return `${index + 1}. ${readingCard.position.name}（${readingCard.position.role}）
-- カード: ${readingCard.card.nameJa}（${readingCard.card.nameEn}）の${orientationLabel[readingCard.orientation]}
+const describeCard = (readingCard: ReadingCard) => {
+  const meaning = readingCard.orientation === "upright" ? readingCard.card.upright : readingCard.card.reversed;
+  const imagery = describeCardImagery(readingCard.card);
+  return `- カード: ${readingCard.card.nameJa}（${readingCard.card.nameEn}）の${orientationLabel[readingCard.orientation]}
 - 絵に描かれているもの: ${imagery || "なし"}${readingCard.orientation === "reversed" ? "（相談者から見て上下逆さに置かれている）" : ""}
 - 伝統的な意味の手がかり: ${meaning.keywords.join("、")}。${meaning.shortMeaning}`;
+};
+
+const describePastReading = (record: ReadingRecord) => {
+  const spread = spreads.find((item) => item.id === record.spreadId);
+  const cardNames = record.cards
+    .map((cardRecord, index) => {
+      const card = tarotDeck.find((candidate) => candidate.id === cardRecord.cardId);
+      const position = spread?.positions[index]?.name ?? "";
+      return card ? `${position}に${card.nameJa}の${orientationLabel[cardRecord.orientation]}` : "";
     })
+    .filter(Boolean)
+    .join("、");
+  const date = new Date(record.createdAt).toLocaleDateString("ja-JP", { month: "long", day: "numeric" });
+  return `- ${date}：問い「${record.question.slice(0, 80)}」。${spread?.name ?? ""}で${cardNames}。`;
+};
+
+export const generatePrompt = (reading: Reading, pastReadings: readonly ReadingRecord[] = []): string => {
+  const flipped = tableCards(reading);
+  const rootNumber = reading.root ? flipped.length : null;
+  const cards = flipped
+    .map((readingCard, index) => `${index + 1}. ${readingCard.position.name}（${readingCard.position.role}）\n${describeCard(readingCard)}`)
     .join("\n\n");
+  const observations = observeTable(reading.cards, majorArcana);
+  const past = pastReadings.filter((record) => record.createdAt !== reading.createdAt);
 
   return `あなたは、夜の小さな占い部屋で長年タロットを読んできた占い師です。
 カードはいま、相談者の目の前の卓に伏せて並べてあります。あなたは語りながら、一枚ずつ表に返していきます。
@@ -34,23 +59,41 @@ export const generatePrompt = (reading: Reading): string => {
 相談者の問い:
 ${reading.question || "（言葉にはされなかった）"}
 
+いまという時:
+${describeMoment(new Date(reading.createdAt))}
+
 並べ方:
 ${reading.spread.name}。${reading.spread.description}
 
 卓に伏せたカード（めくる順）:
 ${cards}
-
+${reading.jumper ? `
+混ぜている最中に、一枚が表向きにこぼれ落ちた（卓の端に最初から表で置いてある。めくる合図は不要）:
+${reading.jumper.position.role}。
+${describeCard(reading.jumper)}
+` : ""}
+卓を見渡したときの手がかり（伝統的な技法で数えたもの。語りに使うのは一つか二つでよい）:
+${observations.length ? observations.map((observation) => `- ${observation.text}`).join("\n") : "- 特に目立つ偏りはない。"}
+${past.length ? `
+この相談者が以前ここで占ったこと（新しい順）:
+${past.map(describePastReading).join("\n")}
+` : ""}
 めくる合図（必ず守る）:
 - カードを表に返す瞬間に、その行だけに [[card:番号]] と書く（例: [[card:1]]）。番号は上の「めくる順」の番号。画面ではこの合図の位置で実際にカードがめくられ、合図そのものは表示されない。
-- ${reading.cards.length}枚すべてについて、1から順に一度ずつ合図を書く。合図より前に、まだめくっていないカードの名前や絵に触れない。
+- ${flipped.length}枚すべてについて、1から順に一度ずつ合図を書く。合図より前に、まだめくっていないカードの名前や絵に触れない。${rootNumber ? `
+- ${rootNumber}番の「山の底」は、並べたカードをすべて語り終えたあとに「最後に、山の一番下を見てみましょう」のような一言を添えてめくる。問いの底に静かに流れているものとして、一、二段落で短く語る。` : ""}
 - すべてのカードを語り終えたら、その行だけに [[close]] と書き、そのあとに締めくくりを語る。
 
 語り方:
 - 話し言葉の「です・ます」で、相談者を「あなた」と呼び、目の前の一人に向けて語る。
-- 最初の合図の前に、伏せたカードを前にして問いを受け止める言葉を一、二文だけ語る（例：問いの中で引っかかった言葉に触れる、「では、一枚目から返していきましょう」）。「承知しました」「〜について読み解きます」のような事務的な前置きはしない。
+- 最初の合図の前に、伏せたカードを前にして問いを受け止める言葉を二、三文だけ語る（例：問いの中で引っかかった言葉に触れる、「では、一枚目から返していきましょう」）。「承知しました」「〜について読み解きます」のような事務的な前置きはしない。
+- 前置きの中で、いまという時（月の形や時刻）に一言だけ触れてよい。月の満ち欠けを問いに重ねるのは、自然につながるときだけにする。${reading.jumper ? `
+- こぼれたカードには、前置きの中で必ず触れる（「混ぜている途中で、一枚が自分から出てきましたね」のように）。意味づけは短くし、あとのカードとつながったらそこでもう一度触れてよい。` : ""}${past.length ? `
+- 以前の占いは、今夜の問いやカードとはっきりつながるときだけ、前置きか締めで一言触れる（「前にいらしたとき、〜が出ていましたね」）。つながらなければ一切触れない。以前の問いの中身を詳しく蒸し返さない。` : ""}
 - 合図のあとは、いま目の前でめくれたカードを見た調子で語る。「過去の位置に出たのは〜ですね」「ここで〜が逆さに出ました」のように、卓を指さしながら話す。前にめくったカードとのつながりに気づいたら、そこで触れてよい。
+- 隣り合うカードの元素の関係（強め合う、打ち消し合う）が手がかりにあれば、二枚目をめくったときに「火のカードの隣に水が来ました」のように卓の上の出来事として触れる。エレメンタル・ディグニティ、クインテッセンスといった用語はそのまま使わず、占い師の普段の言葉に置き換える。
 - 各カードでは、絵に描かれているものを一つ拾って言葉にし（例：灯りの向き、水面、鎖の緩さ）、それが問いのどこに重なるかを語る。キーワードを並べて説明するのではなく、絵と問いを結ぶ。
-- [[close]] のあとは、並んだカード全体を見渡したときの印象（色合い、向き、スートの偏り、大アルカナの多さ、正逆の並び）に一言触れ、今夜か明日にできるささやかなことを一つだけ、語りの流れの中で手渡すように添えて、短い余韻の一文で終える。
+- [[close]] のあとは、卓を見渡したときの手がかりから一つか二つを選び、「カップが一枚もありませんね」「数の芯には隠者がいます」のように卓を見て気づいた調子で語る。そのうえで、今夜か明日にできるささやかなことを一つだけ、語りの流れの中で手渡すように添えて、短い余韻の一文で終える。
 - 一枚あたりの語りは二、三段落までにする。
 - 分量は${lengthGuide[reading.cards.length] ?? "相談者が一息で読める長さ"}。段落は短めに区切る。
 

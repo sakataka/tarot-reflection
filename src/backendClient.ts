@@ -79,3 +79,16 @@ export async function streamBackend(
 
   throw new Error("占い師の言葉が途中で途切れました。");
 }
+
+export async function requestBackend<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+  const response = await fetch(`api/${path}`, {
+    method: init.method ?? "GET",
+    headers: init.body === undefined ? undefined : { "Content-Type": "application/json" },
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(extractBackendError(parseJson(responseText)) || buildBackendError(response.status, responseText));
+  }
+  return parseJson(responseText) as T;
+}

@@ -2,7 +2,18 @@
 
 2026-09-19 更新。組み込みの image_gen で生成。ツールはモデル選択・モデル名の確認を公開していないため、特定のモデルバージョンは記録しない。
 
-全28点を `public/cards/` に保存。大アルカナ22点、小アルカナ4スートの共通絵4点、裏面1点、導入の風景1点。小アルカナのランクは既存仕様どおり画面側で重ねて表示する。
+全44点を `public/cards/` に保存。大アルカナ22点、コートカード16点、小アルカナ4スートの共通絵4点、裏面1点、導入の風景1点。小アルカナのランクは画面側で重ねて表示する（個別絵のカードは四隅だけ、共通絵のカードは中央にも大きく）。
+
+## コートカード（2026-09-27）
+
+Codex CLI の画像生成で、1スートにつき 2×2 の4枚組（左上ペイジ、右上ナイト、左下クイーン、右下キング）を 1024×1536 で生成し、512×768 ずつ切り出して 640×960 に拡大、WebP品質84で `{suit}_{11-14}.webp` に保存した。スタイル参照は `card_back`、`major_04_emperor`、`minor_cups`（ワンドとペンタクルは `major_03_empress`）。初回はワンドとペンタクルの赤・緑が強く大アルカナから浮いたため、次の色の指定を足して再生成した。
+
+共通プロンプト（要約）: Four original court cards of the same Moonlit Tarot deck; references are style only. Exact 2x2 grid of four equal portrait 2:3 cards touching at the centre lines, each with its own thin double-line antique gold frame inset 5%. Quiet corners for rank labels. No letters or numbers. Palette discipline: dominated by midnight indigo, muted teal and moonlit blue-grey; antique gold as the only warm highlight; the suit colour only as a muted accent; calm compositions, no villages or houses.
+
+- ワンド: 若葉の杖を見上げる錆び薔薇色の外套の使者／前脚を上げる栗毛の馬の騎士／獅子の玉座で杖と向日葵を持ち黒猫を連れた女王／獅子とサラマンダーの玉座で花咲く杖を持つ王。
+- カップ: 魚がのぞく杯を掲げる水際の若者／流れを渡る白馬の騎士が杯を差し出す／貝の玉座で蓋つきの杯を見つめる女王／荒れる海の玉座で杯と笏を持つ王、背後に帆船と跳ねる魚。
+- ソード: 風の丘で剣を立て振り返る若者／風に曲がる木々を駆ける灰色の馬の騎士／雲の中の玉座で剣を立て手を差し伸べる女王／蝶と三日月の玉座で剣を立てる王。
+- ペンタクル: 野で金貨を掲げて見つめる若者／黒い農耕馬の上で動かない騎士／薔薇のあずまやで金貨を抱く女王と兎／牡牛の玉座で葡萄の衣をまとい金貨に手を置く王。
 
 ## 共通スタイル・プロンプト
 

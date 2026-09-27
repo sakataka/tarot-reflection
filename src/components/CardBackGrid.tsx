@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import type { DrawnCard, SelectedCard } from "../types/tarot";
 import { playDeal, playPick, playPlace, playShuffle } from "../utils/sound";
 import { cutPileCount } from "../utils/tarot";
+import { CardView } from "./CardView";
 
 // 混ぜる → 手を止める → 山を三つに分けて一つ選ぶ → 集めて広げる → 引く
 type Phase = "shuffling" | "cutting" | "gathering" | "dealing" | "ready";
@@ -15,6 +16,7 @@ const riffleCards = 12;
 
 type CardBackGridProps = {
   cards: DrawnCard[];
+  jumper: DrawnCard | null;
   selectedCards: SelectedCard[];
   requiredCount: number;
   onStopShuffle: () => void;
@@ -88,6 +90,7 @@ const pileNames = ["左の山", "中央の山", "右の山"];
 
 export const CardBackGrid = ({
   cards,
+  jumper,
   selectedCards,
   requiredCount,
   onStopShuffle,
@@ -205,6 +208,18 @@ export const CardBackGrid = ({
           <span>/ {requiredCount} 枚</span>
         </div>
       </div>
+
+      {jumper && phase !== "shuffling" ? (
+        <div className="jumper-note" role="note">
+          <div className="jumper-card">
+            <CardView card={jumper.card} orientation={jumper.orientation} />
+          </div>
+          <p>
+            <strong>混ぜている途中で、一枚が卓にこぼれました。</strong>
+            <span>{jumper.card.nameJa}（{jumper.orientation === "upright" ? "正位置" : "逆位置"}）。自分から出てきたカードは、見落とさないでほしい知らせとして、脇に置いておきます。</span>
+          </p>
+        </div>
+      ) : null}
 
       <div className="tarot-table">
         <div
