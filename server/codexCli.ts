@@ -2,11 +2,13 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const CODEX_MODEL = "gpt-6-sol";
-const CODEX_EFFORT = "medium";
+const CODEX_EFFORT = "medium" as const;
 
 type AskOptions = {
   onDelta?: (text: string) => void;
   signal?: AbortSignal;
+  // 短い問い返しは速さを優先して low にする。
+  effort?: "low" | "medium";
 };
 
 // --json は完成した agent_message を一件ずつ返す。占いの本文以外のイベントは表示しない。
@@ -18,7 +20,7 @@ export function completedMessage(event: unknown): string {
     : "";
 }
 
-export async function askCodex(prompt: string, { onDelta, signal }: AskOptions = {}): Promise<string> {
+export async function askCodex(prompt: string, { onDelta, signal, effort = CODEX_EFFORT }: AskOptions = {}): Promise<string> {
   if (!prompt.trim()) throw new Error("Codexに渡す質問文が空です。");
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
@@ -26,7 +28,7 @@ export async function askCodex(prompt: string, { onDelta, signal }: AskOptions =
   const child = Bun.spawn([
     findCodexExecutable(), "exec", "--ephemeral", "--json", "--sandbox", "read-only",
     "--skip-git-repo-check", "--cd", tmpdir(), "--model", CODEX_MODEL,
-    "-c", `model_reasoning_effort="${CODEX_EFFORT}"`,
+    "-c", `model_reasoning_effort="${effort}"`,
     "-c", 'forced_login_method="chatgpt"',
     "-",
   ], { stdin: "pipe", stdout: "pipe", stderr: "pipe", env });

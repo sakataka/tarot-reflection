@@ -1,7 +1,10 @@
 import { jumperPosition, rootPosition, spreads } from "../data/spreads";
 import { tarotDeck } from "../data/tarotDeck";
-import type { Orientation, Reading, ReadingCard, SpreadPosition } from "../types/tarot";
+import type { Exchange, Orientation, Reading, ReadingCard, SpreadPosition } from "../types/tarot";
 import { readingDayKey } from "./moment";
+
+// 読み終えたあとに占い師へ聞き返せる回数。本物の占いと同じく、一晩に何度も重ねない。
+export const maxFollowUps = 2;
 
 // サーバーに残すリーディングの記録。カードはIDと向きだけを持ち、表示のときにデッキから引き直す。
 export type CardRecord = { cardId: string; orientation: Orientation };
@@ -14,12 +17,25 @@ export type ReadingRecord = {
   jumper: CardRecord | null;
   root: CardRecord | null;
   narration: string;
+  // カードを引く前の問い返しと、読み終えたあとの聞き返し。
+  clarification?: Exchange | null;
+  followUps?: Exchange[];
   createdAt: string;
 };
 
 export const toCardRecord = (readingCard: ReadingCard): CardRecord => ({
   cardId: readingCard.card.id,
   orientation: readingCard.orientation,
+});
+
+// 占い師に渡す卓の状態。カードはIDと向きだけを送る。
+export const tablePayload = (reading: Reading) => ({
+  question: reading.question,
+  spreadId: reading.spread.id,
+  cards: reading.cards.map(toCardRecord),
+  jumper: reading.jumper ? toCardRecord(reading.jumper) : null,
+  root: reading.root ? toCardRecord(reading.root) : null,
+  clarification: reading.clarification ?? null,
 });
 
 const toReadingCard = (record: CardRecord | null, position: SpreadPosition): ReadingCard | null => {
@@ -38,6 +54,7 @@ export const readingFromRecord = (record: ReadingRecord): Reading | null => {
     cards: cards as ReadingCard[],
     jumper: toReadingCard(record.jumper, jumperPosition),
     root: toReadingCard(record.root, rootPosition),
+    clarification: record.clarification ?? null,
     createdAt: record.createdAt,
   };
 };

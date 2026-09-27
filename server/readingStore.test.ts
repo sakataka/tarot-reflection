@@ -27,6 +27,10 @@ describe("readingStore", () => {
     const second = await store.add({ ...input, createdAt: "2026-09-27T13:00:00.000Z" });
     expect((await store.list()).map((record) => record.id)).toEqual([second.id, first.id]);
 
+    expect(await store.addFollowUp(second.id, { question: "もう少し", answer: "ええ" })).toBe(true);
+    expect(await store.addFollowUp("missing", { question: "x", answer: "y" })).toBe(false);
+    expect((await store.list())[0].followUps).toEqual([{ question: "もう少し", answer: "ええ" }]);
+
     expect(await store.remove(first.id)).toBe(true);
     expect(await store.remove(first.id)).toBe(false);
     expect(await store.list()).toHaveLength(1);

@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
 import type { Spread } from "../types/tarot";
 import type { ReadingRecord } from "../utils/history";
 import type { MoonPhase } from "../utils/moment";
+import { oracleName } from "../utils/persona";
 import { SpreadSelector } from "./SpreadSelector";
 
 type QuestionFormProps = {
@@ -12,9 +14,11 @@ type QuestionFormProps = {
   isNight: boolean;
   sameNightReading?: ReadingRecord;
   onOpenRecord: (record: ReadingRecord) => void;
+  // 問いを打ち明けたあと、占い師の問い返しをここに置く。
+  clarifySlot?: ReactNode;
   onQuestionChange: (question: string) => void;
   onSpreadChange: (spreadId: string) => void;
-  onShuffle: () => void;
+  onConfide: () => void;
 };
 
 export const QuestionForm = ({
@@ -26,9 +30,10 @@ export const QuestionForm = ({
   isNight,
   sameNightReading,
   onOpenRecord,
+  clarifySlot,
   onQuestionChange,
   onSpreadChange,
-  onShuffle,
+  onConfide,
 }: QuestionFormProps) => (
   <section className="intro-panel">
     <div className="intro-landscape">
@@ -43,7 +48,10 @@ export const QuestionForm = ({
       <p className="tonight-moon">
         {isNight ? "今夜" : "今日"}は<strong>{moon.name}</strong>。{moon.mood}。
       </p>
-      <p>ようこそ。灯りを少し落としましょう。<br />いま心にかかっていることを、ひとつだけ聞かせてください。</p>
+      <p>
+        ようこそ。灯りを少し落としましょう。<br />いま心にかかっていることを、ひとつだけ聞かせてください。
+        <span className="intro-signature">占い部屋の主　{oracleName}</span>
+      </p>
     </div>
 
     <label className="field">
@@ -55,6 +63,7 @@ export const QuestionForm = ({
         value={question}
         maxLength={300}
         rows={4}
+        readOnly={Boolean(clarifySlot)}
         placeholder="たとえば「転職を考えています。この迷いは、どこから来ているのでしょう」"
         onChange={(event) => onQuestionChange(event.target.value)}
       />
@@ -69,7 +78,7 @@ export const QuestionForm = ({
       <SpreadSelector spreads={spreads} selectedSpreadId={selectedSpreadId} onChange={onSpreadChange} />
     </div>
 
-    {sameNightReading ? (
+    {clarifySlot ?? (sameNightReading ? (
       <div className="same-night" role="status">
         <p>
           その問いには、{isNight ? "今夜" : "今日"}すでにカードが答えています。同じ問いを同じ夜に二度たずねると、カードの声はかえって濁ってしまうもの。夜が明けるまで、受け取った言葉のほうを持ち帰ってください。
@@ -78,15 +87,15 @@ export const QuestionForm = ({
           そのときの言葉を読み返す
         </button>
       </div>
-    ) : null}
-
-    <div className="intro-action">
-      <button className="primary-button" type="button" disabled={!canShuffle || Boolean(sameNightReading)} onClick={onShuffle}>
-        <span aria-hidden="true">✦</span>
-        <span>カードを混ぜる</span>
-        <span aria-hidden="true">✦</span>
-      </button>
-      <small>{sameNightReading ? "別の問いなら、いつでもどうぞ" : canShuffle ? "問いを胸に置いたまま、どうぞ" : "問いを書くと、カードを混ぜられます"}</small>
-    </div>
+    ) : (
+      <div className="intro-action">
+        <button className="primary-button" type="button" disabled={!canShuffle} onClick={onConfide}>
+          <span aria-hidden="true">✦</span>
+          <span>{oracleName}に打ち明ける</span>
+          <span aria-hidden="true">✦</span>
+        </button>
+        <small>{canShuffle ? "カードに触れる前に、少しだけ話を聞かせてください" : "問いを書くと、打ち明けられます"}</small>
+      </div>
+    ))}
   </section>
 );

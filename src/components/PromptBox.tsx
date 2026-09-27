@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { requestBackend, streamBackend } from "../backendClient";
 import type { Reading } from "../types/tarot";
-import { toCardRecord, type ReadingRecord } from "../utils/history";
+import { tablePayload, type ReadingRecord } from "../utils/history";
 import {
   narrationToPlainText,
   parseNarration,
@@ -9,8 +9,10 @@ import {
   splitParagraphs,
   type NarrationSegment,
 } from "../utils/narration";
+import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
+import { FollowUpBox } from "./FollowUpBox";
 
 type PromptBoxProps = {
   reading: Reading;
@@ -44,15 +46,6 @@ const pauseBeforeClosing = 900;
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-// 占い師に渡す卓の状態。カードはIDと向きだけを送る。
-const tablePayload = (reading: Reading) => ({
-  question: reading.question,
-  spreadId: reading.spread.id,
-  cards: reading.cards.map(toCardRecord),
-  jumper: reading.jumper ? toCardRecord(reading.jumper) : null,
-  root: reading.root ? toCardRecord(reading.root) : null,
-});
-
 export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
@@ -74,6 +67,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
   const revealRef = useRef(onRevealCard);
   revealRef.current = onRevealCard;
   const savedRef = useRef("");
+  const [recordId, setRecordId] = useState("");
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
 
@@ -100,7 +94,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
       .catch((caughtError: unknown) => {
         if (abort.signal.aborted) return;
         setError(caughtError instanceof TypeError
-          ? "占い師のところまで声が届きませんでした。サーバーが起動しているか確かめて、もう一度呼んでみてください。"
+          ? `${oracleName}のところまで声が届きませんでした。サーバーが起動しているか確かめて、もう一度呼んでみてください。`
           : caughtError instanceof Error ? caughtError.message : "今夜はうまく言葉が降りてきませんでした。少し間を置いて、もう一度呼んでみてください。");
       });
 
@@ -214,7 +208,10 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
       method: "POST",
       body: { ...tablePayload(reading), narration: raw, createdAt: reading.createdAt },
     })
-      .then(({ reading: record }) => onSavedRef.current?.(record))
+      .then(({ reading: record }) => {
+        setRecordId(record.id);
+        onSavedRef.current?.(record);
+      })
       .catch(() => {
         // 記録に残せなくても、今夜の語りはそのまま読める。
         savedRef.current = "";
@@ -245,7 +242,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
   return (
     <section className={finished ? "oracle-panel is-open" : "oracle-panel"} aria-busy={!finished && !error}>
       <div className="oracle-heading">
-        <p className="ornament-kicker">占い師の言葉</p>
+        <p className="ornament-kicker">{oracleName}の言葉</p>
         <h2>カードは、こう告げています</h2>
       </div>
 
@@ -294,7 +291,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
         <div className="oracle-error" role="alert">
           <p className="copy-fallback">{error}</p>
           <button className="secondary-button" type="button" onClick={retry}>
-            もう一度、占い師を呼ぶ
+            もう一度、{oracleName}を呼ぶ
           </button>
         </div>
       ) : null}
@@ -312,6 +309,8 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
           </div>
         </div>
       ) : null}
+
+      {finished ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} /> : null}
     </section>
   );
 };

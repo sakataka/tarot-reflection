@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { requestBackend } from "./backendClient";
 import { CardBackGrid } from "./components/CardBackGrid";
 import { CardCatalog } from "./components/CardCatalog";
+import { ClarifyBox } from "./components/ClarifyBox";
 import { QuestionForm } from "./components/QuestionForm";
 import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
 import { defaultSpread, spreads } from "./data/spreads";
-import type { DrawnCard, Reading, SelectedCard } from "./types/tarot";
+import type { DrawnCard, Exchange, Reading, SelectedCard } from "./types/tarot";
 import { findSameNightReading, type ReadingRecord } from "./utils/history";
 import { moonPhase, timeBand } from "./utils/moment";
 import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "./utils/sound";
@@ -20,6 +21,8 @@ const App = () => {
   const [selectedSpreadId, setSelectedSpreadId] = useState(defaultSpread.id);
   const [shuffledCards, setShuffledCards] = useState<DrawnCard[]>([]);
   const [jumper, setJumper] = useState<DrawnCard | null>(null);
+  const [isConfiding, setIsConfiding] = useState(false);
+  const [clarification, setClarification] = useState<Exchange | null>(null);
   const [selectedCards, setSelectedCards] = useState<SelectedCard[]>([]);
   const [reading, setReading] = useState<Reading | null>(null);
   const [view, setView] = useState<View>("reading");
@@ -97,7 +100,7 @@ const App = () => {
 
   const handleReveal = () => {
     playPlace();
-    setReading(createReading(question, selectedSpread, selectedCards, { deck: shuffledCards, jumper }));
+    setReading(createReading(question, selectedSpread, selectedCards, { deck: shuffledCards, jumper, clarification }));
   };
 
   const handleReset = () => {
@@ -105,8 +108,17 @@ const App = () => {
     setSelectedSpreadId(defaultSpread.id);
     setShuffledCards([]);
     setJumper(null);
+    setIsConfiding(false);
+    setClarification(null);
     setSelectedCards([]);
     setReading(null);
+  };
+
+  // 問い返しに答えたら（答えなくても）、カードを混ぜ始める。
+  const handleProceedFromClarify = (answered: Exchange | null) => {
+    setClarification(answered);
+    setIsConfiding(false);
+    handleShuffle();
   };
 
   const handleSaved = (record: ReadingRecord) =>
@@ -226,7 +238,10 @@ const App = () => {
             onOpenRecord={openRecord}
             onQuestionChange={setQuestion}
             onSpreadChange={setSelectedSpreadId}
-            onShuffle={handleShuffle}
+            onConfide={() => setIsConfiding(true)}
+            clarifySlot={isConfiding ? (
+              <ClarifyBox question={question.trim()} onProceed={handleProceedFromClarify} onEdit={() => setIsConfiding(false)} />
+            ) : undefined}
           />
         ) : null}
 

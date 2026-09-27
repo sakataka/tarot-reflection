@@ -3,7 +3,9 @@ import { tarotDeck } from "../data/tarotDeck";
 import { readingFromRecord, type ReadingRecord } from "../utils/history";
 import { moonPhase } from "../utils/moment";
 import { parseNarration, splitParagraphs } from "../utils/narration";
+import { oracleName } from "../utils/persona";
 import { tableCards } from "../utils/tarot";
+import { ExchangeList } from "./FollowUpBox";
 import { NarrationCardHeader } from "./PromptBox";
 import { ReadingResult } from "./ReadingResult";
 
@@ -28,7 +30,7 @@ export const ReadingArchive = ({ records, selectedId, error, onSelect, onDelete 
         <div>
           <p className="ornament-kicker">Records</p>
           <h1>これまでの夜</h1>
-          <p>引いたカードと、占い師の言葉が残っています。記録はこのMacの中にだけ置かれます。</p>
+          <p>引いたカードと、{oracleName}の言葉が残っています。記録はこのMacの中にだけ置かれます。</p>
         </div>
       </div>
 
@@ -92,9 +94,15 @@ const ArchivedReading = ({ record, onBack, onDelete }: {
       <ReadingResult reading={reading} revealed={Array.from({ length: cardCount }, () => true)} />
       <section className="oracle-panel is-open">
         <div className="oracle-heading">
-          <p className="ornament-kicker">占い師の言葉</p>
+          <p className="ornament-kicker">{oracleName}の言葉</p>
           <h2>その夜、カードが告げたこと</h2>
         </div>
+        {record.clarification ? (
+          <div className="exchange is-clarify">
+            <div className="exchange-answer"><span>{oracleName}</span><p>{record.clarification.question}</p></div>
+            <p className="exchange-ask"><span>あなた</span>{record.clarification.answer}</p>
+          </div>
+        ) : null}
         <div className="narration">
           {segments.map((segment, segmentIndex) => (
             <div className={`narration-segment is-${segment.kind}`} key={segmentIndex}>
@@ -104,6 +112,7 @@ const ArchivedReading = ({ record, onBack, onDelete }: {
             </div>
           ))}
         </div>
+        {record.followUps?.length ? <ExchangeList exchanges={record.followUps} /> : null}
         <div className="archive-delete">
           {confirming ? (
             <>

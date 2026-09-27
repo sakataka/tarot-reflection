@@ -1,6 +1,7 @@
 import { mkdir, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
+import type { Exchange } from "../src/types/tarot";
 import type { ReadingRecord } from "../src/utils/history";
 import { toCardRecord } from "../src/utils/history";
 import { parseReadingInput } from "./interpretationRequest";
@@ -16,6 +17,7 @@ export type ReadingStore = {
   list: () => Promise<ReadingRecord[]>;
   add: (input: unknown) => Promise<ReadingRecord>;
   remove: (id: string) => Promise<boolean>;
+  addFollowUp: (id: string, exchange: Exchange) => Promise<boolean>;
 };
 
 export const createReadingStore = (path = defaultStorePath()): ReadingStore => {
@@ -66,10 +68,21 @@ export const createReadingStore = (path = defaultStorePath()): ReadingStore => {
           jumper: reading.jumper ? toCardRecord(reading.jumper) : null,
           root: reading.root ? toCardRecord(reading.root) : null,
           narration,
+          clarification: reading.clarification ?? null,
+          followUps: [],
           createdAt,
         };
         await write([record, ...records].slice(0, maxRecords));
         return record;
+      }),
+    addFollowUp: (id, exchange) =>
+      serialize(async () => {
+        const records = await read();
+        const record = records.find((item) => item.id === id);
+        if (!record) return false;
+        record.followUps = [...(record.followUps ?? []), exchange];
+        await write(records);
+        return true;
       }),
     remove: (id) =>
       serialize(async () => {

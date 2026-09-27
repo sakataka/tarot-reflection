@@ -1,6 +1,6 @@
 import { jumperPosition, rootPosition } from "../data/spreads";
 import { tarotDeck } from "../data/tarotDeck";
-import type { DrawnCard, Reading, ReadingCard, SelectedCard, Spread, TarotCard } from "../types/tarot";
+import type { DrawnCard, Exchange, Reading, ReadingCard, SelectedCard, Spread, TarotCard } from "../types/tarot";
 import { randomFloat, randomInt, randomOrientation, shuffle, type RandomSource } from "./random";
 
 export const shuffleDeckForReading = (
@@ -60,9 +60,10 @@ export const createReading = (
   question: string,
   spread: Spread,
   selectedCards: readonly SelectedCard[],
-  { deck = [], jumper = null, createdAt = new Date().toISOString() }: {
+  { deck = [], jumper = null, clarification = null, createdAt = new Date().toISOString() }: {
     deck?: readonly DrawnCard[];
     jumper?: DrawnCard | null;
+    clarification?: Exchange | null;
     createdAt?: string;
   } = {},
 ): Reading => {
@@ -73,6 +74,7 @@ export const createReading = (
     cards: buildReadingCards(spread, selectedCards),
     jumper: jumper ? { ...jumper, position: jumperPosition } : null,
     root: root ? { ...root, position: rootPosition } : null,
+    clarification,
     createdAt,
   };
 };

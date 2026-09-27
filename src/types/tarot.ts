@@ -53,6 +53,12 @@ export type ReadingCard = {
   orientation: Orientation;
 };
 
+// 占い師と相談者のひと往復。
+export type Exchange = {
+  question: string;
+  answer: string;
+};
+
 export type Reading = {
   question: string;
   spread: Spread;
@@ -61,5 +67,7 @@ export type Reading = {
   jumper: ReadingCard | null;
   // 引き終えた山の一番下のカード。最後に占い師がめくる。
   root: ReadingCard | null;
+  // カードを引く前に、占い師が問い返したことと相談者の答え。
+  clarification?: Exchange | null;
   createdAt: string;
 };

@@ -1,6 +1,7 @@
 import { relative, resolve, sep } from "node:path";
 import { askCodex } from "./codexCli";
-import { buildPromptFromInterpretationInput } from "./interpretationRequest";
+import { generateClarifyPrompt } from "../src/utils/prompt";
+import { buildFollowUpRequest, buildPromptFromInterpretationInput, maxQuestionLength } from "./interpretationRequest";
 import { createReadingStore } from "./readingStore";
 
 const port = Number(process.env.PORT ?? 4192);
@@ -21,6 +22,14 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/interpret/stream") {
       return handleInterpretStream(request);
+    }
+
+    if (url.pathname === "/api/clarify/stream") {
+      return handleClarifyStream(request);
+    }
+
+    if (url.pathname === "/api/follow-up/stream") {
+      return handleFollowUpStream(request);
     }
 
     if (url.pathname === "/api/readings") {
@@ -44,12 +53,8 @@ const server = Bun.serve({
 
 console.log(`Tarot Reflection local server listening on http://127.0.0.1:${server.port}/`);
 
-// 占い師の語りを NDJSON で一行ずつ返す。{type:"delta"} を重ね、最後に done か error が届く。
 async function handleInterpretStream(request: Request) {
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed." }, 405);
-  }
-
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
   let prompt: string;
   try {
     const since = Date.now() - memoryDays * 86_400_000;
@@ -60,7 +65,41 @@ async function handleInterpretStream(request: Request) {
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
   }
+  return streamCodex(request, prompt);
+}
 
+// カードを引く前に、占い師が一つだけ問い返す。短いので速さを優先する。
+async function handleClarifyStream(request: Request) {
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
+  const body = (await request.json().catch(() => null)) as { question?: unknown } | null;
+  const question = typeof body?.question === "string" ? body.question.trim().slice(0, maxQuestionLength) : "";
+  if (!question) return jsonResponse({ error: "Question is empty." }, 400);
+  const firstVisit = (await store.list().catch(() => [])).length === 0;
+  return streamCodex(request, generateClarifyPrompt(question, { firstVisit }), { effort: "low" });
+}
+
+// 読み終えたあとの聞き返し。答え終えたら記録に書き足す。
+async function handleFollowUpStream(request: Request) {
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
+  let followUp: ReturnType<typeof buildFollowUpRequest>;
+  try {
+    followUp = buildFollowUpRequest(await request.json().catch(() => null));
+  } catch (error) {
+    return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
+  }
+  return streamCodex(request, followUp.prompt, {
+    onComplete: async (answer) => {
+      if (followUp.recordId) await store.addFollowUp(followUp.recordId, { question: followUp.ask, answer }).catch(() => false);
+    },
+  });
+}
+
+// 占い師の言葉を NDJSON で一行ずつ返す。{type:"delta"} を重ね、最後に done か error が届く。
+function streamCodex(
+  request: Request,
+  prompt: string,
+  { effort, onComplete }: { effort?: "low" | "medium"; onComplete?: (answer: string) => Promise<unknown> } = {},
+) {
   const abort = new AbortController();
   request.signal.addEventListener("abort", () => abort.abort(), { once: true });
   const encoder = new TextEncoder();
@@ -76,10 +115,12 @@ async function handleInterpretStream(request: Request) {
       const heartbeat = setInterval(() => emit({ type: "wait" }), 5000);
 
       try {
-        await askCodex(prompt, {
+        const answer = await askCodex(prompt, {
           signal: abort.signal,
+          effort,
           onDelta: (text) => emit({ type: "delta", text }),
         });
+        await onComplete?.(answer);
         emit({ type: "done" });
       } catch (error) {
         emit({ type: "error", message: error instanceof Error ? error.message : "API request failed." });

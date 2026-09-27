@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { DrawnCard, SelectedCard } from "../types/tarot";
+import { oracleName } from "../utils/persona";
 import { playDeal, playPick, playPlace, playShuffle } from "../utils/sound";
 import { cutPileCount } from "../utils/tarot";
 import { CardView } from "./CardView";
@@ -299,7 +300,7 @@ export const CardBackGrid = ({
               : phase !== "ready"
                 ? "卓の上に、カードを広げています"
                 : isComplete
-                  ? "カードが揃いました。占い師に渡しましょう"
+                  ? `カードが揃いました。${oracleName}に渡しましょう`
                   : `あと ${remaining} 枚、呼ばれる気がするカードを`}
         </p>
         <div className="reveal-buttons">

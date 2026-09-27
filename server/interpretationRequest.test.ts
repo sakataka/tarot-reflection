@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { tarotDeck } from "../src/data/tarotDeck";
-import { buildPromptFromInterpretationInput } from "./interpretationRequest";
+import { generateClarifyPrompt } from "../src/utils/prompt";
+import { buildFollowUpRequest, buildPromptFromInterpretationInput } from "./interpretationRequest";
 
 describe("buildPromptFromInterpretationInput", () => {
   test("builds a prompt from known spread and card ids", () => {
@@ -72,5 +73,40 @@ describe("buildPromptFromInterpretationInput", () => {
         cards: [{ cardId: "made-up-card", orientation: "upright" }],
       })
     ).toThrow("Unknown card");
+  });
+});
+
+describe("conversation with the oracle", () => {
+  const table = {
+    question: "引っ越すべきか",
+    spreadId: "one-card",
+    cards: [{ cardId: "major_17_star", orientation: "upright" }],
+    clarification: { question: "どこへ行きたいのかしら？", answer: "海の近く" },
+  };
+
+  test("introduces the oracle only on the first visit when asking back", () => {
+    expect(generateClarifyPrompt("引っ越すべきか", { firstVisit: true })).toContain("一度だけ「ヴェスペラ」と名乗る");
+    expect(generateClarifyPrompt("引っ越すべきか", { firstVisit: false })).toContain("名乗らず");
+  });
+
+  test("carries the clarifying answer into the reading", () => {
+    const prompt = buildPromptFromInterpretationInput(table);
+    expect(prompt).toContain("海の近く");
+    expect(prompt).toContain("問い返しへの相談者の答え");
+  });
+
+  test("allows two follow-up questions and closes the table on the last", () => {
+    const first = buildFollowUpRequest({ ...table, narration: "[[card:1]]星です。", previous: [], ask: "いつ動けば？", recordId: "abc" });
+    expect(first.prompt).toContain("いつ動けば？");
+    expect(first.prompt).toContain("（1枚目をめくる）");
+    expect(first.prompt).not.toContain("最後の問いかけ");
+    expect(first.recordId).toBe("abc");
+
+    const last = buildFollowUpRequest({ ...table, previous: [{ question: "いつ動けば？", answer: "春に。" }], ask: "誰に相談を？" });
+    expect(last.prompt).toContain("最後の問いかけ");
+
+    const previous = [{ question: "a", answer: "b" }, { question: "c", answer: "d" }];
+    expect(() => buildFollowUpRequest({ ...table, previous, ask: "もう一つ" })).toThrow("No more questions");
+    expect(() => buildFollowUpRequest({ ...table, ask: " " })).toThrow("empty");
   });
 });
