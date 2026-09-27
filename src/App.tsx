@@ -3,6 +3,7 @@ import { requestBackend } from "./backendClient";
 import { CardBackGrid } from "./components/CardBackGrid";
 import { CardCatalog } from "./components/CardCatalog";
 import { ClarifyBox } from "./components/ClarifyBox";
+import { GuidePanel } from "./components/GuidePanel";
 import { QuestionForm } from "./components/QuestionForm";
 import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
@@ -13,7 +14,7 @@ import { moonPhase, timeBand } from "./utils/moment";
 import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "./utils/sound";
 import { createReading, cutDeck, settleShuffle, shuffleDeckForReading } from "./utils/tarot";
 
-type View = "reading" | "catalog" | "archive";
+type View = "reading" | "catalog" | "archive" | "guide";
 const nightBands = new Set(["夕暮れ", "夜", "真夜中", "夜明け前"]);
 
 const App = () => {
@@ -194,6 +195,14 @@ const App = () => {
             <small>{soundOn ? "音あり" : "音なし"}</small>
           </button>
           <button
+            className={view === "guide" ? "header-catalog is-active" : "header-catalog"}
+            type="button"
+            aria-pressed={view === "guide"}
+            onClick={() => toggleView("guide")}
+          >
+            {view === "guide" ? "占いに戻る" : "案内"}
+          </button>
+          <button
             className={view === "archive" ? "header-catalog is-active" : "header-catalog"}
             type="button"
             aria-pressed={view === "archive"}
@@ -218,6 +227,8 @@ const App = () => {
       <main className="app-shell">
         {isCatalogOpen ? (
           <CardCatalog onClose={() => setView("reading")} />
+        ) : view === "guide" ? (
+          <GuidePanel onClose={() => setView("reading")} />
         ) : view === "archive" ? (
           <ReadingArchive
             records={records}
@@ -236,6 +247,7 @@ const App = () => {
             isNight={isNight}
             sameNightReading={sameNightReading}
             onOpenRecord={openRecord}
+            onOpenGuide={() => setView("guide")}
             onQuestionChange={setQuestion}
             onSpreadChange={setSelectedSpreadId}
             onConfide={() => setIsConfiding(true)}

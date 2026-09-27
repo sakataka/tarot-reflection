@@ -2,12 +2,12 @@ import { useState } from "react";
 import { tarotDeck } from "../data/tarotDeck";
 import { readingFromRecord, type ReadingRecord } from "../utils/history";
 import { moonPhase } from "../utils/moment";
-import { parseNarration, splitParagraphs } from "../utils/narration";
+import { parseNarration } from "../utils/narration";
 import { oracleName } from "../utils/persona";
 import { tableCards } from "../utils/tarot";
 import { ExchangeList } from "./FollowUpBox";
-import { NarrationCardHeader } from "./PromptBox";
-import { ReadingResult } from "./ReadingResult";
+import { NarrationView } from "./NarrationView";
+import { ReadingHeading, TableStrip } from "./ReadingTable";
 
 type ReadingArchiveProps = {
   records: ReadingRecord[];
@@ -87,11 +87,12 @@ const ArchivedReading = ({ record, onBack, onDelete }: {
   const segments = parseNarration(record.narration, true, cardCount);
 
   return (
-    <div className="archive-reading">
+    <div className="archive-reading reading-stage">
       <div className="archive-toolbar">
         <button className="text-button" type="button" onClick={onBack}>← 記録の一覧へ</button>
       </div>
-      <ReadingResult reading={reading} revealed={Array.from({ length: cardCount }, () => true)} />
+      <ReadingHeading reading={reading} />
+      <TableStrip reading={reading} revealed={Array.from({ length: cardCount }, () => true)} />
       <section className="oracle-panel is-open">
         <div className="oracle-heading">
           <p className="ornament-kicker">{oracleName}の言葉</p>
@@ -103,15 +104,7 @@ const ArchivedReading = ({ record, onBack, onDelete }: {
             <p className="exchange-ask"><span>あなた</span>{record.clarification.answer}</p>
           </div>
         ) : null}
-        <div className="narration">
-          {segments.map((segment, segmentIndex) => (
-            <div className={`narration-segment is-${segment.kind}`} key={segmentIndex}>
-              {segment.kind === "card" ? <NarrationCardHeader reading={reading} cardIndex={segment.cardIndex} /> : null}
-              {segment.kind === "close" ? <p className="narration-divider" aria-hidden="true">✦</p> : null}
-              {splitParagraphs(segment.text).map((paragraph, index) => <p key={index}>{paragraph}</p>)}
-            </div>
-          ))}
-        </div>
+        <NarrationView reading={reading} segments={segments.map((segment) => ({ segment, text: segment.text }))} />
         {record.followUps?.length ? <ExchangeList exchanges={record.followUps} /> : null}
         <div className="archive-delete">
           {confirming ? (

@@ -158,8 +158,6 @@ p { line-height: 1.9; color: var(--muted); }
 .intro-signature { display: block; margin-top: 10px; color: var(--gold); font-size: 12px; letter-spacing: .24em; }
 .clarify-box { display: grid; gap: 14px; margin-top: 30px; padding: 26px 28px 22px; border: 1px solid var(--line-strong); border-radius: 3px; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201, 164, 92, .08), transparent 70%), rgba(11, 15, 30, .9); box-shadow: inset 0 0 0 5px rgba(7, 10, 20, .7), inset 0 0 0 6px rgba(201, 164, 92, .16); animation: rise .7s ease both; }
 .clarify-box > .ornament-kicker { text-align: center; }
-.thinking-box.is-compact { padding: 4px 0 8px; gap: 12px; }
-.thinking-box.is-compact .candle { transform: scale(.75); }
 .clarify-words { font-family: var(--serif); font-size: 16px; line-height: 2.1; letter-spacing: .05em; color: var(--ink); animation: ink-in 1.2s ease both; }
 .clarify-answer { margin-top: 4px; }
 .clarify-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 14px; }
@@ -321,15 +319,23 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   78% { transform: translate(2px, calc(var(--i) * -1px)) rotate(1deg); }
 }
 /* カット：三つの山から一つを選ぶ */
-.is-cutting .card-back, .is-gathering .card-back { transition-duration: .6s; }
+.is-squaring .card-back, .is-cutting .card-back, .is-lifting .card-back, .is-gathering .card-back { transition-duration: .6s; transition-timing-function: cubic-bezier(.45, .05, .25, 1); }
+.is-squaring .card-back-art { animation: deck-square .55s ease both; }
+@keyframes deck-square { 0% { transform: none; } 35% { transform: translateY(-5px); } 60% { transform: translateY(1px); } 100% { transform: none; } }
+.riffle { border: 0; padding: 0; background: none; cursor: pointer; }
+.riffle:disabled { opacity: 1; cursor: default; }
+.riffle::before { content: ""; position: absolute; inset: -14px -60%; border-radius: 50%; background: radial-gradient(ellipse, rgba(234, 208, 143, .12), transparent 65%); opacity: 0; transition: opacity .4s; pointer-events: none; }
+.riffle:not(:disabled)::before { opacity: 1; animation: glow-pulse 2.6s ease-in-out infinite; }
+@keyframes glow-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 .cut-pile {
   position: absolute;
-  z-index: 250;
+  /* 切り分けた山のカード（山ごとに z-index を千単位で重ねる）より上に置く */
+  z-index: 5000;
   border: 0;
   border-radius: 6px;
   background: none;
   padding: 0;
-  animation: pile-in .5s .45s ease both;
+  animation: pile-in .5s .1s ease both;
 }
 .cut-pile span {
   position: absolute;
@@ -344,6 +350,10 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   transition: color .25s;
 }
 .cut-pile::after { content: ""; position: absolute; inset: -6px -6px 6px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(234, 208, 143, 0); transition: box-shadow .3s; pointer-events: none; }
+.cut-pile:disabled { opacity: 1; cursor: default; }
+.cut-pile.is-chosen::after { box-shadow: 0 0 0 1px var(--gold-bright), 0 0 30px 6px rgba(234, 208, 143, .45); transform: translateY(-26px); transition: box-shadow .3s, transform .6s cubic-bezier(.45, .05, .25, 1); }
+.cut-pile.is-chosen span { color: var(--gold-bright); }
+.cut-pile.is-passed span { opacity: 0; transition: opacity .3s; }
 .cut-pile:focus-visible { outline: none; }
 .cut-pile:focus-visible::after { box-shadow: 0 0 0 1px var(--gold-bright), 0 0 26px 4px rgba(234, 208, 143, .35); }
 .cut-pile:focus-visible span { color: var(--gold-bright); }
@@ -352,6 +362,10 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   .cut-pile:hover span { color: var(--gold-bright); }
 }
 @keyframes pile-in { from { opacity: 0; } to { opacity: 1; } }
+/* 卓の脇から、占い師が手順を促す */
+.oracle-guide { display: flex; align-items: center; gap: 16px; min-height: 72px; }
+.oracle-guide .ornament-kicker { font-size: 11px; }
+.section-heading .oracle-guide-words { margin-top: 4px; font-family: var(--serif); font-size: 15px; line-height: 1.8; letter-spacing: .05em; color: var(--ink); animation: ink-in .7s ease both; }
 .oracle-invitation { position: relative; margin-top: 4px; font-family: var(--serif); font-size: 12px; text-align: center; color: var(--faint); letter-spacing: .06em; }
 .reveal-action {
   position: sticky;
@@ -370,29 +384,18 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .reveal-buttons { display: flex; align-items: center; gap: 12px; }
 
 /* III. 言葉を受け取る */
-.reading-panel { animation: rise .7s ease both; }
-.reading-heading { flex-direction: column; align-items: center; text-align: center; gap: 8px; margin-bottom: 34px; }
+.reading-stage { animation: rise .7s ease both; }
+.reading-heading { flex-direction: column; align-items: center; text-align: center; gap: 8px; margin-bottom: 0; }
 .reading-question { max-width: 640px; font-family: var(--serif); font-size: 16px; color: var(--ink); letter-spacing: .05em; overflow-wrap: anywhere; }
 .reading-question::before { content: "「"; color: var(--gold); }
 .reading-question::after { content: "」"; color: var(--gold); }
-.reading-heading h1 { margin-top: 12px; font-size: clamp(22px, 3vw, 30px); }
 .reading-date { font-family: var(--latin); font-size: 13px; letter-spacing: .08em; color: var(--faint); }
-.reading-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px; }
-.reading-grid.spread-1 { grid-template-columns: minmax(0, 340px); justify-content: center; }
-.reading-grid.spread-7 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.reading-card { min-width: 0; display: flex; flex-direction: column; padding: 18px 18px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; transition: border-color .8s, box-shadow .8s; }
-.reading-card.is-revealed { border-color: var(--line-strong); box-shadow: 0 0 30px rgba(201, 164, 92, .08); }
-.position-copy { min-height: 84px; text-align: center; }
-.position-index { font-family: var(--latin); color: var(--gold); font-size: 14px; letter-spacing: .12em; line-height: 1.4; }
-.position-name { font-family: var(--serif); color: var(--ink) !important; font-size: 16px; font-weight: 600; letter-spacing: .14em; }
-.position-copy p:last-child { font-family: var(--serif); font-size: 12px; margin-top: 2px; }
 .tarot-card { margin: 0; perspective: 1400px; }
 .card-flip { position: relative; aspect-ratio: 2 / 3; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.3, .1, .2, 1); }
 .tarot-card.is-face-down .card-flip { transform: rotateY(180deg); }
 .card-flip-back, .card-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 5px; overflow: hidden; }
 .card-flip-back { transform: rotateY(180deg); background: url('/cards/card_back.webp') center / cover, #192535; border: 1px solid rgba(201, 164, 92, .55); box-shadow: 0 10px 24px rgba(0, 0, 0, .5); }
 .card-face { background: #142033; box-shadow: 0 0 0 1px rgba(201, 164, 92, .4), 0 14px 30px rgba(0, 0, 0, .55); }
-.reading-card.is-revealed .card-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 240, 200, .35) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: glint 1.6s .7s ease both; pointer-events: none; }
 @keyframes glint { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 .card-face-content { position: relative; width: 100%; height: 100%; }
 .card-face img { width: 100%; height: 100%; display: block; object-fit: cover; }
@@ -411,15 +414,79 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .card-number { display: none; }
 .card-meta h3 { font-size: 18px; letter-spacing: .14em; }
 .card-meta p { font-family: var(--latin); font-size: 13px; margin-top: 2px; letter-spacing: .04em; color: var(--faint); }
-.meaning-copy { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); text-align: center; transition: opacity .6s .7s; }
-.reading-card:not(.is-revealed) .meaning-copy { opacity: 0; transition-delay: 0s; }
-.meaning-copy p { font-family: var(--serif); font-size: 13px; }
-.meaning-copy .orientation { display: inline-block; border: 1px solid var(--line-strong); border-radius: 2px; padding: 0 10px; margin-bottom: 8px; font-size: 11px; color: var(--gold); letter-spacing: .14em; }
-.meaning-copy .keyword-list { color: var(--ink); margin-bottom: 4px; letter-spacing: .06em; }
-.reveal-skip { text-align: center; margin-top: 18px; }
-.table-extras { display: flex; justify-content: center; gap: 26px; margin-top: 26px; padding-top: 26px; border-top: 1px dashed var(--line); }
-.reading-card.is-extra { width: min(100%, 230px); background: rgba(10, 14, 28, .6); }
-.reading-card.is-extra .position-index { color: var(--gold-bright); }
+
+/* 占い師の姿。蝋燭の灯りがゆっくり揺れる */
+.oracle-portrait { position: relative; display: block; flex-shrink: 0; width: 240px; aspect-ratio: 1; border-radius: 50% 50% 8px 8px / 42% 42% 8px 8px; overflow: hidden; border: 1px solid var(--line-strong); box-shadow: 0 0 0 5px rgba(7, 10, 20, .85), 0 0 0 6px rgba(201, 164, 92, .28), 0 18px 50px rgba(0, 0, 0, .55), 0 0 60px rgba(234, 208, 143, .08); }
+.oracle-portrait img { width: 100%; height: 100%; display: block; object-fit: cover; animation: portrait-breathe 7s ease-in-out infinite; transform-origin: 50% 60%; }
+.oracle-portrait::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(ellipse 90% 80% at 50% 40%, transparent 55%, rgba(7, 10, 20, .55)); pointer-events: none; }
+.oracle-portrait-flame { position: absolute; width: 46%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255, 196, 110, .38), rgba(255, 160, 70, .1) 45%, transparent 70%); mix-blend-mode: screen; pointer-events: none; animation: flame-flicker 3.1s ease-in-out infinite; }
+.oracle-portrait.is-listening .oracle-portrait-flame { left: 2%; top: 55%; }
+.oracle-portrait.is-reading .oracle-portrait-flame { left: -2%; top: 56%; }
+.oracle-portrait.is-small { width: 64px; border-radius: 50%; box-shadow: 0 0 0 3px rgba(7, 10, 20, .85), 0 0 0 4px rgba(201, 164, 92, .3), 0 6px 18px rgba(0, 0, 0, .5); }
+.oracle-portrait.is-small img { animation: none; transform: scale(2.1); transform-origin: 50% 24%; }
+.oracle-portrait.is-small .oracle-portrait-flame { display: none; }
+@keyframes portrait-breathe { 0%, 100% { transform: scale(1.02); } 50% { transform: scale(1.055); } }
+@keyframes flame-flicker { 0%, 100% { opacity: .75; transform: scale(1); } 23% { opacity: 1; transform: scale(1.08) translate(1%, -1%); } 47% { opacity: .65; transform: scale(.96); } 71% { opacity: .95; transform: scale(1.04) translate(-1%, 0); } }
+.thinking-words.is-steady { animation: breathe-steady 3.2s ease-in-out infinite; }
+@keyframes breathe-steady { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* 問い返し：占い師の姿と言葉 */
+.clarify-oracle { display: flex; flex-direction: column; align-items: center; gap: 18px; text-align: center; }
+.clarify-oracle .oracle-portrait { animation: ink-in 1.2s ease both; transition: width .8s cubic-bezier(.3, .1, .2, 1); }
+.clarify-speech { display: grid; gap: 10px; justify-items: center; }
+.clarify-oracle.has-spoken { flex-direction: row; align-items: flex-start; gap: 26px; text-align: left; }
+.clarify-oracle.has-spoken .oracle-portrait { width: 168px; }
+.clarify-oracle.has-spoken .clarify-speech { justify-items: start; padding-top: 6px; }
+
+/* 卓を小さく見渡す帯。語りの間も上に留まる */
+.table-strip { position: sticky; top: 0; z-index: 40; display: flex; justify-content: center; gap: 14px; margin: 26px -12px 0; padding: 12px 12px 10px; background: linear-gradient(180deg, rgba(7, 10, 20, .96) 70%, rgba(7, 10, 20, .75)); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+.strip-card { display: grid; justify-items: center; gap: 3px; width: 58px; text-decoration: none; color: var(--faint); transition: color .3s; }
+.strip-card-flip { position: relative; width: 44px; aspect-ratio: 2 / 3; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.3, .1, .2, 1), box-shadow .4s; border-radius: 3px; }
+.strip-card-flip > * { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 3px; backface-visibility: hidden; -webkit-backface-visibility: hidden; object-fit: cover; box-shadow: 0 0 0 1px rgba(201, 164, 92, .45), 0 4px 10px rgba(0, 0, 0, .5); }
+.strip-card-back { background: url('/cards/card_back.webp') center / cover, #192535; }
+.strip-card-flip img { transform: rotateY(180deg); }
+.strip-card-flip img.is-reversed { transform: rotateY(180deg) rotate(180deg); }
+.strip-card.is-revealed .strip-card-flip { transform: rotateY(180deg); }
+.strip-card small { font-family: var(--latin); font-size: 11px; color: var(--gold); line-height: 1.2; }
+.strip-card-name { font-family: var(--serif); font-size: 10px; letter-spacing: .04em; line-height: 1.3; white-space: nowrap; }
+.strip-card.is-revealed { color: var(--muted); }
+.strip-card.is-current { color: var(--gold-bright); }
+.strip-card.is-current .strip-card-flip { box-shadow: 0 0 0 2px var(--gold-bright), 0 0 18px 4px rgba(234, 208, 143, .45); transform: rotateY(180deg) translateY(-4px); }
+a.strip-card:hover { color: var(--gold-bright); }
+
+/* 語りの頭で、めくったカードを大きく見せる */
+.narration-segment { scroll-margin-top: 124px; }
+.card-stage { display: grid; grid-template-columns: 168px minmax(0, 1fr); align-items: center; gap: 26px; margin: 10px 0 24px; padding: 22px; border: 1px solid var(--line); border-radius: 4px; background: radial-gradient(ellipse 70% 90% at 20% 50%, rgba(80, 100, 170, .16), transparent 70%), rgba(10, 14, 28, .55); animation: ink-in .8s ease both; }
+.card-stage .card-meta { display: none; }
+.card-stage:not(.is-face-down) .card-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 240, 200, .35) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: glint 1.6s .7s ease both; pointer-events: none; }
+.card-stage-label { display: grid; gap: 4px; line-height: 1.6; transition: opacity .6s .6s; }
+.card-stage.is-face-down .card-stage-label > :not(small):not(.card-stage-role) { opacity: 0; }
+.card-stage-label > * { transition: opacity .6s .5s; }
+.card-stage-label small { font-family: var(--latin); font-size: 13px; letter-spacing: .14em; color: var(--gold); }
+.card-stage-role { font-size: 12px; color: var(--faint); letter-spacing: .04em; }
+.card-stage-label strong { margin-top: 8px; font-size: 24px; font-weight: 600; letter-spacing: .14em; color: var(--ink); }
+.card-stage-label em { font-family: var(--latin); font-style: normal; font-size: 13px; letter-spacing: .08em; color: var(--muted); }
+.card-stage-keywords { margin-top: 6px; font-size: 13px; color: var(--gold-bright); letter-spacing: .06em; }
+.narration-segment.is-intro .card-stage { grid-template-columns: 96px minmax(0, 1fr); padding: 14px 18px; }
+.narration-kicker { display: flex; align-items: center; gap: 14px; margin: 18px 0 16px !important; font-size: 13px; letter-spacing: .24em; color: var(--gold) !important; animation: ink-in .8s ease both; }
+.narration-kicker::before, .narration-kicker::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--line-strong)); }
+.narration-kicker::after { transform: scaleX(-1); }
+.table-overview { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; animation: ink-in .8s ease both; }
+.table-overview-card { display: grid; justify-items: center; gap: 4px; }
+.table-overview-card img { width: 52px; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 3px; box-shadow: 0 0 0 1px rgba(201, 164, 92, .5), 0 6px 14px rgba(0, 0, 0, .5); }
+.table-overview-card img.is-reversed { transform: rotate(180deg); }
+.table-overview-card small { font-family: var(--latin); font-size: 11px; color: var(--gold); line-height: 1; }
+.narration-segment.is-message { margin-top: 22px; }
+.message-words { position: relative; padding: 26px 30px 12px; border: 1px solid var(--gold); border-radius: 3px; text-align: center; background: radial-gradient(ellipse 80% 90% at 50% 0%, rgba(201, 164, 92, .14), transparent 75%), rgba(12, 16, 32, .85); box-shadow: inset 0 0 0 4px rgba(7, 10, 20, .85), inset 0 0 0 5px rgba(201, 164, 92, .3), 0 0 40px rgba(234, 208, 143, .1); animation: ink-in 1.2s ease both; }
+.message-words p { font-size: 19px; line-height: 2; letter-spacing: .08em; color: var(--gold-bright) !important; }
+
+/* 語りの区切り：相談者の合図で次へ進む */
+.narration-gate { display: grid; justify-items: center; gap: 10px; margin: 10px 0 18px; padding-top: 18px; border-top: 1px dashed var(--line); animation: ink-in .8s ease both; }
+.narration-gate p { font-family: var(--serif); font-size: 13px; letter-spacing: .06em; color: var(--muted); text-align: center; }
+.gate-button { display: inline-flex; align-items: center; gap: 12px; min-height: 48px; padding: 10px 30px; border: 1px solid var(--gold); border-radius: 999px; background: radial-gradient(ellipse at 50% 0%, rgba(234, 208, 143, .2), rgba(14, 20, 38, .9) 70%); color: var(--gold-bright); font-family: var(--serif); font-size: 15px; letter-spacing: .16em; box-shadow: 0 0 22px rgba(234, 208, 143, .16); animation: gate-glow 2.6s ease-in-out infinite; }
+.gate-button span[aria-hidden] { font-size: 9px; }
+.gate-button:hover { background: radial-gradient(ellipse at 50% 0%, rgba(234, 208, 143, .32), rgba(14, 20, 38, .9) 70%); }
+@keyframes gate-glow { 0%, 100% { box-shadow: 0 0 16px rgba(234, 208, 143, .12); } 50% { box-shadow: 0 0 30px 4px rgba(234, 208, 143, .3); } }
 
 /* 混ぜている途中でこぼれたカード */
 .jumper-note { display: flex; align-items: center; gap: 18px; max-width: 640px; margin: 0 auto 18px; padding: 12px 18px; border: 1px solid var(--line-strong); border-radius: 3px; background: rgba(12, 18, 36, .7); animation: jumper-in .9s cubic-bezier(.2, .8, .3, 1) both; }
@@ -451,37 +518,17 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .thinking-box { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0 28px; }
 .thinking-words { font-family: var(--serif); font-size: 14px; letter-spacing: .08em; color: var(--muted); animation: breathe 2.8s ease-in-out both; }
 @keyframes breathe { 0% { opacity: 0; transform: translateY(4px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
-.candle { position: relative; display: block; width: 60px; height: 110px; }
-.candle-body { position: absolute; left: 50%; bottom: 0; width: 22px; height: 58px; transform: translateX(-50%); border-radius: 3px 3px 2px 2px; background: linear-gradient(90deg, #b9a888, #efe3c6 40%, #d8c8a4 70%, #9d8c6d); box-shadow: 0 0 20px rgba(255, 190, 90, .15); }
-.candle-body::before { content: ""; position: absolute; top: -2px; left: 0; right: 0; height: 6px; border-radius: 50%; background: #f4ead2; }
-.candle-wick { position: absolute; left: 50%; bottom: 57px; width: 2px; height: 8px; transform: translateX(-50%); background: #2a2016; border-radius: 1px; }
-.candle-flame { position: absolute; left: 50%; bottom: 62px; width: 12px; height: 26px; margin-left: -6px; border-radius: 50% 50% 45% 45% / 65% 65% 35% 35%; background: radial-gradient(ellipse at 50% 80%, #fff 0 18%, #ffe39a 32%, #ffae3c 62%, rgba(255, 120, 30, 0) 75%); transform-origin: 50% 100%; animation: flicker 2.4s ease-in-out infinite; filter: blur(.3px); }
-.candle-glow { position: absolute; left: 50%; bottom: 44px; width: 120px; height: 120px; margin-left: -60px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 190, 90, .32), rgba(255, 150, 60, .08) 45%, transparent 70%); animation: glow 2.4s ease-in-out infinite; }
-@keyframes flicker {
-  0%, 100% { transform: rotate(-2deg) scaleY(1); }
-  20% { transform: rotate(2deg) scaleY(1.08) scaleX(.94); }
-  45% { transform: rotate(-1deg) scaleY(.94); }
-  70% { transform: rotate(3deg) scaleY(1.05) scaleX(.97); }
-}
-@keyframes glow { 0%, 100% { opacity: .8; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
 .oracle-error { text-align: center; }
 /* 語り：届いた言葉が、話す速さで紙に移っていく */
 .narration { font-family: var(--serif); font-size: 16px; line-height: 2.1; letter-spacing: .04em; overflow-wrap: anywhere; color: var(--ink); }
 .narration p { color: #e2d8bf; margin: 0 0 1.2em; white-space: pre-line; animation: ink-in .9s ease both; }
 .narration-segment.is-intro > p:first-child::first-letter { font-size: 1.6em; color: var(--gold-bright); }
 .narration-segment + .narration-segment { margin-top: 12px; }
-.narration-card { display: flex; align-items: center; gap: 16px; margin: 8px 0 18px; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); animation: ink-in .9s ease both; }
-.narration-card-thumb { flex-shrink: 0; width: 46px; aspect-ratio: 2 / 3; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px rgba(201, 164, 92, .5), 0 6px 14px rgba(0, 0, 0, .5); animation: thumb-flip .9s cubic-bezier(.3, .1, .2, 1) both; }
-.narration-card-thumb img { width: 100%; height: 100%; display: block; object-fit: cover; }
-.narration-card-thumb.is-reversed img { transform: rotate(180deg); }
 @keyframes thumb-flip { from { transform: perspective(400px) rotateY(90deg); filter: brightness(1.8); } to { transform: none; filter: none; } }
-.narration-card-label { display: grid; gap: 2px; line-height: 1.5; }
-.narration-card-label small { font-size: 12px; letter-spacing: .12em; color: var(--gold); }
-.narration-card-label strong { font-size: 17px; font-weight: 600; letter-spacing: .12em; color: var(--ink); }
-.narration-card-label em { font-style: normal; font-size: 11px; letter-spacing: .14em; color: var(--muted); }
-.narration-divider { text-align: center; color: var(--gold) !important; font-size: 10px; margin: 8px 0 16px !important; }
 .ink-caret { display: inline-block; width: 6px; height: 6px; margin-left: 6px; vertical-align: middle; border-radius: 50%; background: var(--gold-bright); box-shadow: 0 0 10px 2px rgba(234, 208, 143, .6); animation: caret-breathe 1.4s ease-in-out infinite; }
 @keyframes caret-breathe { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
+/* 語りの途中は下に余白を残し、めくったカードを画面の上まで送れるようにする */
+.narration-tail { height: 45vh; }
 .narration-skip { text-align: center; margin-top: 4px; }
 .narration-skip .text-button { font-size: 12px; color: var(--faint); }
 .copy-fallback { color: var(--danger); font-family: var(--serif); font-size: 13px; margin: 12px 0; }
@@ -490,6 +537,32 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .answer-closing::before { content: "☾"; display: block; color: var(--gold); margin-bottom: 6px; }
 .answer-actions { display: flex; flex-direction: column; align-items: center; margin-top: 20px; animation: ink-in 1s 1.2s ease both; }
 .reset-row { text-align: center; margin-top: 32px; }
+
+/* 案内 */
+.guide-panel { max-width: 860px; margin: auto; animation: rise .6s ease both; }
+.guide-section { margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--line); }
+.guide-section h2 { font-size: 18px; margin-bottom: 14px; color: var(--gold-bright); }
+.guide-section > p, .guide-section p, .guide-section dd, .guide-notes li { font-family: var(--serif); font-size: 14px; line-height: 2; letter-spacing: .03em; color: var(--muted); }
+.guide-steps { counter-reset: step; list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.guide-steps li { counter-increment: step; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 2px 14px; }
+.guide-steps li::before { content: counter(step); grid-row: span 2; display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line-strong); border-radius: 50%; font-family: var(--latin); font-size: 14px; color: var(--gold); }
+.guide-steps strong { font-family: var(--serif); font-size: 15px; letter-spacing: .08em; color: var(--ink); font-weight: 600; }
+.guide-spreads { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }
+.guide-spread { padding: 16px 18px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+.guide-spread h3 { font-size: 15px; color: var(--gold-bright); letter-spacing: .1em; }
+.guide-spread > p { font-size: 12px !important; line-height: 1.8 !important; margin: 6px 0 10px; }
+.guide-spread ol { margin: 0; padding-left: 1.4em; display: grid; gap: 4px; }
+.guide-spread li { font-family: var(--serif); font-size: 12px; line-height: 1.7; color: var(--muted); }
+.guide-spread li::marker { color: var(--gold); font-family: var(--latin); }
+.guide-spread li strong { color: var(--ink); font-weight: 600; margin-right: 8px; }
+.guide-terms { display: grid; gap: 18px; margin: 0; }
+.guide-terms dt { font-family: var(--serif); font-size: 15px; font-weight: 600; letter-spacing: .08em; color: var(--ink); }
+.guide-terms dt span { color: var(--gold-bright); margin-right: 8px; }
+.guide-terms dd { margin: 4px 0 0; }
+.guide-notes { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.guide-notes li::marker { color: var(--gold); }
+.guide-back { margin-top: 34px; text-align: center; }
+.guide-link { display: block; margin: 14px auto 0; font-size: 13px; color: var(--gold); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; }
 
 /* カード図鑑 */
 .catalog-panel { max-width: 1080px; margin: auto; animation: rise .6s ease both; }
@@ -569,19 +642,6 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   .intro-landscape { height: 150px; margin: -4px -16px 0; }
   .intro-copy h1 { font-size: 26px; }
   .mobile-break { display: inline; }
-  .tonight-moon { max-width: 560px; margin: 14px auto 0; color: var(--muted); font-family: var(--serif); font-size: 13px; line-height: 1.9; letter-spacing: .04em; }
-.tonight-moon strong { color: var(--gold-bright); font-weight: 600; letter-spacing: .1em; }
-.intro-signature { display: block; margin-top: 10px; color: var(--gold); font-size: 12px; letter-spacing: .24em; }
-.clarify-box { display: grid; gap: 14px; margin-top: 30px; padding: 26px 28px 22px; border: 1px solid var(--line-strong); border-radius: 3px; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201, 164, 92, .08), transparent 70%), rgba(11, 15, 30, .9); box-shadow: inset 0 0 0 5px rgba(7, 10, 20, .7), inset 0 0 0 6px rgba(201, 164, 92, .16); animation: rise .7s ease both; }
-.clarify-box > .ornament-kicker { text-align: center; }
-.thinking-box.is-compact { padding: 4px 0 8px; gap: 12px; }
-.thinking-box.is-compact .candle { transform: scale(.75); }
-.clarify-words { font-family: var(--serif); font-size: 16px; line-height: 2.1; letter-spacing: .05em; color: var(--ink); animation: ink-in 1.2s ease both; }
-.clarify-answer { margin-top: 4px; }
-.clarify-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 14px; }
-.clarify-actions .text-button:first-child { margin-right: auto; padding-left: 0; }
-.same-night { display: grid; justify-items: center; gap: 14px; margin-top: 28px; padding: 18px 22px; border: 1px solid var(--line-strong); border-radius: 3px; background: rgba(12, 18, 36, .7); text-align: center; }
-.same-night p { font-family: var(--serif); font-size: 13px; line-height: 1.9; color: var(--ink); }
 .intro-copy > p:last-child { font-size: 13px; }
   .field-heading { flex-wrap: wrap; gap: 4px 12px; }
   .field-heading small { font-size: 11px; }
@@ -603,15 +663,31 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   .reveal-action p { font-size: 13px; text-align: center; }
   .reveal-buttons { justify-content: space-between; }
   .reveal-buttons .primary-button { flex: 1; }
-  .reading-grid, .reading-grid.spread-7 { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .reading-card { padding: 12px 10px 14px; }
-  .position-copy { min-height: 96px; }
-  .position-name { font-size: 14px; }
   .card-meta h3 { font-size: 15px; letter-spacing: .08em; }
-  .meaning-copy p { font-size: 12px; }
-  .oracle-panel { padding: 32px 20px 24px; margin-top: 36px; }
+  .oracle-panel { padding: 28px 16px 22px; margin-top: 20px; }
+  .oracle-portrait { width: 200px; }
+  .clarify-oracle.has-spoken { flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+  .clarify-oracle.has-spoken .oracle-portrait { width: 120px; }
+  .clarify-oracle.has-spoken .clarify-speech { justify-items: center; padding-top: 0; }
+  .clarify-oracle.has-spoken .clarify-words { text-align: left; }
+  .table-strip { gap: 6px; margin: 18px -16px 0; padding: 10px 8px 8px; }
+  .strip-card { width: 44px; }
+  .strip-card-flip { width: 34px; }
+  .table-strip.spread-7 .strip-card { width: 36px; }
+  .table-strip.spread-7 .strip-card-flip { width: 28px; }
+  .table-strip.spread-7 .strip-card-name { display: none; }
+  .strip-card-name { font-size: 9px; }
+  .narration-segment { scroll-margin-top: 112px; }
+  .card-stage { grid-template-columns: 116px minmax(0, 1fr); gap: 16px; padding: 14px; margin-bottom: 18px; }
+  .card-stage-label strong { font-size: 19px; margin-top: 4px; }
+  .card-stage-keywords { font-size: 12px; }
+  .narration-segment.is-intro .card-stage { grid-template-columns: 72px minmax(0, 1fr); padding: 10px 12px; }
+  .message-words { padding: 20px 16px 6px; }
+  .message-words p { font-size: 17px; }
   .narration { font-size: 15px; line-height: 2; }
   .catalog-heading { align-items: stretch; }
+  .guide-spreads { grid-template-columns: 1fr; }
+  .guide-section { margin-top: 26px; padding-top: 20px; }
   .catalog-controls { align-items: stretch; flex-direction: column; gap: 14px; }
   .catalog-search { width: 100%; min-width: 0; }
   .catalog-layout { grid-template-columns: 1fr; gap: 20px; }
@@ -620,8 +696,6 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   .catalog-detail .tarot-card { width: 100%; margin: 12px 0 0; }
   .catalog-meanings { margin-top: 12px; padding-top: 0; border-top: 0; }
   .catalog-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .table-extras { gap: 12px; }
-  .reading-card.is-extra { width: auto; flex: 1; max-width: 200px; }
   .jumper-note { gap: 14px; padding: 10px 12px; }
   .jumper-card { width: 52px; }
   .jumper-note p { font-size: 12px; }
@@ -636,9 +710,6 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 }
 @media (max-width: 380px) {
   .ritual-step small { font-size: 11px; }
-  .reading-grid, .reading-grid.spread-7 { grid-template-columns: 1fr; }
-  .reading-card { padding: 20px; }
-  .position-copy { min-height: auto; margin-bottom: 12px; }
   .tarot-card { max-width: 250px; margin: auto; width: 100%; }
   .catalog-heading { flex-direction: column; }
   .catalog-detail { display: block; }

@@ -1,12 +1,17 @@
-// 占い師の語りは、カードをめくる合図 [[card:N]] と締めの合図 [[close]] で区切られて届く。
+// 占い師の語りは、カードをめくる合図 [[card:N]]、締めの合図 [[close]]、
+// 今夜の答えを一言にまとめる合図 [[message]] で区切られて届く。
 // 届いた途中の文字列からも、表示してよい部分だけを段ごとに切り出す。
 
 export type NarrationSegment =
   | { kind: "intro"; text: string }
   | { kind: "card"; cardIndex: number; text: string }
-  | { kind: "close"; text: string };
+  | { kind: "close"; text: string }
+  | { kind: "message"; text: string };
 
-const markerPattern = /\[\[\s*(card\s*:\s*(\d+)|close)\s*\]\]/gi;
+// 語りの中で、相談者の操作を待つ区切り（カードをめくる・卓を見渡す・答えを告げる）。
+export const isGatedSegment = (segment: NarrationSegment) => segment.kind !== "intro";
+
+const markerPattern = /\[\[\s*(card\s*:\s*(\d+)|close|message)\s*\]\]/gi;
 
 export const parseNarration = (raw: string, isComplete: boolean, cardCount: number): NarrationSegment[] => {
   // 書きかけの合図（"[[car" など）は、続きが届くまで表示しない。
@@ -32,8 +37,11 @@ export const parseNarration = (raw: string, isComplete: boolean, cardCount: numb
         seenCards.add(cardIndex);
         segments.push({ kind: "card", cardIndex, text: "" });
       }
-    } else if (!segments.some((segment) => segment.kind === "close")) {
-      segments.push({ kind: "close", text: "" });
+    } else {
+      const kind = match[1].toLowerCase() === "message" ? "message" : "close";
+      if (!segments.some((segment) => segment.kind === kind || segment.kind === "message")) {
+        segments.push({ kind, text: "" });
+      }
     }
   }
   segments[segments.length - 1].text += source.slice(lastIndex);
@@ -73,6 +81,7 @@ export const narrationToPlainText = (segments: NarrationSegment[], cardLabel: (c
     .map((segment) => {
       if (segment.kind === "card") return `― ${cardLabel(segment.cardIndex)} ―\n\n${segment.text.trim()}`;
       if (segment.kind === "close") return `―\n\n${segment.text.trim()}`;
+      if (segment.kind === "message") return `― 今夜の答え ―\n\n${segment.text.trim()}`;
       return segment.text.trim();
     })
     .join("\n\n");

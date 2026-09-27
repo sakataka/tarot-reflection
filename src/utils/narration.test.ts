@@ -29,4 +29,14 @@ describe("parseNarration", () => {
     expect(segmentStarts(segments)).toEqual([0, 3, 6]);
     expect(narrationToPlainText(segments, () => "現在・星")).toBe("はじめ\n\n― 現在・星 ―\n\n一枚目\n\n―\n\nおわり");
   });
+
+  test("keeps the closing message after the closing, and ignores markers after it", () => {
+    const segments = parseNarration("[[card:1]]星。[[close]]見渡して。[[message]]\n今は待つとき。[[close]]", true, 1);
+    expect(segments).toEqual([
+      { kind: "card", cardIndex: 0, text: "星。" },
+      { kind: "close", text: "見渡して。" },
+      { kind: "message", text: "今は待つとき。" },
+    ]);
+    expect(narrationToPlainText(segments, () => "現在・星")).toContain("― 今夜の答え ―\n\n今は待つとき。");
+  });
 });

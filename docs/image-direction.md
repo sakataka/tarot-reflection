@@ -2,7 +2,16 @@
 
 2026-09-19 更新。組み込みの image_gen で生成。ツールはモデル選択・モデル名の確認を公開していないため、特定のモデルバージョンは記録しない。
 
-全44点を `public/cards/` に保存。大アルカナ22点、コートカード16点、小アルカナ4スートの共通絵4点、裏面1点、導入の風景1点。小アルカナのランクは画面側で重ねて表示する（個別絵のカードは四隅だけ、共通絵のカードは中央にも大きく）。
+全46点を `public/cards/` に保存。大アルカナ22点、コートカード16点、小アルカナ4スートの共通絵4点、裏面1点、導入の風景1点、ヴェスペラの肖像2点。小アルカナのランクは画面側で重ねて表示する（個別絵のカードは四隅だけ、共通絵のカードは中央にも大きく）。
+
+## ヴェスペラの肖像（2026-09-27）
+
+Codex CLI の画像生成で 1024×1024 を生成し、800×800 の WebP 品質84で保存。スタイル参照は `card_back` と `major_02_high_priestess`。画面では上部を丸めた額に入れ、蝋燭の位置に揺らぐ灯りを重ねる。小さく使うときは顔へ寄せて丸く切り抜く。
+
+共通プロンプト（要約）: Vespera, a mysterious fortune teller woman in her mid-forties, dignified and quietly alluring, dark hair loosely pinned up, deep indigo shawl with faint gold embroidery, old antique gold crescent earrings, chest up across a small table, lit warmly from below by a single candle, faint stars and crescent moon through a window. Fully clothed, tasteful, not sexualized, not a cliché witch, no crystal ball. Edges fade into very dark midnight indigo. No frame, no text.
+
+- `vespera_listening.webp`: 問いに耳を傾ける。首を少し傾け、目を伏せ、片手を口元に、もう片手を伏せた山に置く。
+- `vespera_reading.webp`: 卓に伏せた三枚のカードを見下ろし、片手をそっとかざす。
 
 ## コートカード（2026-09-27）
 

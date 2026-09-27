@@ -1,32 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { requestBackend, streamBackend } from "../backendClient";
 import type { Reading } from "../types/tarot";
 import { tablePayload, type ReadingRecord } from "../utils/history";
-import {
-  narrationToPlainText,
-  parseNarration,
-  segmentStarts,
-  splitParagraphs,
-  type NarrationSegment,
-} from "../utils/narration";
+import { isGatedSegment, narrationToPlainText, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
 import { FollowUpBox } from "./FollowUpBox";
+import { NarrationView } from "./NarrationView";
+import { OraclePortrait } from "./OraclePortrait";
+import { cardMark, narrationCardId, orientationLabel } from "./ReadingTable";
 
 type PromptBoxProps = {
   reading: Reading;
   revealed: boolean[];
   onRevealCard: (cardIndex: number) => void;
+  onCurrentChange?: (cardIndex: number | null) => void;
   onSaved?: (record: ReadingRecord) => void;
 };
 
-const orientationLabel = {
-  upright: "正位置",
-  reversed: "逆位置",
-} as const;
-
-const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII"];
+const ordinalJa = ["一", "二", "三", "四", "五", "六", "七"];
 
 const waitingWords = [
   "伏せたカードの上に、そっと手をかざしています",
@@ -40,13 +33,14 @@ const charsPerSecond = 24;
 const tickInterval = 40;
 const pauseAfterSentence = 260;
 const pauseAfterParagraph = 650;
-const pauseAfterFlip = 1500;
+const pauseAfterFlip = 1700;
 const pauseBeforeClosing = 900;
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBoxProps) => {
+// 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
+export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
@@ -57,15 +51,20 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  // 語りに入った区切り（カード・総括・答え）の数と、相談者の合図を待っている区切り。
+  const [entered, setEntered] = useState(0);
+  const [awaitingOrdinal, setAwaitingOrdinal] = useState<number | null>(null);
 
   // タイマーからは最新の値を読む。
-  const live = useRef({ raw, streamDone, cursor, instant, revealed, carry: 0, pauseUntil: 0, lastTick: 0 });
+  const live = useRef({ raw, streamDone, cursor, instant, revealed, carry: 0, pauseUntil: 0, lastTick: 0, entered: 0, gatesOpened: 0 });
   live.current.raw = raw;
   live.current.streamDone = streamDone;
   live.current.instant = instant;
   live.current.revealed = revealed;
   const revealRef = useRef(onRevealCard);
   revealRef.current = onRevealCard;
+  const currentRef = useRef(onCurrentChange);
+  currentRef.current = onCurrentChange;
   const savedRef = useRef("");
   const [recordId, setRecordId] = useState("");
   const onSavedRef = useRef(onSaved);
@@ -79,8 +78,12 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
     setError("");
     setCursor(0);
     setFinished(false);
+    setEntered(0);
+    setAwaitingOrdinal(null);
     live.current.cursor = 0;
     live.current.pauseUntil = 0;
+    live.current.entered = 0;
+    live.current.gatesOpened = 0;
 
     streamBackend(
       "interpret/stream",
@@ -115,16 +118,29 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
       const starts = segmentStarts(segments);
       const total = starts.length ? starts[starts.length - 1] + segments[segments.length - 1].text.length : 0;
 
-      for (let guard = 0; guard < cardCount + total + 1; guard += 1) {
-        const pendingFlip = segments.findIndex(
-          (segment, index) => segment.kind === "card" && starts[index] <= state.cursor && !state.revealed[segment.cardIndex],
-        );
-        if (pendingFlip >= 0) {
-          const segment = segments[pendingFlip] as Extract<NarrationSegment, { kind: "card" }>;
-          state.revealed = state.revealed.map((isRevealed, index) => isRevealed || index === segment.cardIndex);
-          revealRef.current(segment.cardIndex);
+      const gated = segments.flatMap((segment, index) => (isGatedSegment(segment) ? [index] : []));
+
+      for (let guard = 0; guard < cardCount + total + 4; guard += 1) {
+        // 次の区切りに来たら、相談者の合図を待ってから入る。
+        const nextGated = gated[state.entered];
+        if (nextGated !== undefined && starts[nextGated] <= state.cursor) {
+          const segment = segments[nextGated];
+          if (!state.instant && state.gatesOpened <= state.entered) {
+            setAwaitingOrdinal(state.entered);
+            return;
+          }
+          state.entered += 1;
+          setEntered(state.entered);
+          setAwaitingOrdinal(null);
+          if (segment.kind === "card") {
+            state.revealed = state.revealed.map((isRevealed, index) => isRevealed || index === segment.cardIndex);
+            revealRef.current(segment.cardIndex);
+            currentRef.current?.(segment.cardIndex);
+          } else {
+            currentRef.current?.(null);
+          }
           if (!state.instant) {
-            state.pauseUntil = now + pauseAfterFlip;
+            state.pauseUntil = now + (segment.kind === "card" ? pauseAfterFlip : pauseBeforeClosing);
             return;
           }
           continue;
@@ -136,6 +152,8 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
             state.revealed.forEach((isRevealed, index) => {
               if (!isRevealed) revealRef.current(index);
             });
+            currentRef.current?.(null);
+            setAwaitingOrdinal(null);
             setFinished(true);
           }
           return;
@@ -168,10 +186,6 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
             break;
           }
         }
-        if (nextCursor === nextBoundary && segments[starts.indexOf(nextBoundary)]?.kind === "close") {
-          pause = Math.max(pause, pauseBeforeClosing);
-        }
-
         state.cursor = nextCursor;
         state.pauseUntil = pause ? now + pause : 0;
         setCursor(nextCursor);
@@ -183,10 +197,14 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
 
   const segments = parseNarration(raw, streamDone, cardCount);
   const starts = segmentStarts(segments);
+  let gatedOrdinal = 0;
   const visibleSegments = segments
-    .map((segment, index) => ({ segment, text: segment.text.slice(0, Math.max(0, cursor - starts[index])) }))
-    .filter(({ segment, text }, index) =>
-      segment.kind === "card" ? starts[index] <= cursor && revealed[segment.cardIndex] : text.length > 0 || (segment.kind === "close" && starts[index] < cursor));
+    .map((segment, index) => {
+      const ordinal = isGatedSegment(segment) ? gatedOrdinal++ : -1;
+      return { segment, ordinal, text: segment.text.slice(0, Math.max(0, cursor - starts[index])) };
+    })
+    .filter(({ segment, ordinal, text }) => (isGatedSegment(segment) ? ordinal < entered : text.length > 0));
+  const awaiting = awaitingOrdinal === null ? null : segments.filter(isGatedSegment)[awaitingOrdinal] ?? null;
   const isWaiting = !error && visibleSegments.length === 0;
   const isSpeaking = !finished && !isWaiting && !error;
 
@@ -199,6 +217,45 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
   useEffect(() => {
     if (finished) playChime();
   }, [finished]);
+
+  // 新しいカードをめくったら、そのカードを目の前に持ってくる。
+  const lastEntered = visibleSegments.filter(({ ordinal }) => ordinal >= 0).at(-1)?.segment;
+  const lastEnteredId = lastEntered?.kind === "card" ? narrationCardId(lastEntered.cardIndex) : lastEntered ? `narration-${lastEntered.kind}` : "";
+  useEffect(() => {
+    if (!lastEnteredId || live.current.instant) return;
+    document.getElementById(lastEnteredId)?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
+  }, [lastEnteredId]);
+
+  // 語りの筆先が画面の下に隠れたら、読んでいる場所までゆっくり送る。
+  // 相談者が自分で読み返している間（最後の操作から少しの間）は動かさない。
+  const lastUserScroll = useRef(0);
+  useEffect(() => {
+    const markUserScroll = () => {
+      lastUserScroll.current = performance.now();
+    };
+    const events = ["wheel", "touchmove", "keydown"] as const;
+    events.forEach((name) => window.addEventListener(name, markUserScroll, { passive: true }));
+    return () => events.forEach((name) => window.removeEventListener(name, markUserScroll));
+  }, []);
+  useEffect(() => {
+    if (finished || instant || performance.now() - lastUserScroll.current < 2500) return;
+    const caret = document.querySelector(".oracle-panel .ink-caret, .narration-gate");
+    if (!caret) return;
+    const bottom = caret.getBoundingClientRect().bottom;
+    const limit = window.innerHeight - 96;
+    if (bottom > limit) window.scrollBy({ top: bottom - limit + window.innerHeight * 0.25, behavior: "smooth" });
+  }, [cursor, awaitingOrdinal, finished, instant]);
+
+  const gateRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (awaitingOrdinal !== null) gateRef.current?.focus({ preventScroll: true });
+  }, [awaitingOrdinal]);
+
+  const openGate = () => {
+    live.current.gatesOpened = live.current.entered + 1;
+    live.current.pauseUntil = 0;
+    setAwaitingOrdinal(null);
+  };
 
   // 語り終えた卓は記録に残す。次に来たとき、占い師が覚えていられるように。
   useEffect(() => {
@@ -218,8 +275,9 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
       });
   }, [streamDone, raw, reading]);
 
+  const flipped = tableCards(reading);
   const cardLabel = (cardIndex: number) => {
-    const readingCard = tableCards(reading)[cardIndex];
+    const readingCard = flipped[cardIndex];
     return `${readingCard.position.name}・${readingCard.card.nameJa}（${orientationLabel[readingCard.orientation]}）`;
   };
 
@@ -237,8 +295,6 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
     setAttempt((count) => count + 1);
   };
 
-  const lastVisible = visibleSegments.length - 1;
-
   return (
     <section className={finished ? "oracle-panel is-open" : "oracle-panel"} aria-busy={!finished && !error}>
       <div className="oracle-heading">
@@ -248,44 +304,28 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
 
       {isWaiting ? (
         <div className="thinking-box" aria-live="polite">
-          <span className="candle" aria-hidden="true">
-            <span className="candle-glow" />
-            <span className="candle-flame" />
-            <span className="candle-wick" />
-            <span className="candle-body" />
-          </span>
+          <OraclePortrait pose="reading" />
           <p key={waitingIndex} className="thinking-words">{waitingWords[waitingIndex]}…</p>
         </div>
       ) : null}
 
       {visibleSegments.length > 0 ? (
-        <div className="narration">
-          {visibleSegments.map(({ segment, text }, segmentIndex) => {
-            const paragraphs = splitParagraphs(text);
-            const isLast = segmentIndex === lastVisible;
-            return (
-              <div className={`narration-segment is-${segment.kind}`} key={`${segment.kind}-${segment.kind === "card" ? segment.cardIndex : segmentIndex}`}>
-                {segment.kind === "card" ? <NarrationCardHeader reading={reading} cardIndex={segment.cardIndex} /> : null}
-                {segment.kind === "close" ? <p className="narration-divider" aria-hidden="true">✦</p> : null}
-                {paragraphs.map((paragraph, index) => (
-                  <p key={index}>
-                    {paragraph}
-                    {isSpeaking && isLast && index === paragraphs.length - 1 ? <span className="ink-caret" aria-hidden="true" /> : null}
-                  </p>
-                ))}
-              </div>
-            );
-          })}
-        </div>
+        <NarrationView reading={reading} segments={visibleSegments} speaking={isSpeaking && !awaiting} animate={!instant} />
+      ) : null}
+
+      {awaiting && !error ? (
+        <Gate reading={reading} segment={awaiting} buttonRef={gateRef} onOpen={openGate} />
       ) : null}
 
       {isSpeaking ? (
         <div className="narration-skip">
           <button className="text-button" type="button" onClick={() => setInstant(true)} disabled={instant}>
-            {instant ? "言葉が届くのを待っています" : "語りを先まで読む"}
+            {instant ? "言葉が届くのを待っています" : "待たずに、語りを最後まで読む"}
           </button>
         </div>
       ) : null}
+
+      {isSpeaking ? <div className="narration-tail" aria-hidden="true" /> : null}
 
       {error ? (
         <div className="oracle-error" role="alert">
@@ -315,18 +355,33 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onSaved }: PromptBo
   );
 };
 
-export const NarrationCardHeader = ({ reading, cardIndex }: { reading: Reading; cardIndex: number }) => {
-  const readingCard = tableCards(reading)[cardIndex];
+type GateProps = {
+  reading: Reading;
+  segment: NarrationSegment;
+  buttonRef: RefObject<HTMLButtonElement | null>;
+  onOpen: () => void;
+};
+
+// 語りの区切りで、次に何が起きるかを示して相談者の合図を待つ。
+const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
+  const flipped = tableCards(reading);
+  const next = segment.kind === "card" ? flipped[segment.cardIndex] : null;
+  const isRoot = segment.kind === "card" && segment.cardIndex >= reading.cards.length;
+  const label = segment.kind === "card"
+    ? isRoot ? "山の底をめくる" : reading.cards.length === 1 ? "カードをめくる" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
+    : segment.kind === "close" ? "卓全体を見渡す" : "今夜の答えを聞く";
+  const hint = next
+    ? `${segment.kind === "card" ? cardMark(reading, segment.cardIndex) : ""}・${next.position.name} ― ${next.position.role}`
+    : segment.kind === "close" ? "すべてのカードが表になりました" : "カードが告げていることを、ひとことに";
+
   return (
-    <div className="narration-card">
-      <span className={readingCard.orientation === "reversed" ? "narration-card-thumb is-reversed" : "narration-card-thumb"} aria-hidden="true">
-        <img src={readingCard.card.imagePath} alt="" />
-      </span>
-      <span className="narration-card-label">
-        <small>{cardIndex < reading.cards.length ? romanNumerals[cardIndex] : "☾"}・{readingCard.position.name}</small>
-        <strong>{readingCard.card.nameJa}</strong>
-        <em>{orientationLabel[readingCard.orientation]}</em>
-      </span>
+    <div className="narration-gate">
+      <p>{hint}</p>
+      <button ref={buttonRef} className="gate-button" type="button" onClick={onOpen}>
+        <span aria-hidden="true">✦</span>
+        <span>{label}</span>
+        <span aria-hidden="true">✦</span>
+      </button>
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { streamBackend } from "../backendClient";
 import type { Exchange } from "../types/tarot";
 import { oracleName } from "../utils/persona";
+import { OraclePortrait } from "./OraclePortrait";
 
 type ClarifyBoxProps = {
   question: string;
@@ -42,21 +43,15 @@ export const ClarifyBox = ({ question, onProceed, onEdit }: ClarifyBoxProps) => 
 
   return (
     <section className="clarify-box" ref={boxRef} aria-live="polite">
-      <p className="ornament-kicker">{oracleName}</p>
-      {!done && !error ? (
-        <div className="thinking-box is-compact">
-          <span className="candle" aria-hidden="true">
-            <span className="candle-glow" />
-            <span className="candle-flame" />
-            <span className="candle-wick" />
-            <span className="candle-body" />
-          </span>
-          <p className="thinking-words">あなたの問いに、じっと耳を傾けています…</p>
+      <div className={done || error ? "clarify-oracle has-spoken" : "clarify-oracle"}>
+        <OraclePortrait pose="listening" />
+        <div className="clarify-speech">
+          <p className="ornament-kicker">{oracleName}</p>
+          {!done && !error ? <p className="thinking-words is-steady">あなたの問いに、じっと耳を傾けています…</p> : null}
+          {done ? <p className="clarify-words">{words.trim()}</p> : null}
+          {error ? <p className="clarify-words">…いいでしょう。言葉にならないものは、カードに聞いてみましょう。</p> : null}
         </div>
-      ) : null}
-
-      {done ? <p className="clarify-words">{words.trim()}</p> : null}
-      {error ? <p className="clarify-words">…いいでしょう。言葉にならないものは、カードに聞いてみましょう。</p> : null}
+      </div>
 
       {done ? (
         <label className="field clarify-answer">

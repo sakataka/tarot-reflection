@@ -14,6 +14,7 @@ type QuestionFormProps = {
   isNight: boolean;
   sameNightReading?: ReadingRecord;
   onOpenRecord: (record: ReadingRecord) => void;
+  onOpenGuide: () => void;
   // 問いを打ち明けたあと、占い師の問い返しをここに置く。
   clarifySlot?: ReactNode;
   onQuestionChange: (question: string) => void;
@@ -30,6 +31,7 @@ export const QuestionForm = ({
   isNight,
   sameNightReading,
   onOpenRecord,
+  onOpenGuide,
   clarifySlot,
   onQuestionChange,
   onSpreadChange,
@@ -76,6 +78,9 @@ export const QuestionForm = ({
         <small>問いの深さに合わせて</small>
       </span>
       <SpreadSelector spreads={spreads} selectedSpreadId={selectedSpreadId} onChange={onSpreadChange} />
+      <button className="text-button guide-link" type="button" onClick={onOpenGuide}>
+        はじめての方へ ― 占いの流れと、特別なカードのこと
+      </button>
     </div>
 
     {clarifySlot ?? (sameNightReading ? (
