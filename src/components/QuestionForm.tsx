@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Spread } from "../types/tarot";
-import { engines, type EngineId } from "../utils/engine";
 import type { ReadingRecord } from "../utils/history";
+import { maxQuestionLength } from "../utils/limits";
 import type { MoonPhase } from "../utils/moment";
 import { oracleName } from "../utils/persona";
 import { SpreadSelector } from "./SpreadSelector";
@@ -20,8 +20,6 @@ type QuestionFormProps = {
   clarifySlot?: ReactNode;
   onQuestionChange: (question: string) => void;
   onSpreadChange: (spreadId: string) => void;
-  engine: EngineId;
-  onEngineChange: (engine: EngineId) => void;
   onConfide: () => void;
 };
 
@@ -38,8 +36,6 @@ export const QuestionForm = ({
   clarifySlot,
   onQuestionChange,
   onSpreadChange,
-  engine,
-  onEngineChange,
   onConfide,
 }: QuestionFormProps) => (
   <section className="intro-panel">
@@ -64,17 +60,17 @@ export const QuestionForm = ({
     <label className="field">
       <span className="field-heading">
         <strong>あなたの問い</strong>
-        <small>{question.length} / 300</small>
+        <small>{question.length} / {maxQuestionLength}</small>
       </span>
       <textarea
         value={question}
-        maxLength={300}
+        maxLength={maxQuestionLength}
         rows={4}
         readOnly={Boolean(clarifySlot)}
         placeholder="たとえば「転職を考えています。この迷いは、どこから来ているのでしょう」"
         onChange={(event) => onQuestionChange(event.target.value)}
       />
-      <small className="field-note">うまくまとまっていなくて構いません。書いた言葉のぶんだけ、カードは応えてくれます。</small>
+      <small className="field-note">うまくまとまっていなくて構いません。話すように長く書いても大丈夫。書いた言葉のぶんだけ、カードは応えてくれます。</small>
     </label>
 
     <div className="field spread-field">
@@ -86,26 +82,6 @@ export const QuestionForm = ({
       <button className="text-button guide-link" type="button" onClick={onOpenGuide}>
         はじめての方へ ― 占いの流れと、特別なカードのこと
       </button>
-    </div>
-
-    <div className="engine-field" role="radiogroup" aria-label={`${oracleName}の言葉を紡ぐAI`}>
-      <span>{oracleName}の言葉を紡ぐAI</span>
-      <div className="engine-options">
-        {engines.map((option) => (
-          <button
-            key={option.id}
-            className={option.id === engine ? "engine-option is-selected" : "engine-option"}
-            type="button"
-            role="radio"
-            aria-checked={option.id === engine}
-            disabled={Boolean(clarifySlot)}
-            onClick={() => onEngineChange(option.id)}
-          >
-            <strong>{option.label}</strong>
-            <small>{option.model}</small>
-          </button>
-        ))}
-      </div>
     </div>
 
     {clarifySlot ?? (sameNightReading ? (

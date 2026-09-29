@@ -1,7 +1,8 @@
 import { relative, resolve, sep } from "node:path";
 import { parseEngine, type EngineId } from "../src/utils/engine";
 import { generateClarifyPrompt } from "../src/utils/prompt";
-import { buildFollowUpRequest, buildPromptFromInterpretationInput, maxQuestionLength } from "./interpretationRequest";
+import { maxQuestionLength } from "../src/utils/limits";
+import { buildFollowUpRequest, buildPromptFromInterpretationInput } from "./interpretationRequest";
 import { askOracle } from "./oracleEngine";
 import { createReadingStore } from "./readingStore";
 

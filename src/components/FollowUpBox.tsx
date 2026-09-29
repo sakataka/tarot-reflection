@@ -3,6 +3,7 @@ import { streamBackend } from "../backendClient";
 import type { Exchange, Reading } from "../types/tarot";
 import { maxFollowUps, tablePayload } from "../utils/history";
 import { cleanNarrationText, splitParagraphs } from "../utils/narration";
+import { maxReplyLength as maxAskLength } from "../utils/limits";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 
@@ -13,7 +14,6 @@ type FollowUpBoxProps = {
   onRecordsChange: () => void;
 };
 
-const maxAskLength = 300;
 
 // 占い師と相談者のやりとりを並べる。記録の読み返しでも使う。
 export const ExchangeList = ({ exchanges }: { exchanges: readonly Exchange[] }) => (

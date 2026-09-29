@@ -112,14 +112,9 @@ p { line-height: 1.9; color: var(--muted); }
 .ritual-step.is-active > span { border-color: var(--gold); background: rgba(201, 164, 92, .14); box-shadow: 0 0 12px rgba(234, 208, 143, .28); }
 .ritual-steps.is-hidden { visibility: hidden; }
 .header-actions { display: flex; align-items: center; gap: 18px; }
-.header-reset, .header-catalog, .header-sound { border: 0; background: none; color: var(--muted); font-family: var(--serif); font-size: 12px; letter-spacing: .08em; padding: 8px 0; white-space: nowrap; }
+.header-reset, .header-catalog { border: 0; background: none; color: var(--muted); font-family: var(--serif); font-size: 12px; letter-spacing: .08em; padding: 8px 0; white-space: nowrap; }
 .header-catalog { color: var(--ink); }
-.header-catalog:hover, .header-catalog.is-active, .header-reset:hover, .header-sound:hover { color: var(--gold-bright); }
-.header-sound { display: inline-flex; align-items: center; gap: 6px; }
-.header-sound > span { display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%; font-size: 11px; position: relative; }
-.header-sound:not(.is-on) > span::after { content: ""; position: absolute; width: 1px; height: 18px; background: currentColor; transform: rotate(45deg); }
-.header-sound.is-on { color: var(--gold-bright); }
-.header-sound.is-on > span { border-color: var(--gold); }
+.header-catalog:hover, .header-catalog.is-active, .header-reset:hover { color: var(--gold-bright); }
 
 .app-shell { width: min(100% - 48px, 1080px); margin: auto; padding: 40px 0 calc(72px + env(safe-area-inset-bottom)); }
 
@@ -187,6 +182,8 @@ textarea {
   letter-spacing: .04em;
   transition: border-color .25s, box-shadow .25s;
 }
+/* 長く書いても全体が見えるよう、書いた分だけ伸ばす（対応ブラウザのみ）。 */
+textarea { field-sizing: content; max-height: 60vh; }
 textarea::placeholder { color: #6f6a60; }
 textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0 0 4px rgba(7, 10, 20, .9), inset 0 0 0 5px rgba(201, 164, 92, .3), 0 0 24px rgba(201, 164, 92, .12); }
 .spread-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -220,15 +217,6 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .spread-option.is-selected .spread-title strong { color: var(--gold-bright); }
 .spread-title em { color: var(--gold); font-family: var(--serif); font-size: 10px; font-style: normal; letter-spacing: .1em; }
 .spread-option > small { color: var(--muted); font-family: var(--serif); font-size: 12px; line-height: 1.8; }
-.engine-field { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 26px; }
-.engine-field > span { font-family: var(--serif); font-size: 12px; letter-spacing: .08em; color: var(--faint); }
-.engine-options { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: rgba(12, 18, 36, .6); }
-.engine-option { display: inline-flex; align-items: baseline; gap: 6px; min-height: 36px; padding: 6px 16px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-family: var(--serif); transition: background .25s, color .25s; }
-.engine-option strong { font-size: 13px; font-weight: 600; letter-spacing: .06em; }
-.engine-option small { font-family: var(--latin); font-size: 11px; letter-spacing: .04em; color: var(--faint); }
-.engine-option.is-selected { background: rgba(201, 164, 92, .16); color: var(--gold-bright); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.engine-option.is-selected small { color: var(--gold); }
-.engine-option:not(:disabled):not(.is-selected):hover { color: var(--ink); }
 .intro-action { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 38px; }
 .intro-action .primary-button { min-width: 280px; min-height: 54px; font-size: 17px; }
 .intro-action small { color: var(--faint); font-family: var(--serif); font-size: 12px; letter-spacing: .08em; }
@@ -320,36 +308,33 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .deal-deck::after { content: ""; position: absolute; inset: -30% -40%; border-radius: 50%; background: radial-gradient(ellipse, rgba(234, 208, 143, .18), transparent 65%); z-index: -1; }
 .card-back:disabled { opacity: 1; cursor: default; }
 .is-ready .card-back:disabled:not(.is-selected) .card-back-art { filter: brightness(.55) saturate(.7); }
-/* シャッフル：山を二つに割り、左右から交互に落として重ねる */
-.riffle { position: absolute; width: var(--card-w); height: var(--card-h); z-index: 200; }
-.riffle-card {
+/* シャッフル：山を左右に割り、内側の角を持ち上げて交互に落とし、反らせて揃える（動きは RiffleShuffle の Web Animations） */
+.riffle { position: absolute; z-index: 200; transform-origin: 50% 100%; }
+.riffle-deck, .riffle-packet, .riffle-card {
   position: absolute;
   inset: 0;
   border-radius: 4px;
   border: 1px solid rgba(201, 164, 92, .6);
   background: url('/cards/card_back.webp') center / cover, #192535;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .5);
-  animation: 1.05s cubic-bezier(.45, 0, .3, 1) calc(var(--i) * 28ms) infinite both;
 }
-.riffle-card.is-left { animation-name: riffle-left; }
-.riffle-card.is-right { animation-name: riffle-right; }
-@keyframes riffle-left {
-  0%, 100% { transform: translate(0, 0) rotate(0); }
-  30%, 48% { transform: translate(calc(var(--card-w) * -.72), 6px) rotate(-11deg); }
-  78% { transform: translate(-2px, calc(var(--i) * -1px)) rotate(-1deg); }
-}
-@keyframes riffle-right {
-  0%, 100% { transform: translate(0, 0) rotate(0); }
-  30%, 48% { transform: translate(calc(var(--card-w) * .72), 6px) rotate(11deg); }
-  78% { transform: translate(2px, calc(var(--i) * -1px)) rotate(1deg); }
-}
+.riffle-deck { box-shadow: 1px 1px 0 #0b1222, 2px 2px 0 rgba(201, 164, 92, .35), 3px 3px 0 #0b1222, 4px 4px 0 rgba(201, 164, 92, .3), 5px 5px 0 #0b1222, 8px 12px 18px rgba(0, 0, 0, .55); }
+.riffle-packet { z-index: 1; opacity: 0; }
+.riffle-card { opacity: 0; box-shadow: 0 1px 2px rgba(0, 0, 0, .45); }
+.riffle-packet.is-left { transform-origin: 100% 100%; }
+.riffle-packet.is-right { transform-origin: 0 100%; }
 /* カット：三つの山から一つを選ぶ */
 .is-squaring .card-back, .is-cutting .card-back, .is-lifting .card-back, .is-gathering .card-back { transition-duration: .6s; transition-timing-function: cubic-bezier(.45, .05, .25, 1); }
 .is-squaring .card-back-art { animation: deck-square .55s ease both; }
 @keyframes deck-square { 0% { transform: none; } 35% { transform: translateY(-5px); } 60% { transform: translateY(1px); } 100% { transform: none; } }
 .riffle { border: 0; padding: 0; background: none; cursor: pointer; }
+/* 手で持ち上げて運ぶ山：外側はまっすぐ移り、札そのものが持ち上がって弧を描く */
+.card-back.is-carried .card-back-art { animation: carry .62s cubic-bezier(.3, .1, .2, 1) var(--carry-delay, 0ms) both; }
+@keyframes carry {
+  0%, 100% { transform: none; }
+  45% { transform: translateY(var(--carry-lift)) rotate(var(--carry-turn)); box-shadow: -4px 12px 14px rgba(0, 0, 0, .2); }
+}
 .riffle:disabled { opacity: 1; cursor: default; }
-.riffle::before { content: ""; position: absolute; inset: -14px -60%; border-radius: 50%; background: radial-gradient(ellipse, rgba(234, 208, 143, .12), transparent 65%); opacity: 0; transition: opacity .4s; pointer-events: none; }
+.riffle::before { content: ""; position: absolute; inset: -14px -80%; border-radius: 50%; background: radial-gradient(ellipse, rgba(234, 208, 143, .12), transparent 65%); opacity: 0; transition: opacity .4s; pointer-events: none; }
 .riffle:not(:disabled)::before { opacity: 1; animation: glow-pulse 2.6s ease-in-out infinite; }
 @keyframes glow-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
 .cut-pile {
@@ -424,6 +409,9 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .reading-question { max-width: 640px; font-family: var(--serif); font-size: 16px; color: var(--ink); letter-spacing: .05em; overflow-wrap: anywhere; }
 .reading-question::before { content: "「"; color: var(--gold); }
 .reading-question::after { content: "」"; color: var(--gold); }
+.reading-question { white-space: pre-line; }
+.reading-question.is-folded { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.reading-question-toggle { padding: 2px 8px; font-size: 12px; }
 .reading-date { font-family: var(--latin); font-size: 13px; letter-spacing: .08em; color: var(--faint); }
 .tarot-card { margin: 0; perspective: 1400px; }
 .card-flip { position: relative; aspect-ratio: 2 / 3; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.3, .1, .2, 1); }
@@ -575,8 +563,6 @@ a.strip-card:hover { color: var(--gold-bright); }
 @keyframes caret-breathe { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
 /* 語りの途中は下に余白を残し、めくったカードを画面の上まで送れるようにする */
 .narration-tail { height: 45vh; }
-.narration-skip { text-align: center; margin-top: 4px; }
-.narration-skip .text-button { font-size: 12px; color: var(--faint); }
 .copy-fallback { color: var(--danger); font-family: var(--serif); font-size: 13px; margin: 12px 0; }
 @keyframes ink-in { from { opacity: 0; filter: blur(3px); transform: translateY(6px); } to { opacity: 1; filter: none; transform: none; } }
 .answer-closing { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); text-align: center; font-family: var(--serif); font-size: 13px; color: var(--muted); letter-spacing: .06em; animation: ink-in 1.4s .6s ease both; }
@@ -608,6 +594,15 @@ a.strip-card:hover { color: var(--gold-bright); }
 .guide-notes { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
 .guide-notes li::marker { color: var(--gold); }
 .guide-back { margin-top: 34px; text-align: center; }
+/* 設定 */
+.setting-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.setting-option { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); text-align: left; transition: border-color .25s, background .25s, box-shadow .25s; }
+.setting-option strong { font-family: var(--serif); font-size: 15px; font-weight: 600; letter-spacing: .08em; }
+.setting-option small { font-family: var(--serif); font-size: 12px; line-height: 1.8; color: var(--muted); }
+.setting-option:hover { border-color: var(--line-strong); }
+.setting-option.is-selected { border-color: var(--gold); background: linear-gradient(180deg, rgba(201, 164, 92, .12), rgba(14, 20, 38, .8)); box-shadow: 0 0 0 1px rgba(201, 164, 92, .4), 0 0 22px rgba(201, 164, 92, .1); }
+.setting-option.is-selected strong { color: var(--gold-bright); }
+.setting-option.is-selected strong::before { content: "✦ "; font-size: 10px; vertical-align: 2px; }
 .guide-link { display: block; margin: 14px auto 0; font-size: 13px; color: var(--gold); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 4px; }
 
 /* カード図鑑 */
@@ -682,7 +677,6 @@ a.strip-card:hover { color: var(--gold-bright); }
   .site-header { flex-wrap: wrap; gap: 14px; padding: max(14px, env(safe-area-inset-top)) 16px 14px; }
   .ritual-steps { order: 3; width: 100%; justify-content: space-between; gap: 8px; }
   .header-actions { margin-left: auto; gap: 14px; }
-  .header-sound small { display: none; }
   .ritual-steps.is-hidden { display: none; }
   .app-shell { width: calc(100% - 32px); padding-top: 20px; }
   .intro-landscape { height: 150px; margin: -4px -16px 0; }
@@ -734,6 +728,7 @@ a.strip-card:hover { color: var(--gold-bright); }
   .narration { font-size: 15px; line-height: 2; }
   .catalog-heading { align-items: stretch; }
   .guide-spreads { grid-template-columns: 1fr; }
+  .setting-options { grid-template-columns: 1fr; }
   .guide-section { margin-top: 26px; padding-top: 20px; }
   .catalog-controls { align-items: stretch; flex-direction: column; gap: 14px; }
   .catalog-search { width: 100%; min-width: 0; }
@@ -768,7 +763,7 @@ a.strip-card:hover { color: var(--gold-bright); }
   /* 16px keeps iOS from zooming into focused fields. */
   .catalog-search input { min-height: 44px; font-size: 16px; }
   .primary-button:not(:disabled):active, .secondary-button:not(:disabled):active, .text-button:not(:disabled):active,
-  .header-reset:active, .header-catalog:active, .header-sound:active { opacity: .7; }
+  .header-reset:active, .header-catalog:active { opacity: .7; }
 }
 @media (prefers-reduced-transparency: reduce) {
   .site-header, .table-strip { backdrop-filter: none; background: var(--night); }

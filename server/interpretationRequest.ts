@@ -2,6 +2,7 @@ import { jumperPosition, rootPosition, spreads } from "../src/data/spreads";
 import { tarotDeck } from "../src/data/tarotDeck";
 import type { Exchange, Orientation, Reading, ReadingCard, SpreadPosition } from "../src/types/tarot";
 import { maxFollowUps, type ReadingRecord } from "../src/utils/history";
+import { maxQuestionLength, maxReplyLength } from "../src/utils/limits";
 import { generateFollowUpPrompt, generatePrompt } from "../src/utils/prompt";
 
 type CardInput = {
@@ -19,7 +20,6 @@ type ReadingInput = {
   createdAt?: unknown;
 };
 
-export const maxQuestionLength = 500;
 // 占い師と相談者のやりとり一つぶんの上限。
 const maxExchangeLength = 1_000;
 const orientations = new Set<Orientation>(["upright", "reversed"]);
@@ -88,7 +88,7 @@ export function buildFollowUpRequest(input: unknown): FollowUpRequest {
     recordId?: unknown;
   };
   const reading = parseReadingInput(input);
-  const ask = text(body.ask, maxQuestionLength);
+  const ask = text(body.ask, maxReplyLength);
   if (!ask) throw new Error("Question is empty.");
   const previous = Array.isArray(body.previous) ? body.previous.map(parseExchange).filter((item) => item !== null) : [];
   if (previous.length >= maxFollowUps) throw new Error("No more questions tonight.");

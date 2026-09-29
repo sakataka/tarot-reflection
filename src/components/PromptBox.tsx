@@ -3,6 +3,7 @@ import { requestBackend, streamBackend } from "../backendClient";
 import type { Reading } from "../types/tarot";
 import { tablePayload, type ReadingRecord } from "../utils/history";
 import { isGatedSegment, narrationToPlainText, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
+import { readStoredPace } from "../utils/pace";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
@@ -48,6 +49,9 @@ const needsCue = (segment: NarrationSegment, ordinal: number) => segment.kind !=
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+// 設定で「すぐに全部」を選んだとき（または動きを減らす設定のとき）は、届いた言葉をそのまま見せる。
+const showAtOnce = () => prefersReducedMotion() || readStoredPace() === "instant";
+
 // 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
 export const PromptBox = ({ reading, active, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
@@ -56,7 +60,7 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [cursor, setCursor] = useState(0);
-  const [instant, setInstant] = useState(prefersReducedMotion);
+  const [instant, setInstant] = useState(showAtOnce);
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -319,7 +323,7 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
   };
 
   const retry = () => {
-    setInstant(prefersReducedMotion());
+    setInstant(showAtOnce());
     setAttempt((count) => count + 1);
   };
 
@@ -344,14 +348,6 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
 
       {awaiting && !error ? (
         <Gate reading={reading} segment={awaiting} buttonRef={gateRef} onOpen={openGate} />
-      ) : null}
-
-      {isSpeaking ? (
-        <div className="narration-skip">
-          <button className="text-button" type="button" onClick={() => setInstant(true)} disabled={instant}>
-            {instant ? "言葉が届くのを待っています" : "待たずに、語りを最後まで読む"}
-          </button>
-        </div>
       ) : null}
 
       {isSpeaking ? <div className="narration-tail" aria-hidden="true" /> : null}

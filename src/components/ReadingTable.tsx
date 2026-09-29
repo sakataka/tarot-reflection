@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { Reading, ReadingCard } from "../types/tarot";
 import { moonPhase } from "../utils/moment";
 import { tableCards } from "../utils/tarot";
@@ -64,13 +64,23 @@ const StripCard = ({ readingCard, mark, isRevealed, isCurrent, targetId, order }
   );
 };
 
+// これより長い問いは、はじめ数行だけ見せて畳んでおく。
+const foldQuestionAt = 140;
+
 export const ReadingHeading = ({ reading }: { reading: Reading }) => {
   const createdAt = new Date(reading.createdAt);
   const moon = moonPhase(createdAt);
+  const isLong = reading.question.length > foldQuestionAt;
+  const [open, setOpen] = useState(false);
   return (
     <section className="reading-heading">
       <p className="ornament-kicker">あなたの問い</p>
-      <p className="reading-question">{reading.question}</p>
+      <p className={isLong && !open ? "reading-question is-folded" : "reading-question"}>{reading.question}</p>
+      {isLong ? (
+        <button className="text-button reading-question-toggle" type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? "問いを畳む" : "問いを全部読む"}
+        </button>
+      ) : null}
       <p className="reading-date">
         {createdAt.toLocaleString("ja-JP", { dateStyle: "long", timeStyle: "short" })}
         ・{moon.glyph} {moon.name}・{reading.spread.name}

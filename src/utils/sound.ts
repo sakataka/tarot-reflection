@@ -98,17 +98,24 @@ const tone = (
   oscillator.stop(start + duration + 0.05);
 };
 
+// 一回のリフルシャッフル（2.2秒）。画面の動き（RiffleShuffle）と同じ順に、
+// 左右から落ちる札の連打 → 反らせて落とすブリッジのさざめき → 揃える軽い音、と鳴らす。
 export const playShuffle = () =>
   withAudio((audio, output) => {
     const now = audio.currentTime;
-    // リフルシャッフル2回分。後半ほど詰まって速くなる。
-    for (const offset of [0, 1.05]) {
-      for (let index = 0; index < 22; index += 1) {
-        const at = now + offset + 0.72 * Math.pow(index / 22, 0.8);
-        brush(audio, output, at, { duration: 0.035, frequency: 2600 + Math.random() * 1400, q: 1.4, gain: 0.22 + Math.random() * 0.12 });
-      }
-      brush(audio, output, now + offset + 0.78, { duration: 0.16, frequency: 900, sweepTo: 420, gain: 0.4 });
+    // 札が落ちる音。後半ほど詰まって速くなる。
+    for (let index = 0; index < 26; index += 1) {
+      const at = now + 0.44 + 0.84 * Math.pow(index / 26, 0.85);
+      brush(audio, output, at, { duration: 0.03, frequency: 2600 + Math.random() * 1400, q: 1.4, gain: 0.2 + Math.random() * 0.12 });
     }
+    brush(audio, output, now + 1.3, { duration: 0.12, frequency: 900, sweepTo: 480, gain: 0.3 });
+    // ブリッジ：反らせた山から、札がさらさらと落ちる。
+    for (let index = 0; index < 16; index += 1) {
+      brush(audio, output, now + 1.54 + index * 0.02, { duration: 0.025, frequency: 3600 - index * 60, q: 1.6, gain: 0.1 });
+    }
+    // 山を揃える。
+    brush(audio, output, now + 1.98, { duration: 0.1, frequency: 700, sweepTo: 320, gain: 0.28 });
+    tone(audio, output, now + 1.98, { frequency: 120, duration: 0.1, gain: 0.12 });
   });
 
 export const playDeal = () =>

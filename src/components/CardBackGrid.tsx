@@ -5,11 +5,11 @@ import { playDeal, playPick, playPlace, playShuffle } from "../utils/sound";
 import { cutPileCount } from "../utils/tarot";
 import { CardView } from "./CardView";
 import { OraclePortrait } from "./OraclePortrait";
+import { RiffleShuffle, riffleCycle } from "./RiffleShuffle";
 
 // 混ぜる → 手を止めて揃える → 上から三つに切り分ける → 一つ選ぶ → 選んだ山を最後に上へ重ねる → 広げる → 引く
 type Phase = "shuffling" | "squaring" | "cutting" | "choosing" | "lifting" | "gathering" | "dealing" | "ready";
 
-const shuffleLoop = 2100;
 const stopAvailableAfter = 900;
 const squareDuration = 650;
 // 上の山から順に、一つずつ切り分けていく間隔。
@@ -23,7 +23,6 @@ const gatherDuration = gatherStagger + 700;
 const dealLead = 320;
 const dealStagger = 20;
 const dealDuration = 360;
-const riffleCards = 12;
 
 type CardBackGridProps = {
   cards: DrawnCard[];
@@ -160,6 +159,9 @@ export const CardBackGrid = ({
   const [phase, setPhase] = useState<Phase>("shuffling");
   const [canStop, setCanStop] = useState(false);
   const [chosenPile, setChosenPile] = useState<number | null>(null);
+  const [hoveredPile, setHoveredPile] = useState<number | null>(null);
+  // 山を選んだ時点で、どのカードがどの山にあったか。重ねるとき、動く山だけを手で運ぶ。
+  const pileOfCard = useRef(new Map<string, number>());
   const selectedById = new Map(selectedCards.map((selectedCard) => [selectedCard.card.id, selectedCard]));
   const isComplete = selectedCards.length === requiredCount;
   const remaining = requiredCount - selectedCards.length;
@@ -180,7 +182,7 @@ export const CardBackGrid = ({
     if (phase === "shuffling") {
       // 手を止めるまで、リフルを繰り返す。
       playShuffle();
-      const loop = window.setInterval(playShuffle, shuffleLoop);
+      const loop = window.setInterval(playShuffle, riffleCycle);
       const enableStop = window.setTimeout(() => setCanStop(true), stopAvailableAfter);
       return () => {
         window.clearInterval(loop);
@@ -254,6 +256,9 @@ export const CardBackGrid = ({
   const choosePile = (pileIndex: number) => {
     if (phase !== "choosing") return;
     playPick();
+    const size = Math.ceil(cards.length / cutPileCount);
+    pileOfCard.current = new Map(cards.map((drawnCard, index) => [drawnCard.card.id, Math.floor(index / size)]));
+    setHoveredPile(null);
     setChosenPile(pileIndex);
     setPhase("lifting");
   };
@@ -280,9 +285,10 @@ export const CardBackGrid = ({
       const pile = Math.floor(index / pileSize);
       const depth = pileSize - (index - pile * pileSize);
       const target = piles.positions[pile];
-      const lifted = phase === "lifting" && pile === chosenPile;
+      // 選んだ山は手に持ち上げる。選ぶ前は、指を乗せた山が少し浮く。
+      const lift = phase === "lifting" && pile === chosenPile ? 30 : phase === "choosing" && pile === hoveredPile ? 10 : 0;
       return {
-        transform: `translate(${target.x}px, ${target.y - depth * 0.35 - (lifted ? 26 : 0)}px) scale(${piles.scale * (lifted ? 1.06 : 1)})`,
+        transform: `translate(${target.x}px, ${target.y - depth * 0.35 - lift}px) scale(${piles.scale * (lift >= 30 ? 1.06 : 1)})`,
         // 上の山ほど先に持ち上げて運ぶ。運んでいる山は、残りの山より上を通る。
         zIndex: (cutPileCount - pile) * 1000 + depth,
         delay: phase === "cutting" ? pile * cutStagger : 0,
@@ -293,9 +299,26 @@ export const CardBackGrid = ({
     const isChosen = phase === "gathering" && index < chosenSize;
     return {
       transform: `translate(${layout.stack.x}px, ${layout.stack.y - depth * 0.12}px) scale(${phase === "gathering" || phase === "squaring" ? piles.scale : 1})`,
-      zIndex: depth,
+      zIndex: depth + (isChosen ? cards.length : 0),
       delay: isChosen ? gatherStagger : 0,
     };
+  };
+
+  // 手で持ち上げて運ぶ山。まっすぐ滑らせず、弧を描いて置く。
+  const carryOf = (index: number, cardId: string): { lift: number; turn: number; delay: number } | null => {
+    if (phase === "cutting") {
+      const pile = Math.floor(index / pileSize);
+      const slot = pileSlots[pile];
+      return slot === 0 ? null : { lift: 30, turn: slot * -4, delay: pile * cutStagger };
+    }
+    if (phase === "gathering") {
+      const pile = pileOfCard.current.get(cardId);
+      if (pile === undefined) return null;
+      // 選んだ山は、残りを重ねたあとに高く持ち上げて最後に載せる。
+      if (pile === chosenPile) return { lift: 18, turn: pileSlots[pile] * -3, delay: gatherStagger };
+      return pileSlots[pile] === 0 ? null : { lift: 22, turn: pileSlots[pile] * -4, delay: 0 };
+    }
+    return null;
   };
 
   const kicker = phase === "shuffling" || phase === "squaring" ? "Shuffle" : isSplit || phase === "gathering" ? "Cut" : "Draw";
@@ -347,23 +370,16 @@ export const CardBackGrid = ({
           aria-label="卓に広げた裏向きのカード"
           style={layout ? { height: layout.height, "--card-w": `${layout.cardWidth}px`, "--card-h": `${layout.cardHeight}px` } as CSSProperties : undefined}
         >
-          {layout && phase === "shuffling" ? (
-            <button
-              className="riffle"
-              type="button"
+          {layout && piles && phase === "shuffling" ? (
+            <RiffleShuffle
+              x={layout.stack.x}
+              y={layout.stack.y}
+              width={layout.cardWidth}
+              height={layout.cardHeight}
+              scale={piles.scale}
               disabled={!canStop}
-              aria-label="ここでカードを混ぜる手を止める"
-              onClick={stopShuffle}
-              style={{ left: layout.stack.x, top: layout.stack.y }}
-            >
-              {Array.from({ length: riffleCards }, (_, index) => (
-                <span
-                  className={index % 2 === 0 ? "riffle-card is-left" : "riffle-card is-right"}
-                  key={index}
-                  style={{ "--i": Math.floor(index / 2) } as CSSProperties}
-                />
-              ))}
-            </button>
+              onStop={stopShuffle}
+            />
           ) : null}
 
           {layout && piles && (phase === "choosing" || phase === "lifting") ? piles.positions.map((position, pileIndex) => (
@@ -374,6 +390,10 @@ export const CardBackGrid = ({
               disabled={phase !== "choosing"}
               aria-label={`${slotNames[pileSlots[pileIndex]]}を選ぶ`}
               onClick={() => choosePile(pileIndex)}
+              onPointerEnter={() => phase === "choosing" && setHoveredPile(pileIndex)}
+              onPointerLeave={() => setHoveredPile((current) => (current === pileIndex ? null : current))}
+              onFocus={() => phase === "choosing" && setHoveredPile(pileIndex)}
+              onBlur={() => setHoveredPile((current) => (current === pileIndex ? null : current))}
               style={{
                 left: position.x + (layout.cardWidth * (1 - piles.scale)) / 2,
                 top: position.y + layout.cardHeight * (1 - piles.scale) - 12,
@@ -407,11 +427,12 @@ export const CardBackGrid = ({
             const selected = selectedById.get(drawnCard.card.id);
             const disabled = phase !== "ready" || (!selected && selectedCards.length >= requiredCount);
             const placement = cardTransform(index, selected);
+            const carry = carryOf(index, drawnCard.card.id);
             const position = selected ? positions[selected.selectedOrder - 1] : undefined;
 
             return (
               <button
-                className={selected ? "card-back is-selected" : "card-back"}
+                className={`card-back${selected ? " is-selected" : ""}${carry ? " is-carried" : ""}`}
                 key={drawnCard.card.id}
                 type="button"
                 disabled={disabled}
@@ -423,7 +444,8 @@ export const CardBackGrid = ({
                   transform: placement.transform,
                   ...(phase === "dealing" ? { animationDelay: `${placement.delay}ms` } : { transitionDelay: `${placement.delay}ms` }),
                   zIndex: placement.zIndex,
-                }}
+                  ...(carry ? { "--carry-lift": `${-carry.lift}px`, "--carry-turn": `${carry.turn}deg`, "--carry-delay": `${carry.delay}ms` } : {}),
+                } as CSSProperties}
               >
                 <span className="card-back-art" />
               </button>

@@ -7,15 +7,17 @@ import { GuidePanel } from "./components/GuidePanel";
 import { QuestionForm } from "./components/QuestionForm";
 import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
+import { SettingsPanel } from "./components/SettingsPanel";
 import { defaultSpread, spreads } from "./data/spreads";
 import type { DrawnCard, Exchange, Reading, SelectedCard } from "./types/tarot";
 import { readStoredEngine, storeEngine, type EngineId } from "./utils/engine";
 import { findSameNightReading, type ReadingRecord } from "./utils/history";
 import { moonPhase, timeBand } from "./utils/moment";
+import { readStoredPace, storePace, type NarrationPace } from "./utils/pace";
 import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "./utils/sound";
 import { createReading, cutDeck, settleShuffle, shuffleDeckForReading } from "./utils/tarot";
 
-type View = "reading" | "catalog" | "archive" | "guide";
+type View = "reading" | "catalog" | "archive" | "guide" | "settings";
 const nightBands = new Set(["夕暮れ", "夜", "真夜中", "夜明け前"]);
 
 const App = () => {
@@ -34,6 +36,7 @@ const App = () => {
   const [shuffleCount, setShuffleCount] = useState(0);
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
   const [engine, setEngine] = useState(readStoredEngine);
+  const [pace, setPace] = useState(readStoredPace);
 
   const selectedSpread = useMemo(
     () => spreads.find((spread) => spread.id === selectedSpreadId) ?? defaultSpread,
@@ -155,8 +158,12 @@ const App = () => {
     setEngine(next);
   };
 
-  const toggleSound = () => {
-    const next = !soundOn;
+  const changePace = (next: NarrationPace) => {
+    storePace(next);
+    setPace(next);
+  };
+
+  const changeSound = (next: boolean) => {
     setSoundEnabled(next);
     setSoundOn(next);
     if (next) playPick();
@@ -195,15 +202,12 @@ const App = () => {
         </nav>
         <div className="header-actions">
           <button
-            className={soundOn ? "header-sound is-on" : "header-sound"}
+            className={view === "settings" ? "header-catalog is-active" : "header-catalog"}
             type="button"
-            aria-pressed={soundOn}
-            aria-label={soundOn ? "効果音を消す" : "効果音を鳴らす"}
-            title={soundOn ? "効果音：オン" : "効果音：オフ"}
-            onClick={toggleSound}
+            aria-pressed={view === "settings"}
+            onClick={() => toggleView("settings")}
           >
-            <span aria-hidden="true">♪</span>
-            <small>{soundOn ? "音あり" : "音なし"}</small>
+            {view === "settings" ? "占いに戻る" : "設定"}
           </button>
           <button
             className={view === "guide" ? "header-catalog is-active" : "header-catalog"}
@@ -240,6 +244,16 @@ const App = () => {
           <CardCatalog onClose={() => setView("reading")} />
         ) : view === "guide" ? (
           <GuidePanel onClose={() => setView("reading")} />
+        ) : view === "settings" ? (
+          <SettingsPanel
+            engine={engine}
+            pace={pace}
+            soundOn={soundOn}
+            onEngineChange={changeEngine}
+            onPaceChange={changePace}
+            onSoundChange={changeSound}
+            onClose={() => setView("reading")}
+          />
         ) : view === "archive" ? (
           <ReadingArchive
             records={records}
@@ -261,8 +275,6 @@ const App = () => {
             onOpenGuide={() => setView("guide")}
             onQuestionChange={setQuestion}
             onSpreadChange={setSelectedSpreadId}
-            engine={engine}
-            onEngineChange={changeEngine}
             onConfide={() => setIsConfiding(true)}
             clarifySlot={isConfiding ? (
               <ClarifyBox question={question.trim()} onProceed={handleProceedFromClarify} onEdit={() => setIsConfiding(false)} />

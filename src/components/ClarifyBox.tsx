@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { streamBackend } from "../backendClient";
 import type { Exchange } from "../types/tarot";
+import { maxReplyLength as maxAnswerLength } from "../utils/limits";
 import { oracleName } from "../utils/persona";
 import { OraclePortrait } from "./OraclePortrait";
 
@@ -10,7 +11,6 @@ type ClarifyBoxProps = {
   onEdit: () => void;
 };
 
-const maxAnswerLength = 300;
 
 // カードに触れる前に、占い師が問いを受け止めて一つだけ問い返す。答えは読みの材料になる。
 export const ClarifyBox = ({ question, onProceed, onEdit }: ClarifyBoxProps) => {
