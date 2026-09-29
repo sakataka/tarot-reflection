@@ -23,20 +23,27 @@ type PromptBoxProps = {
 
 const ordinalJa = ["一", "二", "三", "四", "五", "六", "七"];
 
-const waitingWords = [
-  "伏せたカードの上に、そっと手をかざしています",
+// 言葉が届くまでの間、占い師が卓の上で何をしているかを順に告げる。最後の二つは繰り返す。
+const waitingSteps = (positionNames: string[]) => [
+  "伏せたカードを、卓に並べ終えました",
+  ...positionNames.map((name) => `「${name}」のカードに、そっと手をかざしています`),
   "あなたの問いを、もう一度胸の中でなぞっています",
-  "一枚目に触れる前の、静かな間です",
   "言葉が降りてくるまで、もう少しだけ",
 ];
+const waitingStepInterval = 2600;
 
 // 語りの速さ（1秒あたりの文字数）と、間の取り方。
 const charsPerSecond = 24;
 const tickInterval = 40;
 const pauseAfterSentence = 260;
 const pauseAfterParagraph = 650;
-const pauseAfterFlip = 1700;
+const pauseAfterFlip = 1300;
+// 二枚目からは合図を待たず、一枚告げ終えるごとにこの間を置いて次を返す。
+const pauseBetweenCards = 1100;
 const pauseBeforeClosing = 900;
+
+// 相談者の合図を待つ区切り。最初の一枚、総括、今夜の答え。二枚目以降のカードは続けて返す。
+const needsCue = (segment: NarrationSegment, ordinal: number) => segment.kind !== "card" || ordinal === 0;
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -58,7 +65,7 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
   const [awaitingOrdinal, setAwaitingOrdinal] = useState<number | null>(null);
 
   // タイマーからは最新の値を読む。
-  const live = useRef({ raw, streamDone, cursor, instant, revealed, carry: 0, pauseUntil: 0, lastTick: 0, entered: 0, gatesOpened: 0 });
+  const live = useRef({ raw, streamDone, cursor, instant, revealed, carry: 0, pauseUntil: 0, lastTick: 0, entered: 0, gatesOpened: 0, beatFor: -1 });
   live.current.raw = raw;
   live.current.streamDone = streamDone;
   live.current.instant = instant;
@@ -88,6 +95,7 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
     live.current.pauseUntil = 0;
     live.current.entered = 0;
     live.current.gatesOpened = 0;
+    live.current.beatFor = -1;
 
     streamBackend(
       "interpret/stream",
@@ -131,8 +139,16 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
         if (nextGated !== undefined && starts[nextGated] <= state.cursor) {
           const segment = segments[nextGated];
           if (!state.instant && state.gatesOpened <= state.entered) {
-            setAwaitingOrdinal(state.entered);
-            return;
+            if (needsCue(segment, state.entered)) {
+              setAwaitingOrdinal(state.entered);
+              return;
+            }
+            // 続けて返すカードは、一呼吸おいてからめくる。
+            if (state.beatFor !== state.entered) {
+              state.beatFor = state.entered;
+              state.pauseUntil = now + pauseBetweenCards;
+              return;
+            }
           }
           state.entered += 1;
           setEntered(state.entered);
@@ -212,12 +228,17 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
   const awaiting = awaitingOrdinal === null ? null : segments.filter(isGatedSegment)[awaitingOrdinal] ?? null;
   const isWaiting = !error && visibleSegments.length === 0;
   const isSpeaking = !finished && !isWaiting && !error;
+  const waitingWords = waitingSteps(tableCards(reading).map((readingCard) => readingCard.position.name));
 
   useEffect(() => {
     if (!isWaiting) return;
-    const timer = window.setInterval(() => setWaitingIndex((index) => (index + 1) % waitingWords.length), 2800);
+    setWaitingIndex(0);
+    const timer = window.setInterval(
+      () => setWaitingIndex((index) => (index + 1 < waitingWords.length ? index + 1 : waitingWords.length - 2)),
+      waitingStepInterval,
+    );
     return () => window.clearInterval(timer);
-  }, [isWaiting]);
+  }, [isWaiting, waitingWords.length]);
 
   useEffect(() => {
     if (finished) playChime();
@@ -312,6 +333,7 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
       {isWaiting ? (
         <div className="thinking-box" aria-live="polite">
           <OraclePortrait pose="reading" />
+          <WaitingTable reading={reading} hovered={waitingIndex - 1} />
           <p key={waitingIndex} className="thinking-words">{waitingWords[waitingIndex]}…</p>
         </div>
       ) : null}
@@ -383,12 +405,15 @@ const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
   const flipped = tableCards(reading);
   const next = segment.kind === "card" ? flipped[segment.cardIndex] : null;
   const isRoot = segment.kind === "card" && segment.cardIndex >= reading.cards.length;
+  const count = flipped.length;
   const label = segment.kind === "card"
-    ? isRoot ? "山の底をめくる" : reading.cards.length === 1 ? "カードをめくる" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
-    : segment.kind === "close" ? "卓全体を見渡す" : "今夜の答えを聞く";
+    ? isRoot ? "山の底をめくる" : count === 1 ? "カードをめくる" : segment.cardIndex === 0 ? "カードを返していく" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
+    : segment.kind === "close" ? "では、どういうことか" : "今夜の答えを聞く";
   const hint = next
-    ? `${segment.kind === "card" ? cardMark(reading, segment.cardIndex) : ""}・${next.position.name} ― ${next.position.role}`
-    : segment.kind === "close" ? "すべてのカードが表になりました" : "カードが告げていることを、ひとことに";
+    ? count > 1 && segment.kind === "card" && segment.cardIndex === 0
+      ? `${count}枚を、順に表に返します`
+      : `${segment.kind === "card" ? cardMark(reading, segment.cardIndex) : ""}・${next.position.name} ― ${next.position.role}`
+    : segment.kind === "close" ? "すべてのカードが表になりました。並びを読み解きます" : "カードが告げていることを、ひとことに";
 
   return (
     <div className="narration-gate">
@@ -401,3 +426,15 @@ const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
     </div>
   );
 };
+
+// 言葉を待つ間、伏せたカードの上を占い師の手が順に渡っていく。
+const WaitingTable = ({ reading, hovered }: { reading: Reading; hovered: number }) => (
+  <div className="waiting-table" aria-hidden="true">
+    {tableCards(reading).map((readingCard, index) => (
+      <span className={index === hovered ? "waiting-card is-hovered" : "waiting-card"} key={readingCard.position.id} style={{ animationDelay: `${index * 140}ms` }}>
+        <span className="waiting-card-back" />
+        <small>{readingCard.position.name}</small>
+      </span>
+    ))}
+  </div>
+);

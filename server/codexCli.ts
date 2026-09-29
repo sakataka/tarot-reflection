@@ -1,15 +1,9 @@
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
+import type { AskOptions } from "./oracleEngine";
 
 const CODEX_MODEL = "gpt-6-sol";
 const CODEX_EFFORT = "medium" as const;
-
-type AskOptions = {
-  onDelta?: (text: string) => void;
-  signal?: AbortSignal;
-  // 短い問い返しは速さを優先して low にする。
-  effort?: "low" | "medium";
-};
 
 // --json は完成した agent_message を一件ずつ返す。占いの本文以外のイベントは表示しない。
 export function completedMessage(event: unknown): string {

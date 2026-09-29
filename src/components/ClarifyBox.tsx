@@ -47,8 +47,14 @@ export const ClarifyBox = ({ question, onProceed, onEdit }: ClarifyBoxProps) => 
         <OraclePortrait pose="listening" />
         <div className="clarify-speech">
           <p className="ornament-kicker">{oracleName}</p>
-          {!done && !error ? <p className="thinking-words is-steady">あなたの問いに、じっと耳を傾けています…</p> : null}
-          {done ? <p className="clarify-words">{words.trim()}</p> : null}
+          {!done && !error && !words.trim() ? <p className="thinking-words is-steady">あなたの問いに、じっと耳を傾けています…</p> : null}
+          {/* 届いた言葉から順に見せる。話し終えるまで筆先を灯す。 */}
+          {words.trim() && !error ? (
+            <p className="clarify-words">
+              {words.trim()}
+              {!done ? <span className="ink-caret" aria-hidden="true" /> : null}
+            </p>
+          ) : null}
           {error ? <p className="clarify-words">…いいでしょう。言葉にならないものは、カードに聞いてみましょう。</p> : null}
         </div>
       </div>

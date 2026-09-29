@@ -9,6 +9,7 @@ import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
 import { defaultSpread, spreads } from "./data/spreads";
 import type { DrawnCard, Exchange, Reading, SelectedCard } from "./types/tarot";
+import { readStoredEngine, storeEngine, type EngineId } from "./utils/engine";
 import { findSameNightReading, type ReadingRecord } from "./utils/history";
 import { moonPhase, timeBand } from "./utils/moment";
 import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "./utils/sound";
@@ -32,6 +33,7 @@ const App = () => {
   const [archiveSelectedId, setArchiveSelectedId] = useState<string | null>(null);
   const [shuffleCount, setShuffleCount] = useState(0);
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
+  const [engine, setEngine] = useState(readStoredEngine);
 
   const selectedSpread = useMemo(
     () => spreads.find((spread) => spread.id === selectedSpreadId) ?? defaultSpread,
@@ -148,6 +150,11 @@ const App = () => {
     setView((current) => (current === next ? "reading" : next));
   };
 
+  const changeEngine = (next: EngineId) => {
+    storeEngine(next);
+    setEngine(next);
+  };
+
   const toggleSound = () => {
     const next = !soundOn;
     setSoundEnabled(next);
@@ -254,6 +261,8 @@ const App = () => {
             onOpenGuide={() => setView("guide")}
             onQuestionChange={setQuestion}
             onSpreadChange={setSelectedSpreadId}
+            engine={engine}
+            onEngineChange={changeEngine}
             onConfide={() => setIsConfiding(true)}
             clarifySlot={isConfiding ? (
               <ClarifyBox question={question.trim()} onProceed={handleProceedFromClarify} onEdit={() => setIsConfiding(false)} />
@@ -268,6 +277,7 @@ const App = () => {
             jumper={jumper}
             selectedCards={selectedCards}
             requiredCount={selectedSpread.positions.length}
+            positions={selectedSpread.positions}
             onStopShuffle={handleStopShuffle}
             onCut={handleCut}
             onToggleCard={handleToggleCard}

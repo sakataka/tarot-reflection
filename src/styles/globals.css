@@ -220,6 +220,15 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .spread-option.is-selected .spread-title strong { color: var(--gold-bright); }
 .spread-title em { color: var(--gold); font-family: var(--serif); font-size: 10px; font-style: normal; letter-spacing: .1em; }
 .spread-option > small { color: var(--muted); font-family: var(--serif); font-size: 12px; line-height: 1.8; }
+.engine-field { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 26px; }
+.engine-field > span { font-family: var(--serif); font-size: 12px; letter-spacing: .08em; color: var(--faint); }
+.engine-options { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; background: rgba(12, 18, 36, .6); }
+.engine-option { display: inline-flex; align-items: baseline; gap: 6px; min-height: 36px; padding: 6px 16px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-family: var(--serif); transition: background .25s, color .25s; }
+.engine-option strong { font-size: 13px; font-weight: 600; letter-spacing: .06em; }
+.engine-option small { font-family: var(--latin); font-size: 11px; letter-spacing: .04em; color: var(--faint); }
+.engine-option.is-selected { background: rgba(201, 164, 92, .16); color: var(--gold-bright); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.engine-option.is-selected small { color: var(--gold); }
+.engine-option:not(:disabled):not(.is-selected):hover { color: var(--ink); }
 .intro-action { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 38px; }
 .intro-action .primary-button { min-width: 280px; min-height: 54px; font-size: 17px; }
 .intro-action small { color: var(--faint); font-family: var(--serif); font-size: 12px; letter-spacing: .08em; }
@@ -290,11 +299,27 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 @media (hover: hover) { .is-ready .card-back:not(:disabled):hover .card-back-art { transform: translateY(-14px); box-shadow: -3px 10px 16px rgba(0, 0, 0, .6), 0 0 16px rgba(234, 208, 143, .28); } }
 .card-back:focus-visible { outline: none; }
 .card-back:focus-visible .card-back-art { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
-.card-back.is-selected .card-back-art { transform: translateY(-30px) scale(1.06); border-color: var(--gold-bright); box-shadow: 0 0 0 1px var(--gold-bright), 0 0 24px 4px rgba(234, 208, 143, .45), 0 14px 22px rgba(0, 0, 0, .6); animation: picked .5s ease; }
-@keyframes picked { 0% { filter: brightness(1.8); } 100% { filter: none; } }
+/* 引いたカードは、手に取られて置き場へ運ばれる。途中で少し持ち上がる。 */
+.is-ready .card-back { transition: transform .75s cubic-bezier(.3, .1, .2, 1); }
+.card-back.is-selected .card-back-art { border-color: var(--gold-bright); box-shadow: 0 0 0 1px var(--gold-bright), 0 0 18px 2px rgba(234, 208, 143, .35), 0 10px 18px rgba(0, 0, 0, .6); animation: picked .75s cubic-bezier(.3, .1, .2, 1); }
+@keyframes picked { 0% { transform: none; filter: brightness(1.6); } 45% { transform: translateY(-22px) rotate(-3deg) scale(1.06); box-shadow: 0 0 0 1px var(--gold-bright), 0 0 26px 4px rgba(234, 208, 143, .45), 0 26px 30px rgba(0, 0, 0, .55); } 100% { transform: none; filter: none; } }
+@media (hover: hover) { .is-ready .card-back.is-selected:hover .card-back-art { transform: translateY(-6px); } }
+/* 引いたカードの置き場 */
+.spread-slot { position: absolute; border: 1px dashed rgba(201, 164, 92, .3); border-radius: 5px; background: radial-gradient(ellipse at 50% 40%, rgba(201, 164, 92, .06), transparent 70%); transition: border-color .4s, box-shadow .4s, opacity .6s; pointer-events: none; }
+.is-shuffling .spread-slot, .is-squaring .spread-slot, .is-cutting .spread-slot, .is-choosing .spread-slot, .is-lifting .spread-slot, .is-gathering .spread-slot { opacity: .35; }
+.spread-slot span { position: absolute; left: 50%; top: calc(100% + 8px); transform: translateX(-50%); width: calc(100% + 14px); text-align: center; line-height: 1.35; font-family: var(--serif); font-size: 12px; letter-spacing: .06em; color: var(--faint); transition: color .4s; }
+.spread-slot.is-next { border-color: rgba(234, 208, 143, .6); box-shadow: 0 0 22px rgba(234, 208, 143, .12), inset 0 0 18px rgba(234, 208, 143, .08); animation: glow-pulse 2.6s ease-in-out infinite; }
+.spread-slot.is-next span, .spread-slot.is-filled span { color: var(--gold-bright); }
+/* 配る：山を持った手が弧をなぞり、通ったところにカードが残る */
+.is-dealing .card-back { transition: none; animation: lay-card .28s cubic-bezier(.2, .7, .3, 1) both; }
+@keyframes lay-card { from { opacity: 0; translate: 0 -8px; } to { opacity: 1; translate: 0 0; } }
+.deal-deck { position: absolute; left: 0; top: 0; width: var(--card-w); height: var(--card-h); z-index: 400; transform-origin: 50% 100%; pointer-events: none; }
+.deal-deck span { position: absolute; inset: 0; border-radius: 4px; border: 1px solid rgba(201, 164, 92, .6); background: url('/cards/card_back.webp') center / cover, #192535; box-shadow: -4px 6px 14px rgba(0, 0, 0, .6); }
+.deal-deck span:nth-child(1) { transform: translate(2px, 3px); }
+.deal-deck span:nth-child(2) { transform: translate(1px, 1.5px); }
+.deal-deck::after { content: ""; position: absolute; inset: -30% -40%; border-radius: 50%; background: radial-gradient(ellipse, rgba(234, 208, 143, .18), transparent 65%); z-index: -1; }
 .card-back:disabled { opacity: 1; cursor: default; }
 .is-ready .card-back:disabled:not(.is-selected) .card-back-art { filter: brightness(.55) saturate(.7); }
-.selection-badge { position: absolute; top: -40px; left: 50%; transform: translateX(-50%); width: 24px; height: 24px; display: grid; place-items: center; background: var(--gold); color: #1c1608; border-radius: 50%; font-family: var(--latin); font-size: 13px; font-weight: 700; box-shadow: 0 0 12px rgba(234, 208, 143, .7); pointer-events: none; }
 /* シャッフル：山を二つに割り、左右から交互に落として重ねる */
 .riffle { position: absolute; width: var(--card-w); height: var(--card-h); z-index: 200; }
 .riffle-card {
@@ -362,6 +387,16 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   .cut-pile:hover span { color: var(--gold-bright); }
 }
 @keyframes pile-in { from { opacity: 0; } to { opacity: 1; } }
+/* デスクトップでは卓を画面いっぱい近くまで広げ、カードを大きく扱う */
+@media (min-width: 1140px) {
+  .table-panel { margin-inline: calc((100% - min(100vw - 64px, 1360px)) / 2); }
+  .oracle-panel { max-width: 860px; }
+  .card-stage { grid-template-columns: 230px minmax(0, 1fr); gap: 34px; padding: 28px 30px; }
+  .card-stage-label strong { font-size: 28px; }
+  .table-strip .strip-card { width: 72px; }
+  .table-strip .strip-card-flip { width: 54px; }
+}
+
 /* 卓の脇から、占い師が手順を促す */
 .oracle-guide { display: flex; align-items: center; gap: 16px; min-height: 72px; }
 .oracle-guide .ornament-kicker { font-size: 11px; }
@@ -440,6 +475,8 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 
 /* 卓を小さく見渡す帯。語りの間も上に留まる */
 .table-strip { position: sticky; top: env(safe-area-inset-top); z-index: 40; display: flex; justify-content: center; gap: 14px; margin: 26px -12px 0; padding: 12px 12px 10px; background: linear-gradient(180deg, rgba(7, 10, 20, .96) 70%, rgba(7, 10, 20, .75)); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+.strip-card { animation: strip-deal .7s cubic-bezier(.2, .8, .3, 1) calc(var(--i, 0) * 140ms) both; }
+@keyframes strip-deal { from { opacity: 0; transform: translate(-18px, -22px) rotate(-10deg); } to { opacity: 1; transform: none; } }
 .strip-card { display: grid; justify-items: center; gap: 3px; width: 58px; text-decoration: none; color: var(--faint); transition: color .3s; }
 .strip-card-flip { position: relative; width: 44px; aspect-ratio: 2 / 3; transform-style: preserve-3d; transition: transform .9s cubic-bezier(.3, .1, .2, 1), box-shadow .4s; border-radius: 3px; }
 .strip-card-flip > * { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 3px; backface-visibility: hidden; -webkit-backface-visibility: hidden; object-fit: cover; box-shadow: 0 0 0 1px rgba(201, 164, 92, .45), 0 4px 10px rgba(0, 0, 0, .5); }
@@ -458,6 +495,9 @@ a.strip-card:hover { color: var(--gold-bright); }
 .narration-segment { scroll-margin-top: 124px; }
 .card-stage { display: grid; grid-template-columns: 168px minmax(0, 1fr); align-items: center; gap: 26px; margin: 10px 0 24px; padding: 22px; border: 1px solid var(--line); border-radius: 4px; background: radial-gradient(ellipse 70% 90% at 20% 50%, rgba(80, 100, 170, .16), transparent 70%), rgba(10, 14, 28, .55); animation: ink-in .8s ease both; }
 .card-stage .card-meta { display: none; }
+.card-stage-card { position: relative; }
+.card-stage:not(.is-face-down) .card-stage-card { animation: card-turn-lift 1s cubic-bezier(.3, .1, .2, 1) both; }
+@keyframes card-turn-lift { 0% { transform: none; } 40% { transform: translateY(-14px) scale(1.05); filter: drop-shadow(0 22px 18px rgba(0, 0, 0, .55)); } 100% { transform: none; } }
 .card-stage:not(.is-face-down) .card-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 240, 200, .35) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: glint 1.6s .7s ease both; pointer-events: none; }
 .card-stage-label { display: grid; gap: 4px; line-height: 1.6; transition: opacity .6s .6s; }
 .card-stage.is-face-down .card-stage-label > :not(small):not(.card-stage-role) { opacity: 0; }
@@ -516,6 +556,12 @@ a.strip-card:hover { color: var(--gold-bright); }
 .oracle-heading { text-align: center; margin-bottom: 24px; }
 .oracle-heading h2 { margin-top: 8px; letter-spacing: .14em; }
 .thinking-box { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px 0 28px; }
+.waiting-table { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.waiting-card { display: grid; justify-items: center; gap: 6px; animation: strip-deal .7s cubic-bezier(.2, .8, .3, 1) both; }
+.waiting-card-back { width: 46px; aspect-ratio: 2 / 3; border-radius: 3px; background: url('/cards/card_back.webp') center / cover, #192535; box-shadow: 0 0 0 1px rgba(201, 164, 92, .45), 0 6px 14px rgba(0, 0, 0, .5); transition: transform .8s cubic-bezier(.3, .1, .2, 1), box-shadow .8s, filter .8s; filter: brightness(.8); }
+.waiting-card small { font-family: var(--serif); font-size: 10px; letter-spacing: .04em; color: var(--faint); transition: color .8s; }
+.waiting-card.is-hovered .waiting-card-back { transform: translateY(-6px); filter: brightness(1.15); box-shadow: 0 0 0 1px var(--gold-bright), 0 0 22px 4px rgba(234, 208, 143, .4), 0 12px 18px rgba(0, 0, 0, .5); }
+.waiting-card.is-hovered small { color: var(--gold-bright); }
 .thinking-words { font-family: var(--serif); font-size: 14px; letter-spacing: .08em; color: var(--muted); animation: breathe 2.8s ease-in-out both; }
 @keyframes breathe { 0% { opacity: 0; transform: translateY(4px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .oracle-error { text-align: center; }
@@ -664,6 +710,7 @@ a.strip-card:hover { color: var(--gold-bright); }
   .reveal-buttons { justify-content: space-between; }
   .reveal-buttons .primary-button { flex: 1; }
   .card-meta h3 { font-size: 15px; letter-spacing: .08em; }
+  .spread-slot span { top: calc(100% + 5px); font-size: 10px; letter-spacing: 0; }
   .oracle-panel { padding: 28px 16px 22px; margin-top: 20px; }
   .oracle-portrait { width: 200px; }
   .clarify-oracle.has-spoken { flex-direction: column; align-items: center; gap: 14px; text-align: center; }

@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Reading, ReadingCard } from "../types/tarot";
 import { moonPhase } from "../utils/moment";
 import { tableCards } from "../utils/tarot";
@@ -22,12 +23,14 @@ type TableStripProps = {
   current?: number | null;
 };
 
-const StripCard = ({ readingCard, mark, isRevealed, isCurrent, targetId }: {
+const StripCard = ({ readingCard, mark, isRevealed, isCurrent, targetId, order }: {
   readingCard: ReadingCard;
   mark: string;
   isRevealed: boolean;
   isCurrent: boolean;
   targetId?: string;
+  // 卓に置かれた順。帯に並ぶとき、この順に一枚ずつ配られる。
+  order: number;
 }) => {
   const className = `strip-card${isRevealed ? " is-revealed" : ""}${isCurrent ? " is-current" : ""}`;
   const label = `${mark}・${readingCard.position.name}${isRevealed ? `：${readingCard.card.nameJa}（${orientationLabel[readingCard.orientation]}）` : "（まだ伏せたまま）"}`;
@@ -45,6 +48,7 @@ const StripCard = ({ readingCard, mark, isRevealed, isCurrent, targetId }: {
   return isRevealed && targetId ? (
     <a
       className={className}
+      style={{ "--i": order } as CSSProperties}
       href={`#${targetId}`}
       aria-label={label}
       aria-current={isCurrent ? "step" : undefined}
@@ -56,7 +60,7 @@ const StripCard = ({ readingCard, mark, isRevealed, isCurrent, targetId }: {
       {content}
     </a>
   ) : (
-    <span className={className} role="img" aria-label={label}>{content}</span>
+    <span className={className} style={{ "--i": order } as CSSProperties} role="img" aria-label={label}>{content}</span>
   );
 };
 
@@ -86,10 +90,11 @@ export const TableStrip = ({ reading, revealed, current = null }: TableStripProp
         isRevealed={revealed[index] ?? false}
         isCurrent={current === index}
         targetId={narrationCardId(index)}
+        order={index}
       />
     ))}
     {reading.jumper ? (
-      <StripCard readingCard={reading.jumper} mark="✦" isRevealed isCurrent={false} />
+      <StripCard readingCard={reading.jumper} mark="✦" isRevealed isCurrent={false} order={tableCards(reading).length} />
     ) : null}
   </nav>
 );

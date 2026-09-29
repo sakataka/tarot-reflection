@@ -62,6 +62,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
         signal: abort.signal,
         onDelta: (text) => {
           answer += text;
+          setPending({ question, answer });
         },
       },
     )
@@ -90,7 +91,19 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       {pending ? (
         <div className="exchange is-pending" aria-live="polite">
           <p className="exchange-ask"><span>あなた</span>{pending.question}</p>
-          <p className="thinking-words">{oracleName}が卓のカードを見つめ直しています…</p>
+          {pending.answer.trim() ? (
+            <div className="exchange-answer">
+              <span>{oracleName}</span>
+              {splitParagraphs(cleanNarrationText(pending.answer)).map((paragraph, index, paragraphs) => (
+                <p key={index}>
+                  {paragraph}
+                  {index === paragraphs.length - 1 ? <span className="ink-caret" aria-hidden="true" /> : null}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="thinking-words is-steady">{oracleName}が卓のカードを見つめ直しています…</p>
+          )}
         </div>
       ) : null}
 

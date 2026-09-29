@@ -1,7 +1,8 @@
 import { relative, resolve, sep } from "node:path";
-import { askCodex } from "./codexCli";
+import { parseEngine, type EngineId } from "../src/utils/engine";
 import { generateClarifyPrompt } from "../src/utils/prompt";
 import { buildFollowUpRequest, buildPromptFromInterpretationInput, maxQuestionLength } from "./interpretationRequest";
+import { askOracle } from "./oracleEngine";
 import { createReadingStore } from "./readingStore";
 
 const port = Number(process.env.PORT ?? 4192);
@@ -56,16 +57,19 @@ console.log(`Tarot Reflection local server listening on http://127.0.0.1:${serve
 async function handleInterpretStream(request: Request) {
   if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
   let prompt: string;
+  let engine: EngineId;
   try {
     const since = Date.now() - memoryDays * 86_400_000;
     const pastReadings = (await store.list().catch(() => []))
       .filter((record) => Date.parse(record.createdAt) >= since)
       .slice(0, memoryCount);
-    prompt = buildPromptFromInterpretationInput(await request.json().catch(() => null), pastReadings);
+    const body = await request.json().catch(() => null);
+    engine = engineOf(body);
+    prompt = buildPromptFromInterpretationInput(body, pastReadings);
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
   }
-  return streamCodex(request, prompt);
+  return streamOracle(request, engine, prompt);
 }
 
 // カードを引く前に、占い師が一つだけ問い返す。短いので速さを優先する。
@@ -75,28 +79,34 @@ async function handleClarifyStream(request: Request) {
   const question = typeof body?.question === "string" ? body.question.trim().slice(0, maxQuestionLength) : "";
   if (!question) return jsonResponse({ error: "Question is empty." }, 400);
   const firstVisit = (await store.list().catch(() => [])).length === 0;
-  return streamCodex(request, generateClarifyPrompt(question, { firstVisit }), { effort: "low" });
+  return streamOracle(request, engineOf(body), generateClarifyPrompt(question, { firstVisit }), { effort: "low" });
 }
 
 // 読み終えたあとの聞き返し。答え終えたら記録に書き足す。
 async function handleFollowUpStream(request: Request) {
   if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
   let followUp: ReturnType<typeof buildFollowUpRequest>;
+  let engine: EngineId;
   try {
-    followUp = buildFollowUpRequest(await request.json().catch(() => null));
+    const body = await request.json().catch(() => null);
+    engine = engineOf(body);
+    followUp = buildFollowUpRequest(body);
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
   }
-  return streamCodex(request, followUp.prompt, {
+  return streamOracle(request, engine, followUp.prompt, {
     onComplete: async (answer) => {
       if (followUp.recordId) await store.addFollowUp(followUp.recordId, { question: followUp.ask, answer }).catch(() => false);
     },
   });
 }
 
+const engineOf = (body: unknown) => parseEngine((body as { engine?: unknown } | null)?.engine);
+
 // 占い師の言葉を NDJSON で一行ずつ返す。{type:"delta"} を重ね、最後に done か error が届く。
-function streamCodex(
+function streamOracle(
   request: Request,
+  engine: EngineId,
   prompt: string,
   { effort, onComplete }: { effort?: "low" | "medium"; onComplete?: (answer: string) => Promise<unknown> } = {},
 ) {
@@ -115,7 +125,7 @@ function streamCodex(
       const heartbeat = setInterval(() => emit({ type: "wait" }), 5000);
 
       try {
-        const answer = await askCodex(prompt, {
+        const answer = await askOracle(engine, prompt, {
           signal: abort.signal,
           effort,
           onDelta: (text) => emit({ type: "delta", text }),

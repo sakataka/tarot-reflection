@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Spread } from "../types/tarot";
+import { engines, type EngineId } from "../utils/engine";
 import type { ReadingRecord } from "../utils/history";
 import type { MoonPhase } from "../utils/moment";
 import { oracleName } from "../utils/persona";
@@ -19,6 +20,8 @@ type QuestionFormProps = {
   clarifySlot?: ReactNode;
   onQuestionChange: (question: string) => void;
   onSpreadChange: (spreadId: string) => void;
+  engine: EngineId;
+  onEngineChange: (engine: EngineId) => void;
   onConfide: () => void;
 };
 
@@ -35,6 +38,8 @@ export const QuestionForm = ({
   clarifySlot,
   onQuestionChange,
   onSpreadChange,
+  engine,
+  onEngineChange,
   onConfide,
 }: QuestionFormProps) => (
   <section className="intro-panel">
@@ -81,6 +86,26 @@ export const QuestionForm = ({
       <button className="text-button guide-link" type="button" onClick={onOpenGuide}>
         はじめての方へ ― 占いの流れと、特別なカードのこと
       </button>
+    </div>
+
+    <div className="engine-field" role="radiogroup" aria-label={`${oracleName}の言葉を紡ぐAI`}>
+      <span>{oracleName}の言葉を紡ぐAI</span>
+      <div className="engine-options">
+        {engines.map((option) => (
+          <button
+            key={option.id}
+            className={option.id === engine ? "engine-option is-selected" : "engine-option"}
+            type="button"
+            role="radio"
+            aria-checked={option.id === engine}
+            disabled={Boolean(clarifySlot)}
+            onClick={() => onEngineChange(option.id)}
+          >
+            <strong>{option.label}</strong>
+            <small>{option.model}</small>
+          </button>
+        ))}
+      </div>
     </div>
 
     {clarifySlot ?? (sameNightReading ? (

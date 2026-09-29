@@ -1,3 +1,5 @@
+import { readStoredEngine } from "./utils/engine";
+
 type BackendCommandArgs = Record<string, unknown>;
 
 function parseJson(responseText: string): unknown {
@@ -24,7 +26,7 @@ function extractBackendError(payload: unknown) {
 function buildBackendError(status: number, responseText: string) {
   if (status === 404 && /not found/i.test(responseText)) {
     return [
-      "Codex連携APIが見つかりません。",
+      "占い師を呼ぶAPIが見つかりません。",
       "`bun run dev` で起動した http://127.0.0.1:4192/ から開いてください。",
       "古い http://127.0.0.1:5173/ や別アプリの4174番を開いている場合は、このエラーになります。",
     ].join("\n");
@@ -46,7 +48,8 @@ export async function streamBackend(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(args),
+    // 占い師の言葉を紡ぐAIは、相談者が選んだものを毎回添える。
+    body: JSON.stringify({ ...args, engine: readStoredEngine() }),
     signal,
   });
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import type { DrawnCard, SelectedCard } from "../types/tarot";
+import type { DrawnCard, SelectedCard, SpreadPosition } from "../types/tarot";
 import { oracleName } from "../utils/persona";
 import { playDeal, playPick, playPlace, playShuffle } from "../utils/sound";
 import { cutPileCount } from "../utils/tarot";
@@ -19,8 +19,10 @@ const liftDuration = 600;
 // 残りの山を先に重ね、選んだ山をいちばん最後に上へ載せる。
 const gatherStagger = 480;
 const gatherDuration = gatherStagger + 700;
-const dealStagger = 9;
-const dealDuration = 700;
+// 山を持った手が弧をなぞり、一枚ずつ卓に置いていく。段ごとに向きを折り返す。
+const dealLead = 320;
+const dealStagger = 20;
+const dealDuration = 360;
 const riffleCards = 12;
 
 type CardBackGridProps = {
@@ -28,6 +30,7 @@ type CardBackGridProps = {
   jumper: DrawnCard | null;
   selectedCards: SelectedCard[];
   requiredCount: number;
+  positions: SpreadPosition[];
   onStopShuffle: () => void;
   onCut: (pileIndex: number) => void;
   onToggleCard: (drawnCard: DrawnCard) => void;
@@ -40,7 +43,12 @@ type FanLayout = {
   cardHeight: number;
   height: number;
   positions: { x: number; y: number; angle: number }[];
+  // 配る順番。段ごとに左から右、右から左と折り返す。
+  dealOrder: number[];
+  perRow: number;
   stack: { x: number; y: number };
+  // 引いたカードを置く場所（並べ方の位置ごと）。広げたカードの下に並ぶ。
+  slots: { x: number; y: number; width: number; height: number }[];
 };
 
 type PileLayout = {
@@ -49,10 +57,11 @@ type PileLayout = {
 };
 
 // 卓の幅に合わせて、78枚を数段の弧に広げる。後ろの段ほど奥に置き、手前の段が少し重なる。
-const computeFanLayout = (width: number, count: number): FanLayout => {
+const computeFanLayout = (width: number, count: number, slotCount: number): FanLayout => {
   const rows = width >= 900 ? 2 : width >= 600 ? 3 : 6;
   const perRow = Math.ceil(count / rows);
-  const cardWidth = Math.round(Math.min(rows === 2 ? 84 : rows === 3 ? 70 : 52, width / (rows === 6 ? 7.4 : 8)));
+  const maxWidth = rows === 2 ? (width >= 1100 ? 108 : 90) : rows === 3 ? 70 : 52;
+  const cardWidth = Math.round(Math.min(maxWidth, width / (rows === 6 ? 7.4 : rows === 2 ? 9.6 : 8)));
   const cardHeight = Math.round(cardWidth * 1.5);
   const rowGap = Math.round(cardHeight * (rows === 6 ? 0.66 : 0.78));
   const sag = Math.round(cardHeight * (rows === 6 ? 0.2 : 0.42));
@@ -72,14 +81,48 @@ const computeFanLayout = (width: number, count: number): FanLayout => {
       angle: t * maxAngle,
     };
   });
+  const dealOrder = positions.map((_, index) => {
+    const row = Math.floor(index / perRow);
+    const inRow = Math.min(perRow, count - row * perRow);
+    const column = index - row * perRow;
+    return row * perRow + (row % 2 === 0 ? column : inRow - 1 - column);
+  });
+
+  const fanBottom = lift + (rows - 1) * rowGap + sag + cardHeight;
+  // 置き場は、広げたカードより一回り大きく。枚数が多いときは卓の幅に収める。
+  const slotGap = rows === 6 ? 8 : 18;
+  const slotWidth = Math.floor(Math.min(cardWidth * (slotCount === 1 ? 1.4 : slotCount > 3 ? 1 : 1.15), (width - 16 - slotGap * (slotCount - 1)) / slotCount));
+  const slotHeight = Math.round(slotWidth * 1.5);
+  const rowWidth = slotWidth * slotCount + slotGap * (slotCount - 1);
+  // 弧の中央は高く、両端ほど下がる。置き場の幅の下にある扇の底から少し離して置く。
+  const edge = Math.min(1, (rowWidth / 2 + cardWidth / 2) / (span / 2));
+  const slotTop = lift + (rows - 1) * rowGap + cardHeight + Math.round(sag * edge * edge) + (rows === 6 ? 28 : 36);
+  const slots = Array.from({ length: slotCount }, (_, index) => {
+    // 七枚は蹄鉄の形に、両端を少し下げる。
+    const t = slotCount === 1 ? 0 : (index / (slotCount - 1)) * 2 - 1;
+    const arch = slotCount >= 5 ? Math.round(t * t * slotHeight * 0.22) : 0;
+    return { x: (width - rowWidth) / 2 + index * (slotWidth + slotGap), y: slotTop + arch, width: slotWidth, height: slotHeight };
+  });
+  const slotsBottom = slotTop + slotHeight + (slotCount >= 5 ? Math.round(slotHeight * 0.22) : 0) + 34;
 
   return {
     cardWidth,
     cardHeight,
-    height: lift + (rows - 1) * rowGap + sag + cardHeight + 12,
+    height: Math.max(fanBottom + 12, slotsBottom),
     positions,
+    dealOrder,
+    perRow,
     stack: { x: width / 2 - cardWidth / 2, y: lift + ((rows - 1) * rowGap + sag) / 2 },
+    slots,
   };
+};
+
+// 置き場に載せるための transform。カードは下辺の中央を軸に拡大されるので、その分をずらす。
+const slotTransform = (layout: FanLayout, slot: FanLayout["slots"][number]) => {
+  const scale = slot.width / layout.cardWidth;
+  const x = slot.x - layout.cardWidth / 2 + (layout.cardWidth * scale) / 2;
+  const y = slot.y - layout.cardHeight + layout.cardHeight * scale;
+  return `translate(${x}px, ${y}px) scale(${scale})`;
 };
 
 // 切り分けた山の置き場所。いちばん上の山を左へ、次を右へ運び、残りは中央に残る。
@@ -104,6 +147,7 @@ export const CardBackGrid = ({
   jumper,
   selectedCards,
   requiredCount,
+  positions,
   onStopShuffle,
   onCut,
   onToggleCard,
@@ -111,6 +155,7 @@ export const CardBackGrid = ({
   onReshuffle,
 }: CardBackGridProps) => {
   const fieldRef = useRef<HTMLDivElement>(null);
+  const deckRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const [phase, setPhase] = useState<Phase>("shuffling");
   const [canStop, setCanStop] = useState(false);
@@ -118,6 +163,10 @@ export const CardBackGrid = ({
   const selectedById = new Map(selectedCards.map((selectedCard) => [selectedCard.card.id, selectedCard]));
   const isComplete = selectedCards.length === requiredCount;
   const remaining = requiredCount - selectedCards.length;
+
+  const layout = width > 0 ? computeFanLayout(width, cards.length, requiredCount) : null;
+  const piles = layout ? computePileLayout(width, layout) : null;
+  const dealTotal = dealLead + cards.length * dealStagger;
 
   useLayoutEffect(() => {
     const element = fieldRef.current;
@@ -163,12 +212,37 @@ export const CardBackGrid = ({
       return () => timers.forEach((timer) => window.clearTimeout(timer));
     }
     if (phase === "dealing") {
-      playDeal();
-      const timer = window.setTimeout(() => setPhase("ready"), cards.length * dealStagger + dealDuration);
-      return () => window.clearTimeout(timer);
+      // 段ごとに、手が卓を滑る音を鳴らす。
+      const perRow = layout?.perRow ?? cards.length;
+      const timers = Array.from({ length: Math.ceil(cards.length / perRow) }, (_, row) =>
+        window.setTimeout(playDeal, dealLead + row * perRow * dealStagger));
+      timers.push(window.setTimeout(() => setPhase("ready"), dealTotal + dealDuration));
+      return () => timers.forEach((timer) => window.clearTimeout(timer));
     }
     // onCut は親の描画ごとに作り直されるので、依存に入れない。
   }, [phase, cards.length, chosenPile]);
+
+  // 配るあいだ、山を持った手が弧をなぞって動く。置いた順に、その場所へカードが残る。
+  useLayoutEffect(() => {
+    const deck = deckRef.current;
+    if (phase !== "dealing" || !deck || !layout || !piles || typeof deck.animate !== "function") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      deck.style.display = "none";
+      return;
+    }
+    const byOrder = layout.dealOrder
+      .map((order, index) => ({ order, position: layout.positions[index] }))
+      .sort((a, b) => a.order - b.order);
+    const place = ({ x, y, angle }: { x: number; y: number; angle: number }) => `translate(${x}px, ${y - 10}px) rotate(${angle}deg)`;
+    const keyframes: Keyframe[] = [
+      { transform: `translate(${layout.stack.x}px, ${layout.stack.y}px) scale(${piles.scale})`, opacity: 1, offset: 0 },
+      ...byOrder.map(({ order, position }) => ({ transform: place(position), opacity: 1, offset: (dealLead + order * dealStagger) / (dealTotal + dealDuration) })),
+      { transform: place(byOrder[byOrder.length - 1].position), opacity: 0, offset: 1 },
+    ];
+    const animation = deck.animate(keyframes, { duration: dealTotal + dealDuration, easing: "linear", fill: "forwards" });
+    return () => animation.cancel();
+    // レイアウトは幅から決まる。配っている途中に幅が変わったら、そこから配り直す。
+  }, [phase, width]);
 
   const stopShuffle = () => {
     if (!canStop || phase !== "shuffling") return;
@@ -184,19 +258,23 @@ export const CardBackGrid = ({
     setPhase("lifting");
   };
 
-  const layout = width > 0 ? computeFanLayout(width, cards.length) : null;
-  const piles = layout ? computePileLayout(width, layout) : null;
   const pileSize = Math.ceil(cards.length / cutPileCount);
   const isSpread = phase === "dealing" || phase === "ready";
   const isSplit = phase === "cutting" || phase === "choosing" || phase === "lifting";
   // 集めるときは、選んだ山（並べ替え後の先頭）を最後に載せる。
   const chosenSize = chosenPile === null ? 0 : Math.min(pileSize, cards.length - chosenPile * pileSize);
 
-  const cardTransform = (index: number): { transform: string; zIndex: number; delay: number } => {
+  const cardTransform = (index: number, selected?: SelectedCard): { transform: string; zIndex: number; delay: number } => {
     if (!layout || !piles) return { transform: "", zIndex: index, delay: 0 };
     if (isSpread) {
+      const slot = selected ? layout.slots[selected.selectedOrder - 1] : undefined;
+      if (slot) return { transform: slotTransform(layout, slot), zIndex: cards.length + selected!.selectedOrder, delay: 0 };
       const target = layout.positions[index];
-      return { transform: `translate(${target.x}px, ${target.y}px) rotate(${target.angle}deg)`, zIndex: index, delay: phase === "dealing" ? index * dealStagger : 0 };
+      return {
+        transform: `translate(${target.x}px, ${target.y}px) rotate(${target.angle}deg)`,
+        zIndex: index,
+        delay: phase === "dealing" ? dealLead + layout.dealOrder[index] * dealStagger : 0,
+      };
     }
     if (isSplit) {
       const pile = Math.floor(index / pileSize);
@@ -307,10 +385,29 @@ export const CardBackGrid = ({
             </button>
           )) : null}
 
+          {/* 引いたカードの置き場。並べ方の位置の名前を卓に記しておく。 */}
+          {layout ? layout.slots.map((slot, slotIndex) => (
+            <div
+              className={slotIndex < selectedCards.length ? "spread-slot is-filled" : slotIndex === selectedCards.length && phase === "ready" ? "spread-slot is-next" : "spread-slot"}
+              key={positions[slotIndex]?.id ?? slotIndex}
+              aria-hidden="true"
+              style={{ left: slot.x, top: slot.y, width: slot.width, height: slot.height }}
+            >
+              <span>{positions[slotIndex]?.name}</span>
+            </div>
+          )) : null}
+
+          {layout && phase === "dealing" ? (
+            <div className="deal-deck" ref={deckRef} aria-hidden="true">
+              <span /><span /><span />
+            </div>
+          ) : null}
+
           {layout ? cards.map((drawnCard, index) => {
             const selected = selectedById.get(drawnCard.card.id);
             const disabled = phase !== "ready" || (!selected && selectedCards.length >= requiredCount);
-            const placement = cardTransform(index);
+            const placement = cardTransform(index, selected);
+            const position = selected ? positions[selected.selectedOrder - 1] : undefined;
 
             return (
               <button
@@ -318,18 +415,17 @@ export const CardBackGrid = ({
                 key={drawnCard.card.id}
                 type="button"
                 disabled={disabled}
-                aria-label={`${index + 1}番目の裏向きカード${selected ? `、${selected.selectedOrder}枚目として選択中` : ""}`}
+                aria-label={`${index + 1}番目の裏向きカード${selected ? `、${position?.name ?? `${selected.selectedOrder}枚目`}に置いたカード` : ""}`}
                 aria-pressed={Boolean(selected)}
                 onClick={() => onToggleCard(drawnCard)}
                 tabIndex={phase === "ready" ? undefined : -1}
                 style={{
                   transform: placement.transform,
-                  transitionDelay: `${placement.delay}ms`,
-                  zIndex: selected ? cards.length + selected.selectedOrder : placement.zIndex,
+                  ...(phase === "dealing" ? { animationDelay: `${placement.delay}ms` } : { transitionDelay: `${placement.delay}ms` }),
+                  zIndex: placement.zIndex,
                 }}
               >
                 <span className="card-back-art" />
-                {selected ? <span className="selection-badge">{selected.selectedOrder}</span> : null}
               </button>
             );
           }) : null}
