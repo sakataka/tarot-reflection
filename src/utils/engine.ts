@@ -2,7 +2,7 @@
 
 export const engines = [
   { id: "claude", label: "Claude", model: "Opus 5.5" },
-  { id: "codex", label: "Codex", model: "GPT-6 Sol" },
+  { id: "codex", label: "Codex", model: "GPT-6.1 Sol" },
 ] as const;
 
 export type EngineId = (typeof engines)[number]["id"];

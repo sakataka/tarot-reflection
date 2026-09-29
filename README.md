@@ -38,10 +38,10 @@ bun run dev:frontend
 
 ## 占い師の言葉を紡ぐAI
 
-ヘッダーの「設定」で Claude（Opus 5.5）と Codex（GPT-6 Sol）を切り替えられます。選んだAIはブラウザに保存され、問い返し・語り・聞き返しのすべてに使います。初期値は Claude です。
+ヘッダーの「設定」で Claude（Opus 5.5）と Codex（GPT-6.1 Sol）を切り替えられます。選んだAIはブラウザに保存され、問い返し・語り・聞き返しのすべてに使います。初期値は Claude です。
 
 - Claude: `claude -p --safe-mode --model claude-opus-5-5` を道具なし（`--tools ""`）・履歴なしで呼び、語りを一文字ずつストリーミングで受け取ります。最初の文字が届いたところから語りが始まるので、待ち時間が短くなります。CLI は、Claude デスクトップアプリに同梱された最新版（`~/Library/Application Support/Claude/claude-code/<version>/`）を優先して使います。Homebrew 版は更新が遅く、新しいモデルを呼べないことがあるためです。`TAROT_CLAUDE_BIN` で CLI、`TAROT_CLAUDE_MODEL` でモデルを変えられます。
-- Codex: `codex exec --ephemeral --json` を、モデル `gpt-6-sol`・推論強度 `medium` で呼びます。完成した本文がまとめて届きます。
+- Codex: `codex exec --ephemeral --json` を、モデル `gpt-6.1-sol`・推論強度 `medium` で呼びます。完成した本文がまとめて届きます。
 - フロントエンドにAPIキーは置きません。どちらもCLIへのログイン（Claude のサブスクリプション、ChatGPT）を使い、`ANTHROPIC_API_KEY`・`OPENAI_API_KEY` は子プロセスに渡しません。
 - 読み解きの取得に失敗した場合は、画面から再試行できます。
 
@@ -77,7 +77,7 @@ bun run build
 
 ヘッダーの「設定」には、占いの世界の外にある選択をまとめています。いずれもブラウザに保存されます。
 
-- ヴェスペラの言葉を紡ぐAI: Claude（Opus 5.5）/ Codex（GPT-6 Sol）
+- ヴェスペラの言葉を紡ぐAI: Claude（Opus 5.5）/ Codex（GPT-6.1 Sol）
 - 語りの見せ方: 一枚ずつ、間を置いて（初期値）/ すぐに全部（届いた言葉をそのまま表示し、合図を待たずにめくる）
 - 効果音: 鳴らす（初期値）/ 鳴らさない
 
