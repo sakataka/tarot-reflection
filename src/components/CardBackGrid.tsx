@@ -25,6 +25,7 @@ const dealStagger = 20;
 const dealDuration = 360;
 
 type CardBackGridProps = {
+  active: boolean;
   cards: DrawnCard[];
   jumper: DrawnCard | null;
   selectedCards: SelectedCard[];
@@ -142,6 +143,7 @@ const computePileLayout = (width: number, layout: FanLayout): PileLayout => {
 };
 
 export const CardBackGrid = ({
+  active,
   cards,
   jumper,
   selectedCards,
@@ -173,12 +175,16 @@ export const CardBackGrid = ({
   useLayoutEffect(() => {
     const element = fieldRef.current;
     if (!element) return;
-    const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
+    const observer = new ResizeObserver(([entry]) => {
+      // 非表示の間に幅をゼロへ戻すと、卓の配置が消えてしまう。
+      if (entry.contentRect.width > 0) setWidth(Math.round(entry.contentRect.width));
+    });
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
+    if (!active) return;
     if (phase === "shuffling") {
       // 手を止めるまで、リフルを繰り返す。
       playShuffle();
@@ -222,12 +228,12 @@ export const CardBackGrid = ({
       return () => timers.forEach((timer) => window.clearTimeout(timer));
     }
     // onCut は親の描画ごとに作り直されるので、依存に入れない。
-  }, [phase, cards.length, chosenPile]);
+  }, [phase, cards.length, chosenPile, active]);
 
   // 配るあいだ、山を持った手が弧をなぞって動く。置いた順に、その場所へカードが残る。
   useLayoutEffect(() => {
     const deck = deckRef.current;
-    if (phase !== "dealing" || !deck || !layout || !piles || typeof deck.animate !== "function") return;
+    if (!active || phase !== "dealing" || !deck || !layout || !piles || typeof deck.animate !== "function") return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       deck.style.display = "none";
       return;
@@ -244,7 +250,7 @@ export const CardBackGrid = ({
     const animation = deck.animate(keyframes, { duration: dealTotal + dealDuration, easing: "linear", fill: "forwards" });
     return () => animation.cancel();
     // レイアウトは幅から決まる。配っている途中に幅が変わったら、そこから配り直す。
-  }, [phase, width]);
+  }, [phase, width, active]);
 
   const stopShuffle = () => {
     if (!canStop || phase !== "shuffling") return;

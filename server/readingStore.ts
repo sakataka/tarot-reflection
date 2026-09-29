@@ -2,8 +2,9 @@ import { mkdir, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { Exchange } from "../src/types/tarot";
+import { maxReplyLength } from "../src/utils/limits";
 import type { ReadingRecord } from "../src/utils/history";
-import { toCardRecord } from "../src/utils/history";
+import { maxFollowUps, toCardRecord } from "../src/utils/history";
 import { parseReadingInput } from "./interpretationRequest";
 
 // リーディングの記録は、このMacの中にだけ JSON で残す。iPhoneから開いても同じ占い師が覚えている。
@@ -17,7 +18,7 @@ export type ReadingStore = {
   list: () => Promise<ReadingRecord[]>;
   add: (input: unknown) => Promise<ReadingRecord>;
   remove: (id: string) => Promise<boolean>;
-  addFollowUp: (id: string, exchange: Exchange) => Promise<boolean>;
+  addFollowUp: (id: string, input: unknown) => Promise<boolean>;
 };
 
 export const createReadingStore = (path = defaultStorePath()): ReadingStore => {
@@ -32,8 +33,10 @@ export const createReadingStore = (path = defaultStorePath()): ReadingStore => {
   const read = async (): Promise<ReadingRecord[]> => {
     const file = Bun.file(path);
     if (!(await file.exists())) return [];
-    const data = await file.json().catch(() => []);
-    return Array.isArray(data) ? data : [];
+    // 壊れた記録を空とみなすと、次の保存で残っていた記録を上書きしてしまう。
+    const data: unknown = await file.json();
+    if (!Array.isArray(data)) throw new Error("Reading archive is not an array.");
+    return data;
   };
 
   const write = async (records: ReadingRecord[]) => {
@@ -75,11 +78,23 @@ export const createReadingStore = (path = defaultStorePath()): ReadingStore => {
         await write([record, ...records].slice(0, maxRecords));
         return record;
       }),
-    addFollowUp: (id, exchange) =>
+    addFollowUp: (id, input) =>
       serialize(async () => {
+        const body = (input && typeof input === "object" ? input : {}) as { question?: unknown; answer?: unknown };
+        const exchange: Exchange = {
+          question: typeof body.question === "string" ? body.question.trim() : "",
+          answer: typeof body.answer === "string" ? body.answer.trim() : "",
+        };
+        if (!exchange.question || !exchange.answer) throw new Error("Exchange is empty.");
+        if (exchange.question.length > maxReplyLength || exchange.answer.length > maxNarrationLength) {
+          throw new Error("Exchange is too long.");
+        }
         const records = await read();
         const record = records.find((item) => item.id === id);
         if (!record) return false;
+        // 応答が届かなかった保存の再試行でも、同じやりとりを二度追加しない。
+        if (record.followUps?.some((item) => item.question === exchange.question && item.answer === exchange.answer)) return true;
+        if ((record.followUps?.length ?? 0) >= maxFollowUps) throw new Error("No more questions tonight.");
         record.followUps = [...(record.followUps ?? []), exchange];
         await write(records);
         return true;

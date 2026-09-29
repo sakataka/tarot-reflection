@@ -6,6 +6,7 @@ import { oracleName } from "../utils/persona";
 import { OraclePortrait } from "./OraclePortrait";
 
 type ClarifyBoxProps = {
+  active: boolean;
   question: string;
   onProceed: (clarification: Exchange | null) => void;
   onEdit: () => void;
@@ -13,7 +14,7 @@ type ClarifyBoxProps = {
 
 
 // カードに触れる前に、占い師が問いを受け止めて一つだけ問い返す。答えは読みの材料になる。
-export const ClarifyBox = ({ question, onProceed, onEdit }: ClarifyBoxProps) => {
+export const ClarifyBox = ({ active, question, onProceed, onEdit }: ClarifyBoxProps) => {
   const [words, setWords] = useState("");
   const [done, setDone] = useState(false);
   const [error, setError] = useState(false);
@@ -22,7 +23,6 @@ export const ClarifyBox = ({ question, onProceed, onEdit }: ClarifyBoxProps) => 
   const answerRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     const abort = new AbortController();
     streamBackend("clarify/stream", { question }, {
       signal: abort.signal,
@@ -36,8 +36,10 @@ export const ClarifyBox = ({ question, onProceed, onEdit }: ClarifyBoxProps) => 
   }, [question]);
 
   useEffect(() => {
+    if (!active) return;
+    boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     if (done) answerRef.current?.focus({ preventScroll: true });
-  }, [done]);
+  }, [done, active]);
 
   const proceedWithAnswer = () => onProceed(answer.trim() ? { question: words.trim(), answer: answer.trim() } : null);
 

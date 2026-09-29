@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createReadingStore } from "./readingStore";
@@ -40,5 +40,39 @@ describe("readingStore", () => {
     const store = createReadingStore(join(directory, "other.json"));
     await expect(store.add({ ...input, root: { cardId: "major_00_fool", orientation: "upright" } })).rejects.toThrow("twice");
     await expect(store.add({ ...input, narration: " " })).rejects.toThrow("empty");
+  });
+
+  test("does not overwrite an unreadable archive when adding a reading", async () => {
+    for (const [index, contents] of ['[{"id":"broken"', '{"readings":[]}'].entries()) {
+      const path = join(directory, `broken-${index}.json`);
+      writeFileSync(path, contents);
+      const store = createReadingStore(path);
+      await expect(store.list()).rejects.toThrow();
+      await expect(store.add(input)).rejects.toThrow();
+      expect(readFileSync(path, "utf8")).toBe(contents);
+    }
+  });
+
+  test("retries follow-up saves without duplicates and allows only two exchanges", async () => {
+    const store = createReadingStore(join(directory, "follow-ups.json"));
+    const record = await store.add(input);
+    const exchange = { question: "もう少し", answer: "ええ" };
+    await Promise.all([store.addFollowUp(record.id, exchange), store.addFollowUp(record.id, exchange)]);
+    expect((await store.list())[0].followUps).toEqual([exchange]);
+    await store.addFollowUp(record.id, { question: "最後に", answer: "はい" });
+    expect(await store.addFollowUp(record.id, exchange)).toBe(true);
+    await expect(store.addFollowUp(record.id, { question: "三度目", answer: "いいえ" })).rejects.toThrow("No more");
+    expect((await store.list())[0].followUps).toHaveLength(2);
+  });
+
+  test("preserves long follow-up answers and rejects invalid exchanges", async () => {
+    const store = createReadingStore(join(directory, "long-follow-up.json"));
+    const record = await store.add(input);
+    const exchange = { question: "もう少し", answer: "あ".repeat(1500) };
+    await store.addFollowUp(record.id, exchange);
+    expect((await store.list())[0].followUps).toEqual([exchange]);
+    await expect(store.addFollowUp(record.id, null)).rejects.toThrow("empty");
+    await expect(store.addFollowUp(record.id, { question: "x".repeat(601), answer: "y" })).rejects.toThrow("long");
+    expect((await store.list())[0].followUps).toHaveLength(1);
   });
 });

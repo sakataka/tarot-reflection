@@ -3,7 +3,7 @@ import { requestBackend, streamBackend } from "../backendClient";
 import type { Reading } from "../types/tarot";
 import { tablePayload, type ReadingRecord } from "../utils/history";
 import { isGatedSegment, narrationToPlainText, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
-import { readStoredPace } from "../utils/pace";
+import type { NarrationPace } from "../utils/pace";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
@@ -15,6 +15,7 @@ import { cardMark, narrationCardId, orientationLabel } from "./ReadingTable";
 type PromptBoxProps = {
   reading: Reading;
   active: boolean;
+  pace: NarrationPace;
   onRecordsChange: () => void;
   revealed: boolean[];
   onRevealCard: (cardIndex: number) => void;
@@ -49,18 +50,16 @@ const needsCue = (segment: NarrationSegment, ordinal: number) => segment.kind !=
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-// 設定で「すぐに全部」を選んだとき（または動きを減らす設定のとき）は、届いた言葉をそのまま見せる。
-const showAtOnce = () => prefersReducedMotion() || readStoredPace() === "instant";
-
 // 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
-export const PromptBox = ({ reading, active, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
+export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [cursor, setCursor] = useState(0);
-  const [instant, setInstant] = useState(showAtOnce);
+  // 設定変更は、すでに受け取っている語りにも反映する。
+  const instant = prefersReducedMotion() || pace === "instant";
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -323,7 +322,6 @@ export const PromptBox = ({ reading, active, onRecordsChange, revealed, onReveal
   };
 
   const retry = () => {
-    setInstant(showAtOnce());
     setAttempt((count) => count + 1);
   };
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { streamBackend } from "../backendClient";
+import { requestBackend, streamBackend } from "../backendClient";
 import type { Exchange, Reading } from "../types/tarot";
 import { maxFollowUps, tablePayload } from "../utils/history";
 import { cleanNarrationText, splitParagraphs } from "../utils/narration";
@@ -36,10 +36,27 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
   const [ask, setAsk] = useState("");
   const [pending, setPending] = useState<Exchange | null>(null);
   const [error, setError] = useState("");
+  const [saveFailed, setSaveFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const remaining = maxFollowUps - exchanges.length;
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  const save = async (exchange: Exchange) => {
+    setSaveFailed(false);
+    setError("");
+    try {
+      await requestBackend(`readings/${recordId}/follow-ups`, { method: "POST", body: exchange });
+      setExchanges((current) => [...current, exchange]);
+      setPending(null);
+      setAsk("");
+      onRecordsChange();
+      playChime();
+    } catch {
+      setSaveFailed(true);
+      setError("答えは届きましたが、記録を残せませんでした。もう一度保存してください。");
+    }
+  };
 
   const send = () => {
     const question = ask.trim();
@@ -47,6 +64,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     const abort = new AbortController();
     abortRef.current = abort;
     setError("");
+    setSaveFailed(false);
     setPending({ question, answer: "" });
     let answer = "";
     streamBackend(
@@ -67,16 +85,15 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       },
     )
       .then(() => {
-        setExchanges((current) => [...current, { question, answer: answer.trim() }]);
-        setAsk("");
-        onRecordsChange();
-        playChime();
+        const exchange = { question, answer: answer.trim() };
+        setPending(exchange);
+        return save(exchange);
       })
       .catch((caughtError: unknown) => {
         if (abort.signal.aborted) return;
         setError(caughtError instanceof Error ? caughtError.message : "言葉が届きませんでした。");
-      })
-      .finally(() => setPending(null));
+        setPending(null);
+      });
   };
 
   return (
@@ -97,7 +114,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
               {splitParagraphs(cleanNarrationText(pending.answer)).map((paragraph, index, paragraphs) => (
                 <p key={index}>
                   {paragraph}
-                  {index === paragraphs.length - 1 ? <span className="ink-caret" aria-hidden="true" /> : null}
+                  {!saveFailed && index === paragraphs.length - 1 ? <span className="ink-caret" aria-hidden="true" /> : null}
                 </p>
               ))}
             </div>
@@ -108,6 +125,9 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       ) : null}
 
       {error ? <p className="copy-fallback" role="alert">{error}</p> : null}
+      {saveFailed && pending ? (
+        <button className="secondary-button" type="button" onClick={() => void save(pending)}>聞き返しの保存をやり直す</button>
+      ) : null}
 
       {remaining > 0 && !pending ? (
         <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); send(); }}>

@@ -38,6 +38,18 @@ const server = Bun.serve({
       return handleReadings(request);
     }
 
+    const followUpMatch = url.pathname.match(/^\/api\/readings\/([\w-]+)\/follow-ups$/);
+    if (followUpMatch && request.method === "POST") {
+      try {
+        const exchange: unknown = await request.json().catch(() => null);
+        return (await store.addFollowUp(followUpMatch[1], exchange))
+          ? jsonResponse({ ok: true })
+          : jsonResponse({ error: "Reading not found." }, 404);
+      } catch {
+        return jsonResponse({ error: "聞き返しの記録を残せませんでした。もう一度保存してください。" }, 500);
+      }
+    }
+
     const readingMatch = url.pathname.match(/^\/api\/readings\/([\w-]+)$/);
     if (readingMatch && request.method === "DELETE") {
       return (await store.remove(readingMatch[1]))
@@ -83,7 +95,7 @@ async function handleClarifyStream(request: Request) {
   return streamOracle(request, engineOf(body), generateClarifyPrompt(question, { firstVisit }), { effort: "low" });
 }
 
-// 読み終えたあとの聞き返し。答え終えたら記録に書き足す。
+// 読み終えたあとの聞き返し。保存に失敗しても答えを返し、画面側で保存だけをやり直せる。
 async function handleFollowUpStream(request: Request) {
   if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
   let followUp: ReturnType<typeof buildFollowUpRequest>;

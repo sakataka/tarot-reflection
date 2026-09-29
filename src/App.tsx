@@ -262,45 +262,52 @@ const App = () => {
             onSelect={setArchiveSelectedId}
             onDelete={deleteRecord}
           />
-        ) : activeStep === 1 ? (
-          <QuestionForm
-            question={question}
-            spreads={spreads}
-            selectedSpreadId={selectedSpread.id}
-            canShuffle={canShuffle}
-            moon={moon}
-            isNight={isNight}
-            sameNightReading={sameNightReading}
-            onOpenRecord={openRecord}
-            onOpenGuide={() => setView("guide")}
-            onQuestionChange={setQuestion}
-            onSpreadChange={setSelectedSpreadId}
-            onConfide={() => setIsConfiding(true)}
-            clarifySlot={isConfiding ? (
-              <ClarifyBox question={question.trim()} onProceed={handleProceedFromClarify} onEdit={() => setIsConfiding(false)} />
-            ) : undefined}
-          />
         ) : null}
 
-        {!isAsideOpen && shuffledCards.length > 0 && !reading ? (
-          <CardBackGrid
-            key={shuffleCount}
-            cards={shuffledCards}
-            jumper={jumper}
-            selectedCards={selectedCards}
-            requiredCount={selectedSpread.positions.length}
-            positions={selectedSpread.positions}
-            onStopShuffle={handleStopShuffle}
-            onCut={handleCut}
-            onToggleCard={handleToggleCard}
-            onReveal={handleReveal}
-            onReshuffle={handleShuffle}
-          />
+        {activeStep === 1 ? (
+          <div hidden={isAsideOpen}>
+            <QuestionForm
+              question={question}
+              spreads={spreads}
+              selectedSpreadId={selectedSpread.id}
+              canShuffle={canShuffle}
+              moon={moon}
+              isNight={isNight}
+              sameNightReading={sameNightReading}
+              onOpenRecord={openRecord}
+              onOpenGuide={() => setView("guide")}
+              onQuestionChange={setQuestion}
+              onSpreadChange={setSelectedSpreadId}
+              onConfide={() => setIsConfiding(true)}
+              clarifySlot={isConfiding ? (
+                <ClarifyBox active={!isAsideOpen} question={question.trim()} onProceed={handleProceedFromClarify} onEdit={() => setIsConfiding(false)} />
+              ) : undefined}
+            />
+          </div>
+        ) : null}
+
+        {shuffledCards.length > 0 && !reading ? (
+          <div hidden={isAsideOpen}>
+            <CardBackGrid
+              key={shuffleCount}
+              active={!isAsideOpen}
+              cards={shuffledCards}
+              jumper={jumper}
+              selectedCards={selectedCards}
+              requiredCount={selectedSpread.positions.length}
+              positions={selectedSpread.positions}
+              onStopShuffle={handleStopShuffle}
+              onCut={handleCut}
+              onToggleCard={handleToggleCard}
+              onReveal={handleReveal}
+              onReshuffle={handleShuffle}
+            />
+          </div>
         ) : null}
 
         {reading ? (
           <div hidden={isAsideOpen}>
-            <ReadingStage reading={reading} active={!isAsideOpen} onSaved={handleSaved} onRecordsChange={loadRecords} />
+            <ReadingStage reading={reading} active={!isAsideOpen} pace={pace} onSaved={handleSaved} onRecordsChange={loadRecords} />
           </div>
         ) : null}
 
