@@ -13,6 +13,8 @@ import { cardMark, narrationCardId, orientationLabel } from "./ReadingTable";
 
 type PromptBoxProps = {
   reading: Reading;
+  active: boolean;
+  onRecordsChange: () => void;
   revealed: boolean[];
   onRevealCard: (cardIndex: number) => void;
   onCurrentChange?: (cardIndex: number | null) => void;
@@ -40,7 +42,7 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
-export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
+export const PromptBox = ({ reading, active, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
@@ -67,6 +69,8 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
   currentRef.current = onCurrentChange;
   const savedRef = useRef("");
   const [recordId, setRecordId] = useState("");
+  const [saveError, setSaveError] = useState(false);
+  const [saveAttempt, setSaveAttempt] = useState(0);
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
 
@@ -106,7 +110,8 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
 
   // 届いた言葉を、話す速さで少しずつ紙へ移す。カードの合図に来たら一枚めくって、間を置く。
   useEffect(() => {
-    if (finished) return;
+    live.current.lastTick = 0;
+    if (finished || !active) return;
     const timer = window.setInterval(() => {
       const state = live.current;
       const now = performance.now();
@@ -193,7 +198,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
       }
     }, tickInterval);
     return () => window.clearInterval(timer);
-  }, [finished, cardCount, attempt]);
+  }, [finished, cardCount, attempt, active]);
 
   const segments = parseNarration(raw, streamDone, cardCount);
   const starts = segmentStarts(segments);
@@ -222,9 +227,9 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
   const lastEntered = visibleSegments.filter(({ ordinal }) => ordinal >= 0).at(-1)?.segment;
   const lastEnteredId = lastEntered?.kind === "card" ? narrationCardId(lastEntered.cardIndex) : lastEntered ? `narration-${lastEntered.kind}` : "";
   useEffect(() => {
-    if (!lastEnteredId || live.current.instant) return;
+    if (!active || !lastEnteredId || live.current.instant) return;
     document.getElementById(lastEnteredId)?.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth", block: "start" });
-  }, [lastEnteredId]);
+  }, [lastEnteredId, active]);
 
   // 語りの筆先が画面の下に隠れたら、読んでいる場所までゆっくり送る。
   // 相談者が自分で読み返している間（最後の操作から少しの間）は動かさない。
@@ -238,18 +243,18 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
     return () => events.forEach((name) => window.removeEventListener(name, markUserScroll));
   }, []);
   useEffect(() => {
-    if (finished || instant || performance.now() - lastUserScroll.current < 2500) return;
+    if (!active || finished || instant || performance.now() - lastUserScroll.current < 2500) return;
     const caret = document.querySelector(".oracle-panel .ink-caret, .narration-gate");
     if (!caret) return;
     const bottom = caret.getBoundingClientRect().bottom;
     const limit = window.innerHeight - 96;
     if (bottom > limit) window.scrollBy({ top: bottom - limit + window.innerHeight * 0.25, behavior: "smooth" });
-  }, [cursor, awaitingOrdinal, finished, instant]);
+  }, [cursor, awaitingOrdinal, finished, instant, active]);
 
   const gateRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (awaitingOrdinal !== null) gateRef.current?.focus({ preventScroll: true });
-  }, [awaitingOrdinal]);
+    if (active && awaitingOrdinal !== null) gateRef.current?.focus({ preventScroll: true });
+  }, [awaitingOrdinal, active]);
 
   const openGate = () => {
     live.current.gatesOpened = live.current.entered + 1;
@@ -261,6 +266,7 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
   useEffect(() => {
     if (!streamDone || !raw.trim() || savedRef.current === reading.createdAt) return;
     savedRef.current = reading.createdAt;
+    setSaveError(false);
     requestBackend<{ reading: ReadingRecord }>("readings", {
       method: "POST",
       body: { ...tablePayload(reading), narration: raw, createdAt: reading.createdAt },
@@ -272,8 +278,9 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
       .catch(() => {
         // 記録に残せなくても、今夜の語りはそのまま読める。
         savedRef.current = "";
+        setSaveError(true);
       });
-  }, [streamDone, raw, reading]);
+  }, [streamDone, raw, reading, saveAttempt]);
 
   const flipped = tableCards(reading);
   const cardLabel = (cardIndex: number) => {
@@ -350,7 +357,16 @@ export const PromptBox = ({ reading, revealed, onRevealCard, onCurrentChange, on
         </div>
       ) : null}
 
-      {finished ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} /> : null}
+      {streamDone && !recordId ? (
+        <div className="oracle-save" role={saveError ? "alert" : "status"}>
+          <p className="copy-fallback">{saveError
+            ? "記録を残せませんでした。言葉はこの画面で読めます。画面を閉じる前に、もう一度保存してください。"
+            : "今夜の言葉を記録しています。"}</p>
+          {saveError ? <button className="secondary-button" type="button" onClick={() => { setSaveError(false); setSaveAttempt((count) => count + 1); }}>記録の保存をやり直す</button> : null}
+          {finished ? <p className="copy-fallback">記録を保存すると、聞き返せます。</p> : null}
+        </div>
+      ) : null}
+      {finished && recordId ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} onRecordsChange={onRecordsChange} /> : null}
     </section>
   );
 };

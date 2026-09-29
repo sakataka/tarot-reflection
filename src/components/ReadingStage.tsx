@@ -8,11 +8,13 @@ import { ReadingHeading, TableStrip } from "./ReadingTable";
 
 type ReadingStageProps = {
   reading: Reading;
+  active: boolean;
+  onRecordsChange: () => void;
   onSaved?: (record: ReadingRecord) => void;
 };
 
 // カードは伏せたまま卓に置き、占い師が語りながら一枚ずつ表に返す。最後に山の底をめくる。
-export const ReadingStage = ({ reading, onSaved }: ReadingStageProps) => {
+export const ReadingStage = ({ reading, active, onSaved, onRecordsChange }: ReadingStageProps) => {
   const total = tableCards(reading).length;
   const [revealed, setRevealed] = useState<boolean[]>(() => Array.from({ length: total }, () => false));
   const [current, setCurrent] = useState<number | null>(null);
@@ -32,7 +34,7 @@ export const ReadingStage = ({ reading, onSaved }: ReadingStageProps) => {
     <div className="reading-stage">
       <ReadingHeading reading={reading} />
       <TableStrip reading={reading} revealed={revealed} current={current} />
-      <PromptBox reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onSaved={onSaved} />
+      <PromptBox active={active} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onSaved={onSaved} />
     </div>
   );
 };

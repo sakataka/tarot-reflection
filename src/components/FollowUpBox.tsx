@@ -10,6 +10,7 @@ type FollowUpBoxProps = {
   reading: Reading;
   narration: string;
   recordId: string;
+  onRecordsChange: () => void;
 };
 
 const maxAskLength = 300;
@@ -30,7 +31,7 @@ export const ExchangeList = ({ exchanges }: { exchanges: readonly Exchange[] }) 
 );
 
 // 語り終えたあと、二度まで占い師に聞き返せる。新しいカードは引かず、卓のカードを見直してもらう。
-export const FollowUpBox = ({ reading, narration, recordId }: FollowUpBoxProps) => {
+export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: FollowUpBoxProps) => {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [ask, setAsk] = useState("");
   const [pending, setPending] = useState<Exchange | null>(null);
@@ -67,6 +68,7 @@ export const FollowUpBox = ({ reading, narration, recordId }: FollowUpBoxProps) 
       .then(() => {
         setExchanges((current) => [...current, { question, answer: answer.trim() }]);
         setAsk("");
+        onRecordsChange();
         playChime();
       })
       .catch((caughtError: unknown) => {

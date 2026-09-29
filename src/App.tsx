@@ -49,6 +49,10 @@ const App = () => {
 
   useEffect(loadRecords, [loadRecords]);
 
+  useEffect(() => {
+    if (view === "archive") loadRecords();
+  }, [view, loadRecords]);
+
   const handleShuffle = () => {
     setShuffledCards(shuffleDeckForReading());
     setJumper(null);
@@ -272,8 +276,10 @@ const App = () => {
           />
         ) : null}
 
-        {!isAsideOpen && reading ? (
-          <ReadingStage reading={reading} onSaved={handleSaved} />
+        {reading ? (
+          <div hidden={isAsideOpen}>
+            <ReadingStage reading={reading} active={!isAsideOpen} onSaved={handleSaved} onRecordsChange={loadRecords} />
+          </div>
         ) : null}
 
         {!isAsideOpen && activeStep > 1 ? (
