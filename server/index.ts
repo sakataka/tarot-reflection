@@ -6,7 +6,9 @@ import { buildFollowUpRequest, buildPromptFromInterpretationInput } from "./inte
 import { askOracle } from "./oracleEngine";
 import { createReadingStore } from "./readingStore";
 
-const port = Number(process.env.PORT ?? 4192);
+// LocalWeb passes PORT (localweb dev / LaunchAgent). There is no fallback, so a standalone run never takes another app's port.
+const port = Number(process.env.PORT);
+if (!(port >= 0)) { console.error("PORT is required. Start it with `localweb dev tarot-reflection`."); process.exit(1); }
 const distDir = resolve(import.meta.dir, "..", "dist");
 
 type ApiPayload = Record<string, unknown>;

@@ -10,22 +10,22 @@
 bun install
 ```
 
-通常はこちらを使います。画面表示とCodex連携APIが同じ `4192` 番で動きます。
+通常はこちらを使います。画面表示とCodex連携APIが同じ port で動き、port は LocalWeb が割り当てます。
 
 ```sh
-bun run dev
+localweb dev tarot-reflection
 ```
 
 起動後、次を開きます。
 
-http://127.0.0.1:4192/
+http://tarot-reflection-dev.localhost/
 
 カードを卓に置くと、このサーバーから選んだAIのCLIを起動し、読み解きを `/api/interpret/stream` で受け取ります。どちらもセッション履歴は保存しません。
 
-ポートを変える場合:
+LocalWeb を使わずに起動する場合は `PORT` が必須です。
 
 ```sh
-PORT=4193 bun run server
+PORT=<port> bun run server
 ```
 
 フロントエンドだけをViteで確認する場合:

@@ -27,8 +27,8 @@ function buildBackendError(status: number, responseText: string) {
   if (status === 404 && /not found/i.test(responseText)) {
     return [
       "占い師を呼ぶAPIが見つかりません。",
-      "`bun run dev` で起動した http://127.0.0.1:4192/ から開いてください。",
-      "古い http://127.0.0.1:5173/ や別アプリの4174番を開いている場合は、このエラーになります。",
+      "`localweb dev tarot-reflection` で起動した http://tarot-reflection-dev.localhost/ か、LocalWeb の http://tarot-reflection.localhost/ から開いてください。",
+      "Vite だけを起動した画面や別アプリの port を開いている場合は、このエラーになります。",
     ].join("\n");
   }
 
