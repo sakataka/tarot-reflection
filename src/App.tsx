@@ -42,6 +42,7 @@ const App = () => {
   const [records, setRecords] = useState<ReadingRecord[]>([]);
   const [recordsError, setRecordsError] = useState("");
   const [archiveSelectedId, setArchiveSelectedId] = useState<string | null>(null);
+  const [archiveNotice, setArchiveNotice] = useState("");
   const [shuffleCount, setShuffleCount] = useState(0);
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
   const [engine, setEngine] = useState(readStoredEngine);
@@ -67,7 +68,14 @@ const App = () => {
 
   useEffect(() => {
     if (view === "archive") loadRecords();
+    else setArchiveNotice("");
   }, [view, loadRecords]);
+
+  useEffect(() => {
+    if (!archiveNotice) return;
+    const timer = window.setTimeout(() => setArchiveNotice(""), 5000);
+    return () => window.clearTimeout(timer);
+  }, [archiveNotice]);
 
   const handleShuffle = () => {
     setShuffledCards(shuffleDeckForReading());
@@ -151,13 +159,19 @@ const App = () => {
     setView("archive");
   };
 
-  const deleteRecord = (id: string) => {
-    requestBackend(`readings/${id}`, { method: "DELETE" })
-      .then(() => {
-        setRecords((current) => current.filter((record) => record.id !== id));
-        setArchiveSelectedId(null);
-      })
-      .catch(() => setRecordsError("記録を消せませんでした。もう一度お試しください。"));
+  // 失敗は呼び出し側（記録の画面）で知らせるので、ここでは投げ返す。
+  const deleteRecord = async (id: string) => {
+    try {
+      await requestBackend(`readings/${id}`, { method: "DELETE" });
+    } catch (error) {
+      // 別の画面で先に消えていたなら、消したのと同じに扱う。
+      if (!(error instanceof Error && error.message === "Reading not found.")) throw error;
+    }
+    const removed = records.find((record) => record.id === id);
+    const question = removed?.question.replace(/\s+/g, " ").trim() ?? "";
+    setRecords((current) => current.filter((record) => record.id !== id));
+    setArchiveNotice(question ? `「${question.length > 24 ? `${question.slice(0, 24)}…` : question}」の記録を消しました` : "記録を一件消しました");
+    setArchiveSelectedId(null);
   };
 
   const requestReset = () => {
@@ -276,7 +290,8 @@ const App = () => {
             records={records}
             selectedId={archiveSelectedId}
             error={recordsError}
-            onSelect={setArchiveSelectedId}
+            notice={archiveNotice}
+            onSelect={(id) => { setArchiveNotice(""); setArchiveSelectedId(id); }}
             onDelete={deleteRecord}
           />
         ) : null}

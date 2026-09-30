@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { tarotDeck } from "../data/tarotDeck";
 import { readingFromRecord, type ReadingRecord } from "../utils/history";
 import { moonPhase } from "../utils/moment";
@@ -13,19 +13,27 @@ type ReadingArchiveProps = {
   records: ReadingRecord[];
   selectedId: string | null;
   error: string;
+  // 記録を消したあと、一覧の先頭にしばらく出す知らせ。
+  notice: string;
   onSelect: (id: string | null) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 };
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString("ja-JP", { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 
-export const ReadingArchive = ({ records, selectedId, error, onSelect, onDelete }: ReadingArchiveProps) => {
+export const ReadingArchive = ({ records, selectedId, error, notice, onSelect, onDelete }: ReadingArchiveProps) => {
   const selected = records.find((record) => record.id === selectedId);
+  // 一覧が浮かび上がる動きは最初の一度だけ。記録から戻ったときは、そのまま見せる。
+  const listShown = useRef(false);
+  const settled = listShown.current;
+  useEffect(() => {
+    if (!selected) listShown.current = true;
+  });
   return selected ? (
     <ArchivedReading record={selected} onBack={() => onSelect(null)} onDelete={onDelete} />
   ) : (
-    <section className="archive-panel">
+    <section className={settled ? "archive-panel is-settled" : "archive-panel"}>
       <div className="catalog-heading">
         <div>
           <p className="ornament-kicker">Records</p>
@@ -34,6 +42,7 @@ export const ReadingArchive = ({ records, selectedId, error, onSelect, onDelete 
         </div>
       </div>
 
+      {notice ? <p className="archive-notice" role="status">{notice}</p> : null}
       {error ? <p className="copy-fallback" role="alert">{error}</p> : null}
       {records.length === 0 && !error ? <p className="catalog-empty">まだ記録はありません。語りを最後まで受け取ると、ここに残ります。</p> : null}
 
@@ -70,9 +79,8 @@ export const ReadingArchive = ({ records, selectedId, error, onSelect, onDelete 
 const ArchivedReading = ({ record, onBack, onDelete }: {
   record: ReadingRecord;
   onBack: () => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string) => Promise<void>;
 }) => {
-  const [confirming, setConfirming] = useState(false);
   const reading = readingFromRecord(record);
   if (!reading) {
     return (
@@ -106,18 +114,74 @@ const ArchivedReading = ({ record, onBack, onDelete }: {
         ) : null}
         <NarrationView reading={reading} segments={segments.map((segment) => ({ segment, text: segment.text }))} />
         {record.followUps?.length ? <ExchangeList exchanges={record.followUps} /> : null}
-        <div className="archive-delete">
-          {confirming ? (
-            <>
-              <p>この夜の記録を消します。元には戻せません。</p>
-              <button className="text-button" type="button" onClick={() => setConfirming(false)}>やめる</button>
-              <button className="secondary-button" type="button" onClick={() => onDelete(record.id)}>消す</button>
-            </>
-          ) : (
-            <button className="text-button" type="button" onClick={() => setConfirming(true)}>この記録を消す</button>
-          )}
-        </div>
+        <DeleteRecord record={record} onDelete={onDelete} />
       </section>
+    </div>
+  );
+};
+
+type DeleteState = "idle" | "confirming" | "deleting" | "failed";
+
+// 記録を消す。確かめる欄を開き、消している間はもう押せないようにし、失敗したらその場でやり直せる。
+const DeleteRecord = ({ record, onDelete }: { record: ReadingRecord; onDelete: (id: string) => Promise<void> }) => {
+  const [state, setState] = useState<DeleteState>("idle");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  const openerRef = useRef<HTMLButtonElement>(null);
+  const isOpen = state !== "idle";
+
+  useEffect(() => {
+    if (state !== "confirming") return;
+    panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    cancelRef.current?.focus({ preventScroll: true });
+  }, [state]);
+
+  const cancel = () => {
+    setState("idle");
+    window.requestAnimationFrame(() => openerRef.current?.focus({ preventScroll: true }));
+  };
+
+  // 描画を待たずに続けて押されても、一度だけ送る。
+  const busyRef = useRef(false);
+  const confirm = () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setState("deleting");
+    // 消せたら一覧へ移るので、この欄はそのまま閉じられる。
+    onDelete(record.id).catch(() => {
+      busyRef.current = false;
+      setState("failed");
+    });
+  };
+
+  return (
+    <div className="archive-delete">
+      {isOpen ? (
+        <div
+          className="archive-delete-confirm"
+          ref={panelRef}
+          role="group"
+          aria-label="記録を消すかの確認"
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && state !== "deleting") cancel();
+          }}
+        >
+          <p className="archive-delete-title">この夜の記録を消しますか</p>
+          <p className="archive-delete-question">{record.question}</p>
+          <p className="archive-delete-note">カードと{oracleName}の言葉、聞き返しも消えます。元には戻せません。</p>
+          {state === "failed" ? (
+            <p className="copy-fallback" role="alert">消せませんでした。サーバーが起動しているか確かめて、もう一度お試しください。</p>
+          ) : null}
+          <div className="archive-delete-actions">
+            <button className="danger-button" type="button" disabled={state === "deleting"} onClick={confirm}>
+              {state === "deleting" ? "消しています…" : state === "failed" ? "もう一度消す" : "消す"}
+            </button>
+            <button className="text-button" type="button" ref={cancelRef} disabled={state === "deleting"} onClick={cancel}>やめる</button>
+          </div>
+        </div>
+      ) : (
+        <button className="text-button" type="button" ref={openerRef} onClick={() => setState("confirming")}>この記録を消す</button>
+      )}
     </div>
   );
 };
