@@ -1,7 +1,7 @@
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { tarotDeck } from "../data/tarotDeck";
 import type { Suit, TarotCard } from "../types/tarot";
-import { CardView } from "./CardView";
+import { CardView, minorRankLabel } from "./CardView";
 
 type CatalogFilter = "all" | "major" | Suit;
 
@@ -19,14 +19,16 @@ const arcanaLabel = (card: TarotCard) =>
     ? `大アルカナ ${String(card.number ?? 0).padStart(2, "0")}`
     : filters.find((filter) => filter.id === card.suit)?.label ?? "小アルカナ";
 
-type CardCatalogProps = {
-  onClose: () => void;
-};
+// 狭い画面では、詳細を一覧の上ではなく下から出るシートで見せる。
+const sheetQuery = "(max-width: 760px)";
 
-export const CardCatalog = ({ onClose }: CardCatalogProps) => {
+export const CardCatalog = () => {
   const [filter, setFilter] = useState<CatalogFilter>("all");
   const [query, setQuery] = useState("");
   const [selectedCardId, setSelectedCardId] = useState(tarotDeck[0].id);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const lastTileRef = useRef<HTMLButtonElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase("ja"));
 
   const visibleCards = useMemo(
@@ -47,14 +49,29 @@ export const CardCatalog = ({ onClose }: CardCatalogProps) => {
     ?? tarotDeck.find((card) => card.id === selectedCardId)
     ?? tarotDeck[0];
 
+  const closeSheet = () => {
+    setSheetOpen(false);
+    lastTileRef.current?.focus({ preventScroll: true });
+  };
+
+  useEffect(() => {
+    if (!sheetOpen) return;
+    closeRef.current?.focus({ preventScroll: true });
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeSheet();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheetOpen]);
+
   return (
     <section className="catalog-panel" aria-labelledby="catalog-title">
       <div className="catalog-heading">
         <div>
+          <p className="ornament-kicker">Cards</p>
           <h1 id="catalog-title">カード図鑑</h1>
-          <p>78枚のカードと、正位置・逆位置それぞれの基本的な意味を見られます。</p>
+          <p>78枚のカードと、正位置・逆位置それぞれの基本的な意味。</p>
         </div>
-        <button className="secondary-button" type="button" onClick={onClose}>占いに戻る</button>
       </div>
 
       <div className="catalog-controls">
@@ -84,7 +101,7 @@ export const CardCatalog = ({ onClose }: CardCatalogProps) => {
 
       <div className="catalog-layout">
         <div className="catalog-list-region">
-          <p className="catalog-count">{visibleCards.length}枚を表示</p>
+          <p className="catalog-count">{visibleCards.length}枚</p>
           {visibleCards.length > 0 ? (
             <div className="catalog-grid">
               {visibleCards.map((card) => (
@@ -93,10 +110,17 @@ export const CardCatalog = ({ onClose }: CardCatalogProps) => {
                   type="button"
                   aria-pressed={card.id === selectedCard.id}
                   key={card.id}
-                  onClick={() => setSelectedCardId(card.id)}
+                  onClick={(event) => {
+                    setSelectedCardId(card.id);
+                    lastTileRef.current = event.currentTarget;
+                    if (window.matchMedia?.(sheetQuery).matches) setSheetOpen(true);
+                  }}
                 >
-                  <img src={card.imagePath} alt="" loading="lazy" />
-                  <span>
+                  <span className="catalog-tile-art">
+                    <img src={card.imagePath} alt="" loading="lazy" />
+                    {card.sharedArt ? <i aria-hidden="true">{minorRankLabel[card.number ?? 0]}</i> : null}
+                  </span>
+                  <span className="catalog-tile-name">
                     <strong>{card.nameJa}</strong>
                     <small>{card.nameEn}</small>
                   </span>
@@ -108,8 +132,16 @@ export const CardCatalog = ({ onClose }: CardCatalogProps) => {
           )}
         </div>
 
-        <aside className="catalog-detail" aria-live="polite">
-          <p className="catalog-kicker">{arcanaLabel(selectedCard)}</p>
+        <button className={sheetOpen ? "catalog-backdrop is-open" : "catalog-backdrop"} type="button" tabIndex={-1} aria-hidden="true" onClick={closeSheet} />
+        <aside
+          className={sheetOpen ? "catalog-detail is-open" : "catalog-detail"}
+          aria-live="polite"
+          aria-label={`${selectedCard.nameJa}の意味`}
+        >
+          <div className="catalog-detail-bar">
+            <p className="catalog-kicker">{arcanaLabel(selectedCard)}</p>
+            <button className="text-button catalog-close" type="button" ref={closeRef} onClick={closeSheet}>閉じる</button>
+          </div>
           <CardView card={selectedCard} orientation="upright" />
           <div className="catalog-meanings">
             <section>

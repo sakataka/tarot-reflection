@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import type { Reading, ReadingCard } from "../types/tarot";
 import { moonPhase } from "../utils/moment";
 import { tableCards } from "../utils/tarot";
@@ -90,21 +90,38 @@ export const ReadingHeading = ({ reading }: { reading: Reading }) => {
 };
 
 // 卓の上を小さく見渡す帯。どのカードが表になり、いまどれを語っているかを示す。語りの間も上に留まる。
-export const TableStrip = ({ reading, revealed, current = null }: TableStripProps) => (
-  <nav className={`table-strip spread-${reading.cards.length}`} aria-label="卓の上のカード">
-    {tableCards(reading).map((readingCard, index) => (
-      <StripCard
-        key={readingCard.position.id}
-        readingCard={readingCard}
-        mark={cardMark(reading, index)}
-        isRevealed={revealed[index] ?? false}
-        isCurrent={current === index}
-        targetId={narrationCardId(index)}
-        order={index}
-      />
-    ))}
-    {reading.jumper ? (
-      <StripCard readingCard={reading.jumper} mark="✦" isRevealed isCurrent={false} order={tableCards(reading).length} />
-    ) : null}
-  </nav>
-);
+export const TableStrip = ({ reading, revealed, current = null }: TableStripProps) => {
+  const stripRef = useRef<HTMLElement>(null);
+
+  // 帯は上に留まるので、語りの区切りへ送るときに帯の下へ収まるよう、高さを親に伝える。
+  useLayoutEffect(() => {
+    const strip = stripRef.current;
+    const stage = strip?.parentElement;
+    if (!strip || !stage) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+      if (height > 0) stage.style.setProperty("--strip-h", `${Math.round(height)}px`);
+    });
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <nav className={`table-strip spread-${reading.cards.length}`} aria-label="卓の上のカード" ref={stripRef}>
+      {tableCards(reading).map((readingCard, index) => (
+        <StripCard
+          key={readingCard.position.id}
+          readingCard={readingCard}
+          mark={cardMark(reading, index)}
+          isRevealed={revealed[index] ?? false}
+          isCurrent={current === index}
+          targetId={narrationCardId(index)}
+          order={index}
+        />
+      ))}
+      {reading.jumper ? (
+        <StripCard readingCard={reading.jumper} mark="✦" isRevealed isCurrent={false} order={tableCards(reading).length} />
+      ) : null}
+    </nav>
+  );
+};

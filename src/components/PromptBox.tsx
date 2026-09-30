@@ -21,6 +21,8 @@ type PromptBoxProps = {
   onRevealCard: (cardIndex: number) => void;
   onCurrentChange?: (cardIndex: number | null) => void;
   onSaved?: (record: ReadingRecord) => void;
+  onNewQuestion: () => void;
+  onOpenRecords: () => void;
 };
 
 const ordinalJa = ["一", "二", "三", "四", "五", "六", "七"];
@@ -51,7 +53,7 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
-export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved }: PromptBoxProps) => {
+export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved, onNewQuestion, onOpenRecords }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
@@ -366,6 +368,7 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
             <button className="secondary-button" type="button" onClick={copyAnswer}>
               {copyState === "copied" ? "書き写しました" : "言葉をコピーする"}
             </button>
+            {recordId ? <p className="answer-saved">☾ この夜の言葉は「記録」に残しました</p> : null}
             {copyState === "failed" ? (
               <p className="copy-fallback">コピーできませんでした。本文を選んで書き写してください。</p>
             ) : null}
@@ -383,6 +386,13 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
         </div>
       ) : null}
       {finished && recordId ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} onRecordsChange={onRecordsChange} /> : null}
+
+      {finished ? (
+        <div className="reading-end">
+          <button className="secondary-button" type="button" onClick={onNewQuestion}>別の問いを置く</button>
+          {recordId ? <button className="text-button" type="button" onClick={onOpenRecords}>これまでの記録を見る</button> : null}
+        </div>
+      ) : null}
     </section>
   );
 };

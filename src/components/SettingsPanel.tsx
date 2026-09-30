@@ -10,6 +10,7 @@ type SettingsPanelProps = {
   onPaceChange: (pace: NarrationPace) => void;
   onSoundChange: (soundOn: boolean) => void;
   onClose: () => void;
+  backLabel: string;
 };
 
 type Option<T> = { value: T; label: string; note: string };
@@ -56,7 +57,7 @@ const SettingGroup = <T extends string | boolean>({ title, options, value, onCha
 );
 
 // 占いの卓の外にある、舞台裏の設定。選んだものはこのブラウザに覚えておく。
-export const SettingsPanel = ({ engine, pace, soundOn, onEngineChange, onPaceChange, onSoundChange, onClose }: SettingsPanelProps) => (
+export const SettingsPanel = ({ engine, pace, soundOn, onEngineChange, onPaceChange, onSoundChange, onClose, backLabel }: SettingsPanelProps) => (
   <section className="guide-panel settings-panel">
     <div className="catalog-heading">
       <div>
@@ -76,7 +77,7 @@ export const SettingsPanel = ({ engine, pace, soundOn, onEngineChange, onPaceCha
     <SettingGroup title="効果音" options={soundOptions} value={soundOn} onChange={onSoundChange} />
 
     <div className="guide-back">
-      <button className="secondary-button" type="button" onClick={onClose}>占いに戻る</button>
+      <button className="secondary-button" type="button" onClick={onClose}>{backLabel}</button>
     </div>
   </section>
 );

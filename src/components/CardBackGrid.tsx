@@ -26,6 +26,7 @@ const dealDuration = 360;
 
 type CardBackGridProps = {
   active: boolean;
+  question: string;
   cards: DrawnCard[];
   jumper: DrawnCard | null;
   selectedCards: SelectedCard[];
@@ -57,17 +58,29 @@ type PileLayout = {
 };
 
 // 卓の幅に合わせて、78枚を数段の弧に広げる。後ろの段ほど奥に置き、手前の段が少し重なる。
-const computeFanLayout = (width: number, count: number, slotCount: number): FanLayout => {
+// 卓全体（扇と置き場）が画面の高さに収まるよう、収まらなければカードを一回りずつ小さくする。
+const computeFanLayout = (width: number, count: number, slotCount: number, maxHeight = Infinity): FanLayout => {
   const rows = width >= 900 ? 2 : width >= 600 ? 3 : 6;
-  const perRow = Math.ceil(count / rows);
   const maxWidth = rows === 2 ? (width >= 1100 ? 108 : 90) : rows === 3 ? 70 : 52;
-  const cardWidth = Math.round(Math.min(maxWidth, width / (rows === 6 ? 7.4 : rows === 2 ? 9.6 : 8)));
+  const widest = Math.round(Math.min(maxWidth, width / (rows === 6 ? 7.4 : rows === 2 ? 9.6 : 8)));
+  const smallest = Math.min(widest, rows === 6 ? 44 : 60);
+  let layout = layoutFan(width, count, slotCount, rows, widest);
+  for (let cardWidth = widest - 2; layout.height > maxHeight && cardWidth >= smallest; cardWidth -= 2) {
+    layout = layoutFan(width, count, slotCount, rows, cardWidth);
+  }
+  return layout;
+};
+
+const layoutFan = (width: number, count: number, slotCount: number, rows: number, cardWidth: number): FanLayout => {
+  const perRow = Math.ceil(count / rows);
   const cardHeight = Math.round(cardWidth * 1.5);
   const rowGap = Math.round(cardHeight * (rows === 6 ? 0.66 : 0.78));
   const sag = Math.round(cardHeight * (rows === 6 ? 0.2 : 0.42));
   const maxAngle = rows === 6 ? 9 : 13;
   const lift = 34;
-  const span = width - cardWidth - 8;
+  // 両端のカードは下辺を軸に傾くので、上の角が外へはみ出す。その分だけ内側に寄せる。
+  const edgeRoom = Math.ceil(cardHeight * Math.sin((maxAngle * Math.PI) / 180) * 0.8);
+  const span = width - cardWidth - 8 - edgeRoom * 2;
 
   const positions = Array.from({ length: count }, (_, index) => {
     const row = Math.floor(index / perRow);
@@ -144,6 +157,7 @@ const computePileLayout = (width: number, layout: FanLayout): PileLayout => {
 
 export const CardBackGrid = ({
   active,
+  question,
   cards,
   jumper,
   selectedCards,
@@ -155,9 +169,11 @@ export const CardBackGrid = ({
   onReveal,
   onReshuffle,
 }: CardBackGridProps) => {
+  const panelRef = useRef<HTMLElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
   const deckRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(() => (typeof window === "undefined" ? 800 : window.innerHeight));
   const [phase, setPhase] = useState<Phase>("shuffling");
   const [canStop, setCanStop] = useState(false);
   const [chosenPile, setChosenPile] = useState<number | null>(null);
@@ -168,7 +184,11 @@ export const CardBackGrid = ({
   const isComplete = selectedCards.length === requiredCount;
   const remaining = requiredCount - selectedCards.length;
 
-  const layout = width > 0 ? computeFanLayout(width, cards.length, requiredCount) : null;
+  // 卓の見出し・こぼれたカード・下の操作帯を除いた高さに、卓を収める。
+  // 狭い画面では、こぼれたカードの知らせが見出しの下に一段増える。
+  const narrow = typeof window !== "undefined" && window.innerWidth <= 760;
+  const fieldBudget = Math.max(360, viewportHeight - (jumper && narrow ? 380 : 304));
+  const layout = width > 0 ? computeFanLayout(width, cards.length, requiredCount, fieldBudget) : null;
   const piles = layout ? computePileLayout(width, layout) : null;
   const dealTotal = dealLead + cards.length * dealStagger;
 
@@ -180,8 +200,22 @@ export const CardBackGrid = ({
       if (entry.contentRect.width > 0) setWidth(Math.round(entry.contentRect.width));
     });
     observer.observe(element);
-    return () => observer.disconnect();
+    const onResize = () => setViewportHeight(window.innerHeight);
+    window.addEventListener("resize", onResize);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", onResize);
+    };
   }, []);
+
+  // 広げ始めたら、卓の全体と置き場、下の操作帯が一度に見える位置まで送る。
+  useEffect(() => {
+    if (!active || phase !== "dealing") return;
+    const panel = panelRef.current;
+    if (!panel || panel.getBoundingClientRect().bottom <= window.innerHeight) return;
+    const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: window.scrollY + panel.getBoundingClientRect().top - 8, behavior: reduced ? "auto" : "smooth" });
+  }, [phase, active]);
 
   useEffect(() => {
     if (!active) return;
@@ -342,7 +376,8 @@ export const CardBackGrid = ({
   }[phase];
 
   return (
-    <section className={`table-panel is-${phase}`}>
+    <section className={`table-panel is-${phase}`} ref={panelRef}>
+      <p className="table-question"><span>あなたの問い</span>{question}</p>
       <div className="section-heading">
         <div className="oracle-guide">
           <OraclePortrait pose="reading" size="small" />
@@ -351,23 +386,22 @@ export const CardBackGrid = ({
             <p className="oracle-guide-words" key={phase === "ready" ? `ready-${remaining}` : phase} aria-live="polite">{oracleWords}</p>
           </div>
         </div>
+        {jumper && phase !== "shuffling" && phase !== "squaring" ? (
+          <div className="jumper-note" role="note">
+            <div className="jumper-card">
+              <CardView card={jumper.card} orientation={jumper.orientation} />
+            </div>
+            <p>
+              <strong>一枚、卓にこぼれました ― {jumper.card.nameJa}（{jumper.orientation === "upright" ? "正位置" : "逆位置"}）</strong>
+              <span>自分から出てきたカードは、見落とさないでほしい知らせ。脇に置いて、語りの最初に読みます。</span>
+            </p>
+          </div>
+        ) : null}
         <div className="selection-counter" aria-live="polite">
           <strong>{selectedCards.length}</strong>
           <span>/ {requiredCount} 枚</span>
         </div>
       </div>
-
-      {jumper && phase !== "shuffling" && phase !== "squaring" ? (
-        <div className="jumper-note" role="note">
-          <div className="jumper-card">
-            <CardView card={jumper.card} orientation={jumper.orientation} />
-          </div>
-          <p>
-            <strong>混ぜている途中で、一枚が卓にこぼれました。</strong>
-            <span>{jumper.card.nameJa}（{jumper.orientation === "upright" ? "正位置" : "逆位置"}）。自分から出てきたカードは、見落とさないでほしい知らせとして、脇に置いておきます。</span>
-          </p>
-        </div>
-      ) : null}
 
       <div className="tarot-table">
         <div

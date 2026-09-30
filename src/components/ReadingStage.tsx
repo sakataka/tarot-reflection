@@ -13,10 +13,12 @@ type ReadingStageProps = {
   pace: NarrationPace;
   onRecordsChange: () => void;
   onSaved?: (record: ReadingRecord) => void;
+  onNewQuestion: () => void;
+  onOpenRecords: () => void;
 };
 
 // カードは伏せたまま卓に置き、占い師が語りながら一枚ずつ表に返す。最後に山の底をめくる。
-export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange }: ReadingStageProps) => {
+export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange, onNewQuestion, onOpenRecords }: ReadingStageProps) => {
   const total = tableCards(reading).length;
   const [revealed, setRevealed] = useState<boolean[]>(() => Array.from({ length: total }, () => false));
   const [current, setCurrent] = useState<number | null>(null);
@@ -36,7 +38,7 @@ export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange }
     <div className="reading-stage">
       <ReadingHeading reading={reading} />
       <TableStrip reading={reading} revealed={revealed} current={current} />
-      <PromptBox active={active} pace={pace} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onSaved={onSaved} />
+      <PromptBox active={active} pace={pace} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onSaved={onSaved} onNewQuestion={onNewQuestion} onOpenRecords={onOpenRecords} />
     </div>
   );
 };

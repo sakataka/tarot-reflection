@@ -36,7 +36,6 @@ export const SpreadSelector = ({ spreads, selectedSpreadId, onChange }: SpreadSe
           <strong>{spread.name}</strong>
           {spread.id === "three-card" ? <em>はじめての方に</em> : null}
         </span>
-        <small>{spread.description}</small>
       </button>
     ))}
   </div>

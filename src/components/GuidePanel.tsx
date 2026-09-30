@@ -4,6 +4,7 @@ import { oracleName } from "../utils/persona";
 
 type GuidePanelProps = {
   onClose: () => void;
+  backLabel: string;
 };
 
 const steps = [
@@ -17,7 +18,7 @@ const steps = [
 ];
 
 // はじめての人に、この占い部屋の作法と、特別なカードの意味を案内する。
-export const GuidePanel = ({ onClose }: GuidePanelProps) => (
+export const GuidePanel = ({ onClose, backLabel }: GuidePanelProps) => (
   <section className="guide-panel">
     <div className="catalog-heading">
       <div>
@@ -91,7 +92,7 @@ export const GuidePanel = ({ onClose }: GuidePanelProps) => (
     </div>
 
     <div className="guide-back">
-      <button className="secondary-button" type="button" onClick={onClose}>占いに戻る</button>
+      <button className="secondary-button" type="button" onClick={onClose}>{backLabel}</button>
     </div>
   </section>
 );

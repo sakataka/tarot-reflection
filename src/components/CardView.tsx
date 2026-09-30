@@ -13,7 +13,7 @@ const suitLabel = {
   pentacles: "PENTACLES",
 } as const;
 
-const minorRankLabel: Record<number, string> = {
+export const minorRankLabel: Record<number, string> = {
   1: "A",
   2: "II",
   3: "III",

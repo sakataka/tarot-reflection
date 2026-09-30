@@ -18,6 +18,15 @@ import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "
 import { createReading, cutDeck, settleShuffle, shuffleDeckForReading } from "./utils/tarot";
 
 type View = "reading" | "catalog" | "archive" | "guide" | "settings";
+type AsideView = Exclude<View, "reading">;
+
+// 占いの卓の外にある部屋。押しても名前は変えず、開いている部屋だけを灯す。
+const navItems: { id: AsideView; label: string }[] = [
+  { id: "archive", label: "記録" },
+  { id: "catalog", label: "図鑑" },
+  { id: "guide", label: "案内" },
+  { id: "settings", label: "設定" },
+];
 const nightBands = new Set(["夕暮れ", "夜", "真夜中", "夜明け前"]);
 
 const App = () => {
@@ -37,6 +46,8 @@ const App = () => {
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
   const [engine, setEngine] = useState(readStoredEngine);
   const [pace, setPace] = useState(readStoredPace);
+  // 途中の卓を誤って崩さないよう、「最初から」は二度押しで確かめる。
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const selectedSpread = useMemo(
     () => spreads.find((spread) => spread.id === selectedSpreadId) ?? defaultSpread,
@@ -114,6 +125,7 @@ const App = () => {
   };
 
   const handleReset = () => {
+    setConfirmingReset(false);
     setQuestion("");
     setSelectedSpreadId(defaultSpread.id);
     setShuffledCards([]);
@@ -147,6 +159,17 @@ const App = () => {
       })
       .catch(() => setRecordsError("記録を消せませんでした。もう一度お試しください。"));
   };
+
+  const requestReset = () => {
+    if (confirmingReset) handleReset();
+    else setConfirmingReset(true);
+  };
+
+  useEffect(() => {
+    if (!confirmingReset) return;
+    const timer = window.setTimeout(() => setConfirmingReset(false), 3500);
+    return () => window.clearTimeout(timer);
+  }, [confirmingReset]);
 
   const toggleView = (next: View) => {
     setArchiveSelectedId(null);
@@ -182,68 +205,61 @@ const App = () => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [activeStep, view, archiveSelectedId]);
 
+  const backLabel = activeStep > 1 ? "卓に戻る" : "占いに戻る";
+
   return (
     <div className="app">
       <header className="site-header">
         <button className="brand" type="button" onClick={() => { handleReset(); setView("reading"); }} aria-label="最初の画面へ戻る">
           <span className="brand-moon" aria-hidden="true">☾</span>
-          <span>Tarot Reflection</span>
+          <span className="brand-name">Tarot Reflection</span>
         </button>
-        <nav className={isAsideOpen ? "ritual-steps is-hidden" : "ritual-steps"} aria-label="リーディングの進行">
-          {["問いを置く", "カードを引く", "言葉を受け取る"].map((label, index) => {
-            const step = index + 1;
-            return (
-              <div className={step === activeStep ? "ritual-step is-active" : step < activeStep ? "ritual-step is-done" : "ritual-step"} key={label} aria-current={step === activeStep ? "step" : undefined}>
-                <span>{["I", "II", "III"][index]}</span>
-                <small>{label}</small>
-              </div>
-            );
-          })}
+        <nav className="site-nav" aria-label="メニュー">
+          {navItems.map((item) => (
+            <button
+              className={view === item.id ? "nav-item is-active" : "nav-item"}
+              type="button"
+              key={item.id}
+              aria-current={view === item.id ? "page" : undefined}
+              onClick={() => toggleView(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
         </nav>
-        <div className="header-actions">
-          <button
-            className={view === "settings" ? "header-catalog is-active" : "header-catalog"}
-            type="button"
-            aria-pressed={view === "settings"}
-            onClick={() => toggleView("settings")}
-          >
-            {view === "settings" ? "占いに戻る" : "設定"}
-          </button>
-          <button
-            className={view === "guide" ? "header-catalog is-active" : "header-catalog"}
-            type="button"
-            aria-pressed={view === "guide"}
-            onClick={() => toggleView("guide")}
-          >
-            {view === "guide" ? "占いに戻る" : "案内"}
-          </button>
-          <button
-            className={view === "archive" ? "header-catalog is-active" : "header-catalog"}
-            type="button"
-            aria-pressed={view === "archive"}
-            onClick={() => toggleView("archive")}
-          >
-            {view === "archive" ? "占いに戻る" : "記録"}
-          </button>
-          <button
-            className={isCatalogOpen ? "header-catalog is-active" : "header-catalog"}
-            type="button"
-            aria-pressed={isCatalogOpen}
-            onClick={() => toggleView("catalog")}
-          >
-            {isCatalogOpen ? "占いに戻る" : "カード図鑑"}
-          </button>
-          {activeStep > 1 && !isAsideOpen ? (
-            <button className="header-reset" type="button" onClick={handleReset}>最初から</button>
-          ) : null}
-        </div>
+        {!isAsideOpen ? (
+          <div className="header-progress">
+            <ol className="ritual-steps" aria-label="リーディングの進行">
+              {["問いを置く", "カードを引く", "言葉を受け取る"].map((label, index) => {
+                const step = index + 1;
+                return (
+                  <li className={step === activeStep ? "ritual-step is-active" : step < activeStep ? "ritual-step is-done" : "ritual-step"} key={label} aria-current={step === activeStep ? "step" : undefined}>
+                    <span aria-hidden="true">{["I", "II", "III"][index]}</span>
+                    <small>{label}</small>
+                  </li>
+                );
+              })}
+            </ol>
+            {activeStep > 1 ? (
+              <button className={confirmingReset ? "header-reset is-confirming" : "header-reset"} type="button" onClick={requestReset}>
+                {confirmingReset ? "本当に最初から？" : "最初から"}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </header>
 
       <main className="app-shell">
+        {isAsideOpen && !(view === "archive" && archiveSelectedId) ? (
+          <div className={`aside-back is-${view}`}>
+            <button className="text-button" type="button" onClick={() => setView("reading")}>← {backLabel}</button>
+          </div>
+        ) : null}
+
         {isCatalogOpen ? (
-          <CardCatalog onClose={() => setView("reading")} />
+          <CardCatalog />
         ) : view === "guide" ? (
-          <GuidePanel onClose={() => setView("reading")} />
+          <GuidePanel onClose={() => setView("reading")} backLabel={backLabel} />
         ) : view === "settings" ? (
           <SettingsPanel
             engine={engine}
@@ -253,6 +269,7 @@ const App = () => {
             onPaceChange={changePace}
             onSoundChange={changeSound}
             onClose={() => setView("reading")}
+            backLabel={backLabel}
           />
         ) : view === "archive" ? (
           <ReadingArchive
@@ -291,6 +308,7 @@ const App = () => {
             <CardBackGrid
               key={shuffleCount}
               active={!isAsideOpen}
+              question={question.trim()}
               cards={shuffledCards}
               jumper={jumper}
               selectedCards={selectedCards}
@@ -307,13 +325,15 @@ const App = () => {
 
         {reading ? (
           <div hidden={isAsideOpen}>
-            <ReadingStage reading={reading} active={!isAsideOpen} pace={pace} onSaved={handleSaved} onRecordsChange={loadRecords} />
-          </div>
-        ) : null}
-
-        {!isAsideOpen && activeStep > 1 ? (
-          <div className="reset-row">
-            <button className="text-button" type="button" onClick={handleReset}>別の問いでカードを引く</button>
+            <ReadingStage
+              reading={reading}
+              active={!isAsideOpen}
+              pace={pace}
+              onSaved={handleSaved}
+              onRecordsChange={loadRecords}
+              onNewQuestion={handleReset}
+              onOpenRecords={() => toggleView("archive")}
+            />
           </div>
         ) : null}
       </main>
