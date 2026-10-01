@@ -13,8 +13,11 @@ export const parseEngine = (value: unknown): EngineId =>
   engines.some((engine) => engine.id === value) ? (value as EngineId) : defaultEngine;
 
 const storageKey = "tarot-reflection:engine";
+// 保存を拒否されても、画面で選んだAIをこのタブのリクエストに使う。
+let sessionEngine: EngineId | undefined;
 
 export const readStoredEngine = (): EngineId => {
+  if (sessionEngine) return sessionEngine;
   try {
     return parseEngine(globalThis.localStorage?.getItem(storageKey));
   } catch {
@@ -23,6 +26,7 @@ export const readStoredEngine = (): EngineId => {
 };
 
 export const storeEngine = (engine: EngineId) => {
+  sessionEngine = engine;
   try {
     globalThis.localStorage?.setItem(storageKey, engine);
   } catch {

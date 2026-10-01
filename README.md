@@ -25,16 +25,20 @@ http://tarot-reflection-dev.localhost/
 LocalWeb を使わずに起動する場合は `PORT` が必須です。
 
 ```sh
+bun run build
 PORT=<port> bun run server
 ```
 
-フロントエンドだけをViteで確認する場合:
+フロントエンドをViteで確認し、読み解きも使う場合は、別ターミナルでAPIサーバーを起動します。空いているAPI用portを決め、両方に同じ値を指定してください。
 
 ```sh
-bun run dev:frontend
+# APIサーバー
+PORT=<api-port> bun run server
+# 別ターミナルでVite（上と同じAPI用port）
+LOCALWEB_API_PORT=<api-port> bun run dev:frontend
 ```
 
-この場合、カードの読み解きを使うには別ターミナルで `bun run server` も起動してください。
+画面表示だけなら `bun run dev:frontend` で確認できます。`LOCALWEB_API_PORT` がなければ、APIへのプロキシは設定されません。
 
 ## 占い師の言葉を紡ぐAI
 
