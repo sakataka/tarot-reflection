@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { compareVersions, resultError, textDelta } from "./claudeCli";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { compareVersions, newestBundledClaude, resultError, textDelta } from "./claudeCli";
 
 describe("Claude CLI events", () => {
   test("accepts only streamed answer text", () => {
@@ -17,5 +20,24 @@ describe("Claude CLI events", () => {
 
   test("orders CLI versions numerically", () => {
     expect(["2.1.99", "2.1.284", "2.1.281"].sort((a, b) => compareVersions(b, a))).toEqual(["2.1.284", "2.1.281", "2.1.99"]);
+  });
+
+  test("finds the newest bundled CLI in both the old and the build-id layouts", () => {
+    const root = mkdtempSync(join(tmpdir(), "tarot-claude-"));
+    const place = (...parts: string[]) => {
+      const directory = join(root, ...parts, "claude.app", "Contents", "MacOS");
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(join(directory, "claude"), "");
+      return join(directory, "claude");
+    };
+    try {
+      place("2.1.99");
+      expect(newestBundledClaude(root)).toBe(join(root, "2.1.99", "claude.app", "Contents", "MacOS", "claude"));
+      const newest = place("2.1.286", "f2326db61802");
+      place("2.1.284", "4819fdb9b264");
+      expect(newestBundledClaude(root)).toBe(newest);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

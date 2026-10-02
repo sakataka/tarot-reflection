@@ -113,10 +113,24 @@ export function newestBundledClaude(root: string): string | null {
   }
   const newestFirst = versions.sort((a, b) => compareVersions(b, a));
   for (const version of newestFirst) {
-    const binary = join(root, version, "claude.app", "Contents", "MacOS", "claude");
-    if (existsSync(binary)) return binary;
+    // 以前は <version>/claude.app、今は <version>/<ビルドID>/claude.app に置かれる。どちらも探す。
+    const directories = [join(root, version), ...subdirectories(join(root, version))];
+    for (const directory of directories) {
+      const binary = join(directory, "claude.app", "Contents", "MacOS", "claude");
+      if (existsSync(binary)) return binary;
+    }
   }
   return null;
+}
+
+function subdirectories(directory: string): string[] {
+  try {
+    return readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "claude.app")
+      .map((entry) => join(directory, entry.name));
+  } catch {
+    return [];
+  }
 }
 
 export const compareVersions = (a: string, b: string) => {
