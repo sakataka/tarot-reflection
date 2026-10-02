@@ -79,6 +79,14 @@ p { line-height: 1.9; color: var(--muted); }
 /* 部屋の灯り：手の近くを蝋燭が照らし、金の塵が昇る（AmbientLight） */
 .ambient-light { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 1000; pointer-events: none; mix-blend-mode: screen; }
 
+/* 段が変わるとき：前の景色が墨のように溶け、次が浮かぶ（View Transitions） */
+.site-header { view-transition-name: site-header; }
+.ambient-light { view-transition-name: ambient-light; }
+::view-transition-old(root) { animation: scene-out .6s cubic-bezier(.4, 0, .2, 1) both; }
+::view-transition-new(root) { animation: scene-in .95s .18s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes scene-out { to { opacity: 0; filter: blur(10px) brightness(.5); transform: scale(.985); } }
+@keyframes scene-in { from { opacity: 0; filter: blur(12px) brightness(1.3); transform: scale(1.012); } }
+
 /* 部屋に入るときの幕（Prelude） */
 .prelude { position: fixed; inset: 0; z-index: 2000; display: grid; place-content: center; justify-items: center; gap: 6px; background: radial-gradient(ellipse 60% 50% at 50% 46%, #0f1630, var(--night) 70%); cursor: pointer; }
 .prelude.is-leaving { animation: prelude-out 1.1s cubic-bezier(.6, 0, .2, 1) forwards; pointer-events: none; }
@@ -429,15 +437,6 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   .cut-pile:hover span { color: var(--gold-bright); }
 }
 @keyframes pile-in { from { opacity: 0; } to { opacity: 1; } }
-/* デスクトップでは卓を画面いっぱい近くまで広げ、カードを大きく扱う */
-@media (min-width: 1140px) {
-  .table-panel { margin-inline: calc((100% - min(100vw - 64px, 1360px)) / 2); }
-  .oracle-panel { max-width: 860px; }
-  .card-stage { grid-template-columns: 230px minmax(0, 1fr); gap: 34px; padding: 28px 30px; }
-  .card-stage-label strong { font-size: 28px; }
-  .table-strip .strip-card { width: 72px; }
-  .table-strip .strip-card-flip { width: 54px; }
-}
 
 /* 卓の脇から、占い師が手順を促す */
 .oracle-guide { display: flex; align-items: center; gap: 16px; min-height: 72px; flex: 1 1 360px; min-width: 0; }
@@ -538,12 +537,34 @@ a.strip-card:hover { color: var(--gold-bright); }
 
 /* 語りの頭で、めくったカードを大きく見せる */
 .narration-segment { scroll-margin-top: calc(var(--strip-h, 124px) + 18px); }
-.card-stage { display: grid; grid-template-columns: 168px minmax(0, 1fr); align-items: center; gap: 26px; margin: 10px 0 24px; padding: 22px; border: 1px solid var(--line); border-radius: 4px; background: radial-gradient(ellipse 70% 90% at 20% 50%, rgba(80, 100, 170, .16), transparent 70%), rgba(10, 14, 28, .55); animation: ink-in .8s ease both; }
+.card-stage { position: relative; isolation: isolate; display: grid; grid-template-columns: 168px minmax(0, 1fr); align-items: center; gap: 28px; margin: 14px 0 26px; padding: 26px 22px; border-block: 1px solid var(--line); background: radial-gradient(ellipse 34% 80% at 16% 50%, rgba(234, 208, 143, .09), transparent 70%), radial-gradient(ellipse 70% 90% at 20% 50%, rgba(80, 100, 170, .16), transparent 70%); animation: ink-in .8s ease both; }
 .card-stage .card-meta { display: none; }
 .card-stage-card { position: relative; }
-.card-stage:not(.is-face-down) .card-stage-card { animation: card-turn-lift 1s cubic-bezier(.3, .1, .2, 1) both; }
+.card-stage.is-animated:not(.is-face-down) .card-stage-card { animation: card-turn-lift 1s cubic-bezier(.3, .1, .2, 1) both; }
 @keyframes card-turn-lift { 0% { transform: none; } 40% { transform: translateY(-14px) scale(1.05); filter: drop-shadow(0 22px 18px rgba(0, 0, 0, .55)); } 100% { transform: none; } }
-.card-stage:not(.is-face-down) .card-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 240, 200, .35) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: glint 1.6s .7s ease both; pointer-events: none; }
+.card-stage.is-animated:not(.is-face-down) .card-face::after { content: ""; position: absolute; inset: 0; background: linear-gradient(115deg, transparent 35%, rgba(255, 240, 200, .35) 50%, transparent 65%) 0 0 / 250% 100% no-repeat; animation: glint 1.6s .7s ease both; pointer-events: none; }
+/* 表に返った瞬間、カードから光の輪と粒が散る */
+.reveal-burst { position: absolute; left: 50%; top: 50%; z-index: 3; width: 120%; aspect-ratio: 1; translate: -50% -50%; pointer-events: none; }
+.reveal-burst::before, .reveal-burst::after { content: ""; position: absolute; border-radius: 50%; opacity: 0; }
+.reveal-burst::before { inset: 10%; border: 1px solid rgba(234, 208, 143, .85); box-shadow: 0 0 18px rgba(234, 208, 143, .5), inset 0 0 18px rgba(234, 208, 143, .3); }
+.reveal-burst::after { inset: -10%; background: radial-gradient(circle, rgba(255, 236, 190, .5), rgba(234, 208, 143, .14) 34%, transparent 64%); mix-blend-mode: screen; }
+.reveal-burst i { position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; border-radius: 50%; background: #fff3cf; box-shadow: 0 0 8px 2px rgba(234, 208, 143, .8); opacity: 0; transform: rotate(var(--a)) translateY(0); }
+.card-stage.is-animated:not(.is-face-down) .reveal-burst::before { animation: burst-ring 1.4s .45s cubic-bezier(.15, .7, .2, 1) both; }
+.card-stage.is-animated:not(.is-face-down) .reveal-burst::after { animation: burst-flash 1.5s .4s ease-out both; }
+.card-stage.is-animated:not(.is-face-down) .reveal-burst i { animation: burst-spark 1.6s .45s cubic-bezier(.15, .7, .2, 1) both; }
+.card-stage.is-animated:not(.is-face-down) .reveal-burst i:nth-child(odd) { animation-duration: 1.9s; animation-delay: .52s; }
+@keyframes burst-ring { 0% { opacity: .95; transform: scale(.35); } 100% { opacity: 0; transform: scale(1.35); } }
+@keyframes burst-flash { 0% { opacity: 0; transform: scale(.5); } 22% { opacity: 1; } 100% { opacity: 0; transform: scale(1.15); } }
+@keyframes burst-spark { 0% { opacity: 0; transform: rotate(var(--a)) translateY(-10%); } 15% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-460%) scale(.4); } }
+/* 手に取ったカード：ポインタへ傾き、箔に灯りが走る（TiltCard） */
+.tilt-card { position: relative; transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .7s cubic-bezier(.2, .8, .2, 1); }
+.tilt-card.is-tilting { transition: transform .15s linear; }
+.tilt-sheen { position: absolute; left: 0; right: 0; top: 0; aspect-ratio: 2 / 3; border-radius: 5px; pointer-events: none; opacity: 0; transition: opacity .5s; mix-blend-mode: color-dodge; background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(255, 236, 190, .5), rgba(255, 220, 160, .1) 30%, transparent 58%), linear-gradient(115deg, transparent 28%, rgba(190, 160, 255, .12) 42%, rgba(255, 228, 170, .2) 50%, rgba(150, 215, 255, .12) 58%, transparent 72%) var(--mx, 50%) var(--my, 50%) / 220% 220%; }
+.tilt-card.is-tilting .tilt-sheen { opacity: 1; }
+.is-face-down .tilt-sheen { display: none; }
+/* 位置の番号を、背景に大きく透かす */
+.card-stage-label { position: relative; }
+.card-stage-label::before { content: attr(data-mark); position: absolute; right: 0; top: 50%; translate: 0 -54%; z-index: -1; font-family: var(--latin); font-size: clamp(90px, 12vw, 150px); font-weight: 500; line-height: 1; letter-spacing: .02em; color: rgba(201, 164, 92, .07); pointer-events: none; }
 .card-stage-label { display: grid; gap: 4px; line-height: 1.6; transition: opacity .6s .6s; }
 .card-stage.is-face-down .card-stage-label > :not(small):not(.card-stage-role) { opacity: 0; }
 .card-stage-label > * { transition: opacity .6s .5s; }
@@ -562,8 +583,17 @@ a.strip-card:hover { color: var(--gold-bright); }
 .table-overview-card img.is-reversed { transform: rotate(180deg); }
 .table-overview-card small { font-family: var(--latin); font-size: 11px; color: var(--gold); line-height: 1; }
 .narration-segment.is-message { margin-top: 22px; }
-.message-words { position: relative; padding: 26px 30px 12px; border: 1px solid var(--gold); border-radius: 3px; text-align: center; background: radial-gradient(ellipse 80% 90% at 50% 0%, rgba(201, 164, 92, .14), transparent 75%), rgba(12, 16, 32, .85); box-shadow: inset 0 0 0 4px rgba(7, 10, 20, .85), inset 0 0 0 5px rgba(201, 164, 92, .3), 0 0 40px rgba(234, 208, 143, .1); animation: ink-in 1.2s ease both; }
-.message-words p { font-size: 19px; line-height: 2; letter-spacing: .08em; color: var(--gold-bright) !important; }
+/* 今夜の答え：封をした手紙のように。上に、占った夜の月を据える */
+.message-words { position: relative; margin-top: 30px; padding: 42px 48px 26px; border: 1px solid var(--gold); border-radius: 2px; text-align: center; background: radial-gradient(ellipse 70% 80% at 50% 0%, rgba(234, 208, 143, .16), transparent 75%), radial-gradient(ellipse 90% 60% at 50% 110%, rgba(80, 100, 170, .18), transparent 70%), rgba(12, 16, 32, .9); box-shadow: inset 0 0 0 5px rgba(7, 10, 20, .85), inset 0 0 0 6px rgba(201, 164, 92, .3), 0 0 60px rgba(234, 208, 143, .12), 0 30px 60px rgba(0, 0, 0, .35); animation: ink-in 1.4s ease both, message-glow 5s 1.4s ease-in-out infinite; }
+.message-words::before { content: ""; position: absolute; inset: 12px; pointer-events: none; --c: var(--gold-bright); background:
+  linear-gradient(var(--c), var(--c)) top left / 20px 1px no-repeat, linear-gradient(var(--c), var(--c)) top left / 1px 20px no-repeat,
+  linear-gradient(var(--c), var(--c)) top right / 20px 1px no-repeat, linear-gradient(var(--c), var(--c)) top right / 1px 20px no-repeat,
+  linear-gradient(var(--c), var(--c)) bottom left / 20px 1px no-repeat, linear-gradient(var(--c), var(--c)) bottom left / 1px 20px no-repeat,
+  linear-gradient(var(--c), var(--c)) bottom right / 20px 1px no-repeat, linear-gradient(var(--c), var(--c)) bottom right / 1px 20px no-repeat; opacity: .7; }
+.message-words::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, transparent 38%, rgba(255, 236, 190, .14) 50%, transparent 62%) 0 0 / 260% 100% no-repeat; animation: glint 2.4s 1s ease both; }
+@keyframes message-glow { 0%, 100% { box-shadow: inset 0 0 0 5px rgba(7, 10, 20, .85), inset 0 0 0 6px rgba(201, 164, 92, .3), 0 0 50px rgba(234, 208, 143, .1), 0 30px 60px rgba(0, 0, 0, .35); } 50% { box-shadow: inset 0 0 0 5px rgba(7, 10, 20, .85), inset 0 0 0 6px rgba(201, 164, 92, .45), 0 0 80px 6px rgba(234, 208, 143, .2), 0 30px 60px rgba(0, 0, 0, .35); } }
+.message-emblem { position: absolute; left: 50%; top: 0; width: 34px; height: 34px; padding: 5px; translate: -50% -50%; border-radius: 50%; background: var(--night); box-shadow: 0 0 0 1px var(--gold), 0 0 22px rgba(234, 208, 143, .4); }
+.message-words p { font-size: clamp(19px, 2.1vw, 24px); line-height: 2; letter-spacing: .1em; color: var(--gold-bright) !important; text-shadow: 0 0 24px rgba(234, 208, 143, .25); }
 
 /* 語りの区切り：相談者の合図で次へ進む */
 .narration-gate { display: grid; justify-items: center; gap: 10px; margin: 10px 0 18px; padding-top: 18px; border-top: 1px dashed var(--line); animation: ink-in .8s ease both; }
@@ -763,6 +793,15 @@ a.strip-card:hover { color: var(--gold-bright); }
 .danger-button:not(:disabled):hover { background: rgba(229, 154, 138, .2); border-color: var(--danger); }
 .danger-button:disabled { opacity: .7; cursor: progress; }
 
+/* デスクトップでは卓を画面いっぱい近くまで広げ、カードを大きく扱う */
+@media (min-width: 1140px) {
+  .table-panel { margin-inline: calc((100% - min(100vw - 64px, 1360px)) / 2); }
+  .oracle-panel { max-width: 860px; }
+  .card-stage { grid-template-columns: 250px minmax(0, 1fr); gap: 40px; padding: 34px 30px; }
+  .card-stage-label strong { font-size: 32px; }
+  .table-strip .strip-card { width: 72px; }
+  .table-strip .strip-card-flip { width: 54px; }
+}
 @media (max-width: 760px) {
   .site-header { flex-wrap: wrap; gap: 8px 10px; padding: max(10px, env(safe-area-inset-top)) 12px 10px 16px; }
   .brand { font-size: 17px; gap: 8px; }
@@ -827,8 +866,8 @@ a.strip-card:hover { color: var(--gold-bright); }
   .card-stage-label strong { font-size: 19px; margin-top: 4px; }
   .card-stage-keywords { font-size: 12px; }
   .narration-segment.is-intro .card-stage { grid-template-columns: 72px minmax(0, 1fr); padding: 10px 12px; }
-  .message-words { padding: 20px 16px 6px; }
-  .message-words p { font-size: 17px; }
+  .message-words { padding: 32px 20px 14px; }
+  .message-words p { font-size: 18px; letter-spacing: .06em; }
   .narration { font-size: 15px; line-height: 2; }
   .catalog-heading { align-items: stretch; }
   .guide-spreads { grid-template-columns: 1fr; }

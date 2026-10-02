@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { flushSync } from "react-dom";
 import { requestBackend } from "./backendClient";
 import { AmbientLight } from "./components/AmbientLight";
 import { CardBackGrid } from "./components/CardBackGrid";
@@ -30,6 +31,16 @@ const navItems: { id: AsideView; label: string }[] = [
   { id: "settings", label: "設定" },
 ];
 const nightBands = new Set(["夕暮れ", "夜", "真夜中", "夜明け前"]);
+
+// 画面の段が変わるときは、前の景色が墨のように溶けて次が浮かぶ。対応していない環境や動きを控える設定では、そのまま切り替える。
+const withSceneChange = (update: () => void) => {
+  const doc = document as Document & { startViewTransition?: (callback: () => void) => unknown };
+  if (!doc.startViewTransition || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+    update();
+    return;
+  }
+  doc.startViewTransition(() => flushSync(update));
+};
 
 const App = () => {
   const [question, setQuestion] = useState("");
@@ -131,7 +142,7 @@ const App = () => {
 
   const handleReveal = () => {
     playPlace();
-    setReading(createReading(question, selectedSpread, selectedCards, { deck: shuffledCards, jumper, clarification }));
+    withSceneChange(() => setReading(createReading(question, selectedSpread, selectedCards, { deck: shuffledCards, jumper, clarification })));
   };
 
   const handleReset = () => {
@@ -148,18 +159,20 @@ const App = () => {
 
   // 問い返しに答えたら（答えなくても）、カードを混ぜ始める。
   const handleProceedFromClarify = (answered: Exchange | null) => {
-    setClarification(answered);
-    setIsConfiding(false);
-    handleShuffle();
+    withSceneChange(() => {
+      setClarification(answered);
+      setIsConfiding(false);
+      handleShuffle();
+    });
   };
 
   const handleSaved = (record: ReadingRecord) =>
     setRecords((current) => [record, ...current.filter((item) => item.id !== record.id)]);
 
-  const openRecord = (record: ReadingRecord) => {
+  const openRecord = (record: ReadingRecord) => withSceneChange(() => {
     setArchiveSelectedId(record.id);
     setView("archive");
-  };
+  });
 
   // 失敗は呼び出し側（記録の画面）で知らせるので、ここでは投げ返す。
   const deleteRecord = async (id: string) => {
@@ -177,7 +190,7 @@ const App = () => {
   };
 
   const requestReset = () => {
-    if (confirmingReset) handleReset();
+    if (confirmingReset) withSceneChange(handleReset);
     else setConfirmingReset(true);
   };
 
@@ -188,9 +201,12 @@ const App = () => {
   }, [confirmingReset]);
 
   const toggleView = (next: View) => {
-    setArchiveSelectedId(null);
-    setView((current) => (current === next ? "reading" : next));
+    withSceneChange(() => {
+      setArchiveSelectedId(null);
+      setView((current) => (current === next ? "reading" : next));
+    });
   };
+  const openView = (next: View) => withSceneChange(() => setView(next));
 
   const changeEngine = (next: EngineId) => {
     storeEngine(next);
@@ -217,7 +233,8 @@ const App = () => {
   const isCatalogOpen = view === "catalog";
   const isAsideOpen = view !== "reading";
 
-  useEffect(() => {
+  // 景色が変わる前に上へ戻しておき、切り替わりの一枚に収める。
+  useLayoutEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [activeStep, view, archiveSelectedId]);
 
@@ -228,7 +245,7 @@ const App = () => {
       <Prelude moon={moon} />
       <AmbientLight />
       <header className="site-header">
-        <button className="brand" type="button" onClick={() => { handleReset(); setView("reading"); }} aria-label="最初の画面へ戻る">
+        <button className="brand" type="button" onClick={() => withSceneChange(() => { handleReset(); setView("reading"); })} aria-label="最初の画面へ戻る">
           <span className="brand-moon" aria-hidden="true">☾</span>
           <span className="brand-name">Tarot Reflection</span>
         </button>
@@ -270,14 +287,14 @@ const App = () => {
       <main className="app-shell">
         {isAsideOpen && !(view === "archive" && archiveSelectedId) ? (
           <div className={`aside-back is-${view}`}>
-            <button className="text-button" type="button" onClick={() => setView("reading")}>← {backLabel}</button>
+            <button className="text-button" type="button" onClick={() => openView("reading")}>← {backLabel}</button>
           </div>
         ) : null}
 
         {isCatalogOpen ? (
           <CardCatalog />
         ) : view === "guide" ? (
-          <GuidePanel onClose={() => setView("reading")} backLabel={backLabel} />
+          <GuidePanel onClose={() => openView("reading")} backLabel={backLabel} />
         ) : view === "settings" ? (
           <SettingsPanel
             engine={engine}
@@ -286,7 +303,7 @@ const App = () => {
             onEngineChange={changeEngine}
             onPaceChange={changePace}
             onSoundChange={changeSound}
-            onClose={() => setView("reading")}
+            onClose={() => openView("reading")}
             backLabel={backLabel}
           />
         ) : view === "archive" ? (
@@ -311,7 +328,7 @@ const App = () => {
               isNight={isNight}
               sameNightReading={sameNightReading}
               onOpenRecord={openRecord}
-              onOpenGuide={() => setView("guide")}
+              onOpenGuide={() => openView("guide")}
               onQuestionChange={setQuestion}
               onSpreadChange={setSelectedSpreadId}
               onConfide={() => setIsConfiding(true)}
@@ -350,7 +367,7 @@ const App = () => {
               pace={pace}
               onSaved={handleSaved}
               onRecordsChange={loadRecords}
-              onNewQuestion={handleReset}
+              onNewQuestion={() => withSceneChange(handleReset)}
               onOpenRecords={() => toggleView("archive")}
             />
           </div>

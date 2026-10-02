@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { Reading, ReadingCard } from "../types/tarot";
+import { moonPhase } from "../utils/moment";
 import { splitParagraphs, type NarrationSegment } from "../utils/narration";
 import { tableCards } from "../utils/tarot";
 import { CardView } from "./CardView";
+import { MoonGlyph } from "./MoonGlyph";
 import { cardMark, narrationCardId, orientationLabel } from "./ReadingTable";
+import { TiltCard } from "./TiltCard";
 
 export type VisibleSegment = { segment: NarrationSegment; text: string };
 
@@ -33,11 +36,18 @@ const CardStage = ({ readingCard, mark, animate, note }: {
   }, [faceDown]);
 
   return (
-    <div className={faceDown ? "card-stage is-face-down" : "card-stage"}>
+    <div className={`card-stage${faceDown ? " is-face-down" : ""}${animate ? " is-animated" : ""}`}>
       <div className="card-stage-card">
-        <CardView card={readingCard.card} orientation={readingCard.orientation} faceDown={faceDown} />
+        {animate ? (
+          <span className="reveal-burst" aria-hidden="true">
+            {Array.from({ length: 10 }, (_, index) => <i key={index} style={{ "--a": `${index * 36 + 8}deg` } as CSSProperties} />)}
+          </span>
+        ) : null}
+        <TiltCard>
+          <CardView card={readingCard.card} orientation={readingCard.orientation} faceDown={faceDown} />
+        </TiltCard>
       </div>
-      <div className="card-stage-label">
+      <div className="card-stage-label" data-mark={mark}>
         <small>{mark}・{readingCard.position.name}</small>
         <span className="card-stage-role">{note ?? readingCard.position.role}</span>
         <strong>{readingCard.card.nameJa}</strong>
@@ -98,7 +108,10 @@ export const NarrationView = ({ reading, segments, speaking = false, animate = f
           return (
             <div className="narration-segment is-message" id="narration-message" key="message">
               <p className="narration-kicker">今夜の答え</p>
-              <div className="message-words">{body}</div>
+              <div className="message-words">
+                <MoonGlyph age={moonPhase(new Date(reading.createdAt)).age} className="message-emblem" />
+                {body}
+              </div>
             </div>
           );
         }
