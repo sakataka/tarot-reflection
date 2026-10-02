@@ -208,7 +208,7 @@ p { line-height: 1.9; color: var(--muted); }
 .intro-signature { display: block; margin-top: 10px; color: var(--gold); font-size: 12px; letter-spacing: .24em; }
 .clarify-box { display: grid; gap: 14px; margin-top: 30px; padding: 26px 28px 22px; border: 1px solid var(--line-strong); border-radius: 3px; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(201, 164, 92, .08), transparent 70%), rgba(11, 15, 30, .9); box-shadow: inset 0 0 0 5px rgba(7, 10, 20, .7), inset 0 0 0 6px rgba(201, 164, 92, .16); animation: rise .7s ease both; }
 .clarify-box > .ornament-kicker { text-align: center; }
-.clarify-words { font-family: var(--serif); font-size: 16px; line-height: 2.1; letter-spacing: .05em; color: var(--ink); animation: ink-in 1.2s ease both; }
+.clarify-words { font-family: var(--serif); font-size: 16px; line-height: 2.1; letter-spacing: .05em; color: var(--ink); white-space: pre-line; animation: ink-in 1.2s ease both; }
 .clarify-answer { margin-top: 4px; }
 .clarify-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 14px; }
 .clarify-actions .text-button:first-child { margin-right: auto; padding-left: 0; }
@@ -310,6 +310,8 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   overflow: hidden;
 }
 /* 卓に描かれた金の円環 */
+/* 卓の右奥に置いた蝋燭の灯り。ゆっくりゆらいで卓を照らす */
+.tarot-table::after { content: ""; position: absolute; right: -6%; top: -12%; width: 46%; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255, 190, 110, .16), rgba(240, 160, 80, .05) 40%, transparent 68%); mix-blend-mode: screen; pointer-events: none; animation: flame-flicker 3.4s ease-in-out infinite; }
 .tarot-table::before {
   content: "";
   position: absolute;
@@ -469,6 +471,7 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .reading-question.is-folded { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .reading-question-toggle { padding: 2px 8px; font-size: 12px; }
 .reading-date { font-family: var(--latin); font-size: 13px; letter-spacing: .08em; color: var(--faint); }
+.inline-moon { width: 12px; height: 12px; margin: 0 4px 0 2px; vertical-align: -1px; }
 .tarot-card { margin: 0; perspective: 1400px; }
 .card-flip { position: relative; aspect-ratio: 2 / 3; transform-style: preserve-3d; transition: transform 1s cubic-bezier(.3, .1, .2, 1); }
 .tarot-card.is-face-down .card-flip { transform: rotateY(180deg); }

@@ -6,6 +6,7 @@ import { parseNarration } from "../utils/narration";
 import { oracleName } from "../utils/persona";
 import { tableCards } from "../utils/tarot";
 import { ExchangeList } from "./FollowUpBox";
+import { MoonGlyph } from "./MoonGlyph";
 import { NarrationView } from "./NarrationView";
 import { ReadingHeading, TableStrip } from "./ReadingTable";
 
@@ -55,7 +56,7 @@ export const ReadingArchive = ({ records, selectedId, error, notice, onSelect, o
           return (
             <li key={record.id}>
               <button className="archive-item" type="button" onClick={() => onSelect(record.id)}>
-                <span className="archive-date">{formatDate(record.createdAt)}・{moon.glyph} {moon.name}</span>
+                <span className="archive-date">{formatDate(record.createdAt)}・<MoonGlyph age={moon.age} className="inline-moon" />{moon.name}</span>
                 <strong className="archive-question">{record.question}</strong>
                 <span className="archive-cards" aria-label={cards.map((item) => item.card?.nameJa).join("、")}>
                   {cards.map((item) => (
