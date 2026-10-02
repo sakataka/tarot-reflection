@@ -151,6 +151,7 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
     const texture = gl.createTexture();
     let frame = 0;
     let disposed = false;
+    let ready = false;
     let visible = true;
     const still = prefersReducedMotion();
     const pointer = { x: 0, y: 0, tx: 0, ty: 0 };
@@ -160,6 +161,8 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
       const width = Math.round(canvas.clientWidth * ratio);
       const height = Math.round(canvas.clientHeight * ratio);
+      // 卓の外の部屋を開いている間は非表示になる。描画面を0へ戻さず、再表示時のサイズ通知を待つ。
+      if (!width || !height) return false;
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
@@ -169,6 +172,7 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       // 縦長の画面では、月と水面が両方入るよう横の中心を月の側へ寄せる。
       const portrait = canvas.clientWidth / canvas.clientHeight < 1.2;
       gl.uniform2f(u.focus, portrait ? .6 : .52, portrait ? .5 : .44);
+      return true;
     };
 
     const draw = (now: number) => {
@@ -207,6 +211,7 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+      ready = true;
       resize();
       setLive(true);
       draw(performance.now());
@@ -219,9 +224,11 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       pointer.ty = (event.clientY / window.innerHeight) * 2 - 1;
     };
     const onResize = () => {
-      resize();
-      if (still) draw(performance.now());
+      if (resize() && still && ready) draw(performance.now());
     };
+    // 問い返しで高さが変わるときや、非表示から戻るときも描画面を合わせる。
+    const sizeObserver = new ResizeObserver(onResize);
+    sizeObserver.observe(canvas);
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
     observer.observe(canvas);
     window.addEventListener("pointermove", onPointer, { passive: true });
@@ -231,6 +238,7 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       disposed = true;
       cancelAnimationFrame(frame);
       observer.disconnect();
+      sizeObserver.disconnect();
       window.removeEventListener("pointermove", onPointer);
       window.removeEventListener("resize", onResize);
       gl.deleteTexture(texture);

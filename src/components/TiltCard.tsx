@@ -1,4 +1,4 @@
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 type TiltCardProps = {
   children: ReactNode;
@@ -10,6 +10,7 @@ type TiltCardProps = {
 export const TiltCard = ({ children, className }: TiltCardProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const frame = useRef(0);
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   const update = (x: number, y: number) => {
     cancelAnimationFrame(frame.current);
@@ -28,7 +29,7 @@ export const TiltCard = ({ children, className }: TiltCardProps) => {
       className={className ? `tilt-card ${className}` : "tilt-card"}
       ref={ref}
       onPointerMove={(event) => {
-        if (event.pointerType === "touch") return;
+        if (event.pointerType === "touch" || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
         const rect = event.currentTarget.getBoundingClientRect();
         event.currentTarget.classList.add("is-tilting");
         update(((event.clientX - rect.left) / rect.width) * 2 - 1, ((event.clientY - rect.top) / rect.height) * 2 - 1);

@@ -939,4 +939,6 @@ a.strip-card:hover { color: var(--gold-bright); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .tilt-card { transform: none; }
+  .tilt-sheen { display: none; }
 }
