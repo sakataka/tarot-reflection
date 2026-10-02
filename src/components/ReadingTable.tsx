@@ -22,18 +22,21 @@ type TableStripProps = {
   revealed: boolean[];
   // いま占い師が語っているカード（めくる順の番号）。
   current?: number | null;
+  // 言葉を待つ間、占い師の手がかざされているカード。
+  hovered?: number | null;
 };
 
-const StripCard = ({ readingCard, mark, isRevealed, isCurrent, targetId, order }: {
+const StripCard = ({ readingCard, mark, isRevealed, isCurrent, isHovered = false, targetId, order }: {
   readingCard: ReadingCard;
   mark: string;
   isRevealed: boolean;
   isCurrent: boolean;
+  isHovered?: boolean;
   targetId?: string;
   // 卓に置かれた順。帯に並ぶとき、この順に一枚ずつ配られる。
   order: number;
 }) => {
-  const className = `strip-card${isRevealed ? " is-revealed" : ""}${isCurrent ? " is-current" : ""}`;
+  const className = `strip-card${isRevealed ? " is-revealed" : ""}${isCurrent ? " is-current" : ""}${isHovered ? " is-hovered" : ""}`;
   const label = `${mark}・${readingCard.position.name}${isRevealed ? `：${readingCard.card.nameJa}（${orientationLabel[readingCard.orientation]}）` : "（まだ伏せたまま）"}`;
   const content = (
     <>
@@ -91,7 +94,7 @@ export const ReadingHeading = ({ reading }: { reading: Reading }) => {
 };
 
 // 卓の上を小さく見渡す帯。どのカードが表になり、いまどれを語っているかを示す。語りの間も上に留まる。
-export const TableStrip = ({ reading, revealed, current = null }: TableStripProps) => {
+export const TableStrip = ({ reading, revealed, current = null, hovered = null }: TableStripProps) => {
   const stripRef = useRef<HTMLElement>(null);
 
   // 帯は上に留まるので、語りの区切りへ送るときに帯の下へ収まるよう、高さを親に伝える。
@@ -116,6 +119,7 @@ export const TableStrip = ({ reading, revealed, current = null }: TableStripProp
           mark={cardMark(reading, index)}
           isRevealed={revealed[index] ?? false}
           isCurrent={current === index}
+          isHovered={hovered === index}
           targetId={narrationCardId(index)}
           order={index}
         />

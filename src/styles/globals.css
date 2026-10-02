@@ -537,6 +537,8 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .strip-card.is-current { color: var(--gold-bright); }
 .strip-card.is-current .strip-card-flip { box-shadow: 0 0 0 2px var(--gold-bright), 0 0 18px 4px rgba(234, 208, 143, .45); transform: rotateY(180deg) translateY(-4px); }
 a.strip-card:hover { color: var(--gold-bright); }
+.strip-card.is-hovered { color: var(--gold-bright); }
+.strip-card.is-hovered .strip-card-flip { transform: translateY(-5px); box-shadow: 0 0 0 1px var(--gold-bright), 0 0 20px 4px rgba(234, 208, 143, .42), 0 10px 14px rgba(0, 0, 0, .5); }
 
 /* 語りの頭で、めくったカードを大きく見せる */
 .narration-segment { scroll-margin-top: calc(var(--strip-h, 124px) + 18px); }
@@ -633,16 +635,10 @@ a.strip-card:hover { color: var(--gold-bright); }
 .oracle-panel::after { top: 14px; right: 16px; }
 .oracle-heading { text-align: center; margin-bottom: 22px; }
 .oracle-heading h2 { margin-top: 8px; letter-spacing: .14em; }
-.thinking-box { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "portrait table" "portrait words"; align-items: center; justify-items: center; gap: 18px 32px; padding: 8px 0 28px; }
-.thinking-box .oracle-portrait { grid-area: portrait; width: 210px; }
-.thinking-box .waiting-table { grid-area: table; align-self: end; }
-.thinking-box .thinking-words { grid-area: words; align-self: start; text-align: center; }
-.waiting-table { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
-.waiting-card { display: grid; justify-items: center; gap: 6px; animation: strip-deal .7s cubic-bezier(.2, .8, .3, 1) both; }
-.waiting-card-back { width: 46px; aspect-ratio: 2 / 3; border-radius: 3px; background: url('/cards/card_back.webp') center / cover, #192535; box-shadow: 0 0 0 1px rgba(201, 164, 92, .45), 0 6px 14px rgba(0, 0, 0, .5); transition: transform .8s cubic-bezier(.3, .1, .2, 1), box-shadow .8s, filter .8s; filter: brightness(.8); }
-.waiting-card small { font-family: var(--serif); font-size: 10px; letter-spacing: .04em; color: var(--faint); transition: color .8s; }
-.waiting-card.is-hovered .waiting-card-back { transform: translateY(-6px); filter: brightness(1.15); box-shadow: 0 0 0 1px var(--gold-bright), 0 0 22px 4px rgba(234, 208, 143, .4), 0 12px 18px rgba(0, 0, 0, .5); }
-.waiting-card.is-hovered small { color: var(--gold-bright); }
+/* 言葉を待つ間：占い師の姿と、いまの手つきの一言。手がかざされるカードは上の帯で光る */
+.thinking-box { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 8px 0 30px; text-align: center; }
+.thinking-box .oracle-portrait { width: 230px; }
+.thinking-box .thinking-words { min-height: 2em; }
 .thinking-words { font-family: var(--serif); font-size: 14px; letter-spacing: .08em; color: var(--muted); animation: breathe 2.8s ease-in-out both; }
 @keyframes breathe { 0% { opacity: 0; transform: translateY(4px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
 .oracle-error { text-align: center; }
@@ -851,7 +847,7 @@ a.strip-card:hover { color: var(--gold-bright); }
   .spread-slot span { top: calc(100% + 5px); font-size: 10px; letter-spacing: 0; }
   .oracle-panel { padding: 28px 16px 22px; margin-top: 20px; }
   .oracle-portrait { width: 200px; }
-  .thinking-box { grid-template-columns: 1fr; grid-template-areas: "portrait" "table" "words"; gap: 16px; }
+  .thinking-box { gap: 16px; }
   .thinking-box .oracle-portrait { width: 176px; }
   .table-question { font-size: 12px; margin-bottom: 10px; }
   .clarify-oracle.has-spoken { flex-direction: column; align-items: center; gap: 14px; text-align: center; }

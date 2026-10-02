@@ -22,6 +22,7 @@ export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange, 
   const total = tableCards(reading).length;
   const [revealed, setRevealed] = useState<boolean[]>(() => Array.from({ length: total }, () => false));
   const [current, setCurrent] = useState<number | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
 
   // 語りの進行から同じ描画中に続けて呼ばれても二重にめくらないよう、最新の状態を ref で持つ。
   const revealedRef = useRef(revealed);
@@ -37,8 +38,8 @@ export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange, 
   return (
     <div className="reading-stage">
       <ReadingHeading reading={reading} />
-      <TableStrip reading={reading} revealed={revealed} current={current} />
-      <PromptBox active={active} pace={pace} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onSaved={onSaved} onNewQuestion={onNewQuestion} onOpenRecords={onOpenRecords} />
+      <TableStrip reading={reading} revealed={revealed} current={current} hovered={hovered} />
+      <PromptBox active={active} pace={pace} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onWaitingHover={setHovered} onSaved={onSaved} onNewQuestion={onNewQuestion} onOpenRecords={onOpenRecords} />
     </div>
   );
 };

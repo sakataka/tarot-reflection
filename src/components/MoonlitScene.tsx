@@ -191,7 +191,8 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
 
     const loop = (now: number) => {
       if (disposed) return;
-      if (visible && !document.hidden) draw(now);
+      // 隠れたタブでは requestAnimationFrame 自体が止まるので、ここでは画面外かどうかだけを見る。
+      if (visible) draw(now);
       frame = requestAnimationFrame(loop);
     };
 
@@ -208,8 +209,8 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
       resize();
       setLive(true);
-      if (still) draw(performance.now());
-      else frame = requestAnimationFrame(loop);
+      draw(performance.now());
+      if (!still) frame = requestAnimationFrame(loop);
     };
 
     const onPointer = (event: PointerEvent) => {

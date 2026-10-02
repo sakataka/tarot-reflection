@@ -85,7 +85,7 @@ export const AmbientLight = () => {
     };
 
     const loop = (now: number) => {
-      if (!document.hidden) draw(now);
+      draw(now);
       frame = requestAnimationFrame(loop);
     };
 

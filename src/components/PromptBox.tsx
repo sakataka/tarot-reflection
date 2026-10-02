@@ -20,6 +20,8 @@ type PromptBoxProps = {
   revealed: boolean[];
   onRevealCard: (cardIndex: number) => void;
   onCurrentChange?: (cardIndex: number | null) => void;
+  // 言葉を待つ間、占い師の手がかざされているカード（上の帯で光らせる）。
+  onWaitingHover?: (cardIndex: number | null) => void;
   onSaved?: (record: ReadingRecord) => void;
   onNewQuestion: () => void;
   onOpenRecords: () => void;
@@ -53,7 +55,7 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
-export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, onRevealCard, onCurrentChange, onSaved, onNewQuestion, onOpenRecords }: PromptBoxProps) => {
+export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, onRevealCard, onCurrentChange, onWaitingHover, onSaved, onNewQuestion, onOpenRecords }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
@@ -245,6 +247,12 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
     return () => window.clearInterval(timer);
   }, [isWaiting, waitingWords.length]);
 
+  // 最初の一言は並べ終えた合図、そのあと位置ごとに手が渡る。言葉が届いたら手を離す。
+  const hoveredCard = isWaiting && waitingIndex >= 1 && waitingIndex <= cardCount ? waitingIndex - 1 : null;
+  useEffect(() => {
+    onWaitingHover?.(hoveredCard);
+  }, [hoveredCard, onWaitingHover]);
+
   useEffect(() => {
     if (finished) playChime();
   }, [finished]);
@@ -337,7 +345,6 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
       {isWaiting ? (
         <div className="thinking-box" aria-live="polite">
           <OraclePortrait pose="reading" />
-          <WaitingTable reading={reading} hovered={waitingIndex - 1} />
           <p key={waitingIndex} className="thinking-words">{waitingWords[waitingIndex]}…</p>
         </div>
       ) : null}
@@ -431,14 +438,3 @@ const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
   );
 };
 
-// 言葉を待つ間、伏せたカードの上を占い師の手が順に渡っていく。
-const WaitingTable = ({ reading, hovered }: { reading: Reading; hovered: number }) => (
-  <div className="waiting-table" aria-hidden="true">
-    {tableCards(reading).map((readingCard, index) => (
-      <span className={index === hovered ? "waiting-card is-hovered" : "waiting-card"} key={readingCard.position.id} style={{ animationDelay: `${index * 140}ms` }}>
-        <span className="waiting-card-back" />
-        <small>{readingCard.position.name}</small>
-      </span>
-    ))}
-  </div>
-);
