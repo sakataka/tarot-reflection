@@ -4,6 +4,9 @@ import type { ReadingRecord } from "../utils/history";
 import { maxQuestionLength } from "../utils/limits";
 import type { MoonPhase } from "../utils/moment";
 import { oracleName } from "../utils/persona";
+import { MoonGlyph } from "./MoonGlyph";
+import { MoonlitScene } from "./MoonlitScene";
+import { RevealText } from "./RevealText";
 import { SpreadSelector } from "./SpreadSelector";
 
 type QuestionFormProps = {
@@ -43,20 +46,22 @@ export const QuestionForm = ({
 
   return (
     <section className={clarifySlot ? "intro-panel is-confiding" : "intro-panel"}>
-      <div className="intro-landscape">
-        <img src="cards/selection_oracle.webp" alt="月明かりに照らされた静かな庭と水辺" />
-      </div>
-      <div className="intro-copy">
-        <p className="ornament-kicker">Moonlit Tarot</p>
-        <h1>今夜のカードに、<br className="mobile-break" />胸の内をたずねる</h1>
-        <p className="tonight-moon">
-          <span className="tonight-moon-glyph" aria-hidden="true">{moon.glyph}</span>
-          {tonight}は<strong>{moon.name}</strong>。{moon.mood}。
-        </p>
-        <p className="intro-greeting">
-          ようこそ。灯りを少し落としましょう。<br />いま心にかかっていることを、ひとつだけ聞かせてください。
-          <span className="intro-signature">占い部屋の主　{oracleName}</span>
-        </p>
+      <div className="intro-hero">
+        <MoonlitScene moon={moon} />
+        <div className="intro-copy">
+          <p className="ornament-kicker">Moonlit Tarot</p>
+          <h1><RevealText lines={["今夜のカードに、", "胸の内をたずねる"]} delay={500} /></h1>
+          <p className="tonight-moon">
+            <MoonGlyph age={moon.age} className="tonight-moon-glyph" />
+            {tonight}は<strong>{moon.name}</strong>
+            <span className="tonight-moon-age">月齢 {moon.age.toFixed(1)}</span>
+            <span className="tonight-moon-mood">{moon.mood}。</span>
+          </p>
+          <p className="intro-greeting">
+            ようこそ。灯りを少し落としましょう。<br />いま心にかかっていることを、ひとつだけ聞かせてください。
+            <span className="intro-signature">占い部屋の主　{oracleName}</span>
+          </p>
+        </div>
       </div>
 
       {clarifySlot ? (

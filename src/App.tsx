@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { requestBackend } from "./backendClient";
+import { AmbientLight } from "./components/AmbientLight";
 import { CardBackGrid } from "./components/CardBackGrid";
 import { CardCatalog } from "./components/CardCatalog";
 import { ClarifyBox } from "./components/ClarifyBox";
 import { GuidePanel } from "./components/GuidePanel";
+import { Prelude } from "./components/Prelude";
 import { QuestionForm } from "./components/QuestionForm";
 import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
@@ -223,6 +225,8 @@ const App = () => {
 
   return (
     <div className="app">
+      <Prelude moon={moon} />
+      <AmbientLight />
       <header className="site-header">
         <button className="brand" type="button" onClick={() => { handleReset(); setView("reading"); }} aria-label="最初の画面へ戻る">
           <span className="brand-moon" aria-hidden="true">☾</span>

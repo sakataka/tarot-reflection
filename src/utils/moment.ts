@@ -1,6 +1,6 @@
 // 占う「いま」を言葉にする。月齢と時刻の帯、それから占いの一日の区切り。
 
-const synodicMonth = 29.530588853;
+export const synodicMonth = 29.530588853;
 // 2000-01-06 18:14 UTC の新月を起点にする。
 const referenceNewMoon = Date.UTC(2000, 0, 6, 18, 14);
 const dayMs = 86_400_000;
@@ -29,6 +29,9 @@ const phases: { until: number; name: string; glyph: string; mood: string }[] = [
   { until: 27.8, name: "有明の月", glyph: "☾", mood: "明け方の空に残る細い月。静かに振り返り、休むとき" },
   { until: synodicMonth + 1, name: "新月前夜", glyph: "☾", mood: "月が消える前の暗い夜。次の始まりの前に、心を空けておくとき" },
 ];
+
+// 月の輝いている割合（0: 新月 〜 1: 満月）。
+export const moonIllumination = (age: number) => (1 - Math.cos((age / synodicMonth) * Math.PI * 2)) / 2;
 
 export const moonPhase = (date: Date): MoonPhase => {
   const age = (((date.getTime() - referenceNewMoon) / dayMs) % synodicMonth + synodicMonth) % synodicMonth;
