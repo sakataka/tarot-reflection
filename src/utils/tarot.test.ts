@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { tarotDeck } from "../data/tarotDeck";
+import { describeCardImagery } from "../data/cardImagery";
 import { spreads } from "../data/spreads";
 import type { SelectedCard } from "../types/tarot";
 import type { RandomSource } from "./random";
@@ -39,15 +40,19 @@ describe("tarot deck", () => {
     expect(missingImages).toEqual([]);
   });
 
-  test("has a production image for every minor arcana card, shared per suit or its own", () => {
+  test("has a distinct production image and scene for every minor arcana card", () => {
     const minorCards = tarotDeck.filter((card) => card.arcana === "minor");
     const missingImages = [...new Set(minorCards.map((card) => card.imagePath))].filter(
       (imagePath) => !existsSync(resolve(import.meta.dir, "../../public", imagePath.replace(/^\//, ""))),
     );
 
     expect(missingImages).toEqual([]);
+    expect(new Set(minorCards.map((card) => card.imagePath)).size).toBe(56);
+    expect(new Set(minorCards.map(describeCardImagery)).size).toBe(56);
     for (const card of minorCards) {
-      expect(card.imagePath).toBe(card.sharedArt ? `cards/minor_${card.suit}.webp` : `cards/${card.id}.webp`);
+      expect(card.sharedArt).toBe(false);
+      expect(card.imagePath).toBe(`cards/${card.id}.webp`);
+      expect(describeCardImagery(card)).not.toBe("");
     }
   });
 });

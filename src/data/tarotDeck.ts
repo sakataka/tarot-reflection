@@ -53,12 +53,6 @@ const rankSeeds = [
   { number: 14, ja: "キング", en: "King" },
 ];
 
-// 個別の絵が描かれた小アルカナ。ここにないカードはスート共通の絵に数字を重ねる。
-// 絵を足したら public/cards/{id}.webp を置き、IDをここに加える。
-const minorWithOwnArt = new Set<string>(
-  ["wands", "cups", "swords", "pentacles"].flatMap((suit) => [11, 12, 13, 14].map((rank) => `${suit}_${rank}`)),
-);
-
 const padMajor = (number: number) => String(number).padStart(2, "0");
 const padMinor = (number: number) => String(number).padStart(2, "0");
 
@@ -84,7 +78,6 @@ const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((su
   rankSeeds.map((rank) => {
     const suitLabel = suitLabels[suit];
     const id = `${suitLabel.imagePrefix}_${padMinor(rank.number)}`;
-    const hasOwnArt = minorWithOwnArt.has(id);
     return {
       id,
       nameJa: `${suitLabel.ja}の${rank.ja}`,
@@ -93,8 +86,8 @@ const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((su
       number: rank.number,
       suit,
       ...minorMeanings[suit][rank.number - 1],
-      imagePath: hasOwnArt ? `cards/${id}.webp` : `cards/minor_${suitLabel.imagePrefix}.webp`,
-      sharedArt: !hasOwnArt,
+      imagePath: `cards/${id}.webp`,
+      sharedArt: false,
     };
   }),
 );

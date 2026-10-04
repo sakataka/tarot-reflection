@@ -1,8 +1,8 @@
 # 画像の制作方針
 
-画像は2026-09-19と2026-09-27に制作。表示仕様は2026-10-03の実装に合わせて確認。組み込みの image_gen で生成。ツールはモデル選択・モデル名の確認を公開していないため、特定のモデルバージョンは記録しない。
+既存画像は2026-09-19と2026-09-27に制作。数札40枚は2026-10-04にDotsから納品され、同日の表示仕様に合わせて確認。既存画像は組み込みの image_gen で生成したが、ツールはモデル選択・モデル名の確認を公開していないため、特定のモデルバージョンは記録しない。
 
-全46点を `public/cards/` に保存。大アルカナ22点、コートカード16点、小アルカナ4スートの共通絵4点、裏面1点、導入の風景1点、ヴェスペラの肖像2点。小アルカナのランクとスートは画面側で左上と右下に重ねて表示する。スート共通絵を使う数札は、図鑑の一覧にもランクを添える。
+全86点を `public/cards/` に保存。大アルカナ22点、数札40点、コートカード16点、参照用に残した旧スート共通絵4点、裏面1点、導入の風景1点、ヴェスペラの肖像2点。78枚のカードはすべて個別の絵を使う。小アルカナのランクとスートは画面側で左上と右下に重ねて表示し、中央には大きな数字を重ねない。
 
 導入の風景は `MoonlitScene` が同じ絵をWebGLで描き、月相、水面、星、ポインタに合わせた奥行きを加える。WebGLが使えなければ元の絵を表示し、動きを控える設定では月相を反映した静止画にする。月齢は `moment.ts` の基準新月と平均周期から計算する近似値で、`MoonGlyph` もその月齢から形を描く。
 
@@ -26,6 +26,12 @@ Codex CLI の画像生成で、1スートにつき 2×2 の4枚組（左上ペ�
 - ソード: 風の丘で剣を立て振り返る若者／風に曲がる木々を駆ける灰色の馬の騎士／雲の中の玉座で剣を立て手を差し伸べる女王／蝶と三日月の玉座で剣を立てる王。
 - ペンタクル: 野で金貨を掲げて見つめる若者／黒い農耕馬の上で動かない騎士／薔薇のあずまやで金貨を抱く女王と兎／牡牛の玉座で葡萄の衣をまとい金貨に手を置く王。
 
+## 数札40枚（2026-10-04）
+
+Dotsから、4スートそれぞれのエース〜10を `public/cards/{suit}_{01-10}.webp` に納品。[37枚の追加](https://github.com/sakataka/tarot-reflection/commit/05bd4d3) と [残る3枚の追加](https://github.com/sakataka/tarot-reflection/commit/349f41a9d554cd98df4b83cd773960736b691fb7) で40枚が揃った。
+
+全40枚を640×960pxのWebPとして読み込み確認し、各札の場面を見て `src/data/cardImagery.ts` に記述した。ランク・スートの角ラベルを保ち、旧共通絵用の中央数字と図鑑の数字バッジは表示しない。画像のファイル名と札のIDは一致する。制作時の参照・共通プロンプト・各札の主題は [Dotsへの依頼書](dots-minor-arcana-artwork-brief.md) に保存。
+
 ## 共通スタイル・プロンプト
 
 Use case: stylized-concept. Make ONE original image for the same coherent Moonlit Tarot collection as the attached reference. Reference is STYLE ONLY, not layout or subject. Match deep midnight indigo and muted teal, antique brushed gold and ivory moonlight; painterly gouache, delicate etched linework, subtle tactile paper grain. Mature, atmospheric, elegant, restrained, visually legible. No letters, words, numbers, logos, watermark.
@@ -34,7 +40,7 @@ Use case: stylized-concept. Make ONE original image for the same coherent Moonli
 
 風景の指定: Landscape 3:2 image, full bleed.
 
-全画像のスタイル参照には、この更新で生成した `card_back.webp` の元画像を使用。カード名とランクはHTMLで表示し、生成画像には文字を入れない。WebP品質84に圧縮し、カードは640×960px、風景は幅1280pxで配信。
+既存画像のスタイル参照には、最初の更新で生成した `card_back.webp` の元画像を使用。カード名とランクはHTMLで表示し、生成画像には文字を入れない。WebP品質84に圧縮し、カードは640×960px、風景は幅1280pxで配信。
 
 「吊るされた男」は、静かな水面に逆さに映る人物で、視点の転換と内省を表現したオリジナルの図案。
 

@@ -15,10 +15,12 @@ describe("buildPromptFromInterpretationInput", () => {
     expect(() => buildPromptFromInterpretationInput({ spreadId: "celtic-cross", cards: cards.slice(0, 7) })).toThrow("Card count");
   });
 
-  test("passes card-specific meanings but does not invent scenes on shared artwork", () => {
+  test("passes card-specific meanings and the scene from the delivered artwork", () => {
     const prompt = buildPromptFromInterpretationInput({ spreadId: "one-card", cards: [{ cardId: "swords_09", orientation: "upright" }] });
     expect(prompt).toContain("不安、眠れぬ思い、自責");
-    expect(prompt).toContain("RWS固有の場面は画面に描かれていない");
+    expect(prompt).toContain("寝台に座って両手で顔を覆う人物");
+    expect(prompt).toContain("九本の剣");
+    expect(prompt).not.toContain("スート共通の絵");
   });
   test("builds a prompt from known spread and card ids", () => {
     const prompt = buildPromptFromInterpretationInput({
