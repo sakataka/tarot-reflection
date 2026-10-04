@@ -27,6 +27,9 @@ export const CardCatalog = () => {
   const [query, setQuery] = useState("");
   const [selectedCardId, setSelectedCardId] = useState(tarotDeck[0].id);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [isCompact, setIsCompact] = useState(() => window.matchMedia(sheetQuery).matches);
+  const sheetRef = useRef<HTMLDialogElement>(null);
+  const backdropPressRef = useRef(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const lastTileRef = useRef<HTMLButtonElement | null>(null);
   const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase("ja"));
@@ -50,19 +53,53 @@ export const CardCatalog = () => {
     ?? tarotDeck[0];
 
   const closeSheet = () => {
+    sheetRef.current?.close();
     setSheetOpen(false);
     lastTileRef.current?.focus({ preventScroll: true });
   };
 
   useEffect(() => {
-    if (!sheetOpen) return;
-    closeRef.current?.focus({ preventScroll: true });
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeSheet();
+    const media = window.matchMedia(sheetQuery);
+    const onChange = () => {
+      setIsCompact(media.matches);
+      setSheetOpen(false);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [sheetOpen]);
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, []);
+
+  useEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet) return;
+    if (sheetOpen) {
+      sheet.showModal();
+      closeRef.current?.focus({ preventScroll: true });
+    } else if (sheet.open) {
+      sheet.close();
+    }
+  }, [sheetOpen, isCompact]);
+
+  const detail = (
+    <>
+      <div className="catalog-detail-bar">
+        <p className="catalog-kicker">{arcanaLabel(selectedCard)}</p>
+        {isCompact ? <button className="text-button catalog-close" type="button" ref={closeRef} onClick={closeSheet}>閉じる</button> : null}
+      </div>
+      <CardView card={selectedCard} orientation="upright" />
+      <div className="catalog-meanings">
+        <section>
+          <h2>正位置</h2>
+          <p className="catalog-keywords">{selectedCard.upright.keywords.join(" / ")}</p>
+          <p>{selectedCard.upright.shortMeaning}</p>
+        </section>
+        <section>
+          <h2>逆位置</h2>
+          <p className="catalog-keywords">{selectedCard.reversed.keywords.join(" / ")}</p>
+          <p>{selectedCard.reversed.shortMeaning}</p>
+        </section>
+      </div>
+    </>
+  );
 
   return (
     <section className="catalog-panel" aria-labelledby="catalog-title">
@@ -101,7 +138,7 @@ export const CardCatalog = () => {
 
       <div className="catalog-layout">
         <div className="catalog-list-region">
-          <p className="catalog-count">{visibleCards.length}枚</p>
+          <p className="catalog-count" role="status">{visibleCards.length}枚</p>
           {visibleCards.length > 0 ? (
             <div className="catalog-grid">
               {visibleCards.map((card) => (
@@ -109,11 +146,13 @@ export const CardCatalog = () => {
                   className={card.id === selectedCard.id ? "catalog-tile is-selected" : "catalog-tile"}
                   type="button"
                   aria-pressed={card.id === selectedCard.id}
+                  aria-label={`${card.nameJa} ${card.nameEn}`}
+                  aria-haspopup={isCompact ? "dialog" : undefined}
                   key={card.id}
                   onClick={(event) => {
                     setSelectedCardId(card.id);
                     lastTileRef.current = event.currentTarget;
-                    if (window.matchMedia?.(sheetQuery).matches) setSheetOpen(true);
+                    if (isCompact) setSheetOpen(true);
                   }}
                 >
                   <span className="catalog-tile-art">
@@ -132,30 +171,39 @@ export const CardCatalog = () => {
           )}
         </div>
 
-        <button className={sheetOpen ? "catalog-backdrop is-open" : "catalog-backdrop"} type="button" tabIndex={-1} aria-hidden="true" onClick={closeSheet} />
-        <aside
-          className={sheetOpen ? "catalog-detail is-open" : "catalog-detail"}
-          aria-live="polite"
-          aria-label={`${selectedCard.nameJa}の意味`}
-        >
-          <div className="catalog-detail-bar">
-            <p className="catalog-kicker">{arcanaLabel(selectedCard)}</p>
-            <button className="text-button catalog-close" type="button" ref={closeRef} onClick={closeSheet}>閉じる</button>
-          </div>
-          <CardView card={selectedCard} orientation="upright" />
-          <div className="catalog-meanings">
-            <section>
-              <h2>正位置</h2>
-              <p className="catalog-keywords">{selectedCard.upright.keywords.join(" / ")}</p>
-              <p>{selectedCard.upright.shortMeaning}</p>
-            </section>
-            <section>
-              <h2>逆位置</h2>
-              <p className="catalog-keywords">{selectedCard.reversed.keywords.join(" / ")}</p>
-              <p>{selectedCard.reversed.shortMeaning}</p>
-            </section>
-          </div>
-        </aside>
+        {isCompact ? (
+          <dialog
+            className="catalog-detail"
+            ref={sheetRef}
+            aria-label={`${selectedCard.nameJa}の意味`}
+            onCancel={(event) => { event.preventDefault(); closeSheet(); }}
+            onKeyDown={(event) => {
+              // シートで操作できるのは「閉じる」だけ。Tabで背後やブラウザ枠へ抜けないようにする。
+              if (event.key === "Tab") {
+                event.preventDefault();
+                closeRef.current?.focus();
+              }
+            }}
+            onPointerDown={(event) => {
+              const bounds = event.currentTarget.getBoundingClientRect();
+              backdropPressRef.current = event.target === event.currentTarget
+                && (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom);
+            }}
+            onClick={(event) => {
+              const pressedBackdrop = backdropPressRef.current;
+              backdropPressRef.current = false;
+              if (!pressedBackdrop || event.target !== event.currentTarget) return;
+              const bounds = event.currentTarget.getBoundingClientRect();
+              if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeSheet();
+            }}
+          >
+            {detail}
+          </dialog>
+        ) : (
+          <aside className="catalog-detail" aria-live="polite" aria-label={`${selectedCard.nameJa}の意味`}>
+            {detail}
+          </aside>
+        )}
       </div>
     </section>
   );

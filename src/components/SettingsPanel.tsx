@@ -39,14 +39,24 @@ const SettingGroup = <T extends string | boolean>({ title, options, value, onCha
   <div className="guide-section">
     <h2>{title}</h2>
     <div className="setting-options" role="radiogroup" aria-label={title}>
-      {options.map((option) => (
+      {options.map((option, index) => (
         <button
           key={String(option.value)}
           className={option.value === value ? "setting-option is-selected" : "setting-option"}
           type="button"
           role="radio"
           aria-checked={option.value === value}
+          tabIndex={option.value === value ? 0 : -1}
           onClick={() => onChange(option.value)}
+          onKeyDown={(event) => {
+            const offsets: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+            const offset = offsets[event.key];
+            if (offset === undefined && event.key !== "Home" && event.key !== "End") return;
+            event.preventDefault();
+            const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1 : (index + (offset ?? 0) + options.length) % options.length;
+            onChange(options[nextIndex].value);
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("button")[nextIndex]?.focus();
+          }}
         >
           <strong>{option.label}</strong>
           <small>{option.note}</small>

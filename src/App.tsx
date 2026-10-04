@@ -245,7 +245,7 @@ const App = () => {
       <Prelude moon={moon} />
       <AmbientLight />
       <header className="site-header">
-        <button className="brand" type="button" onClick={() => withSceneChange(() => { handleReset(); setView("reading"); })} aria-label="最初の画面へ戻る">
+        <button className="brand" type="button" onClick={() => openView("reading")} aria-label={backLabel}>
           <span className="brand-moon" aria-hidden="true">☾</span>
           <span className="brand-name">Tarot Reflection</span>
         </button>
