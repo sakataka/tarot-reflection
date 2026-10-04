@@ -1,3 +1,4 @@
+import { minorMeanings } from "./minorMeanings";
 import type { Suit, TarotCard } from "../types/tarot";
 
 type MajorSeed = {
@@ -44,20 +45,12 @@ const suitLabels: Record<Suit, { ja: string; en: string; theme: string; imagePre
 };
 
 const rankSeeds = [
-  { number: 1, ja: "エース", en: "Ace", upright: ["始まり", "芽生え", "可能性"], reversed: ["停滞", "不安定", "準備不足"] },
-  { number: 2, ja: "2", en: "Two", upright: ["調和", "選択", "均衡"], reversed: ["すれ違い", "迷い", "不均衡"] },
-  { number: 3, ja: "3", en: "Three", upright: ["成長", "協力", "広がり"], reversed: ["足並みの乱れ", "未熟", "分散"] },
-  { number: 4, ja: "4", en: "Four", upright: ["安定", "休息", "土台"], reversed: ["停滞", "閉塞", "固執"] },
-  { number: 5, ja: "5", en: "Five", upright: ["変化", "葛藤", "課題"], reversed: ["回復", "見直し", "緊張緩和"] },
-  { number: 6, ja: "6", en: "Six", upright: ["調整", "支援", "前進"], reversed: ["依存", "過去への固執", "停滞"] },
-  { number: 7, ja: "7", en: "Seven", upright: ["探求", "試練", "選別"], reversed: ["迷走", "疑い", "疲労"] },
-  { number: 8, ja: "8", en: "Eight", upright: ["継続", "集中", "改善"], reversed: ["惰性", "焦り", "過労"] },
-  { number: 9, ja: "9", en: "Nine", upright: ["達成", "充足", "成熟"], reversed: ["満たされなさ", "油断", "孤立"] },
-  { number: 10, ja: "10", en: "Ten", upright: ["完成", "区切り", "責任"], reversed: ["負担", "未整理", "抱え込み"] },
-  { number: 11, ja: "ペイジ", en: "Page", upright: ["学び", "好奇心", "知らせ"], reversed: ["未熟", "散漫", "ためらい"] },
-  { number: 12, ja: "ナイト", en: "Knight", upright: ["行動", "推進", "挑戦"], reversed: ["焦り", "暴走", "一貫性不足"] },
-  { number: 13, ja: "クイーン", en: "Queen", upright: ["受容", "成熟", "育成"], reversed: ["過敏", "抱え込み", "偏り"] },
-  { number: 14, ja: "キング", en: "King", upright: ["統率", "責任", "安定"], reversed: ["支配", "硬直", "過信"] },
+  { number: 1, ja: "エース", en: "Ace" },
+  ...["Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"].map((en, index) => ({ number: index + 2, ja: String(index + 2), en })),
+  { number: 11, ja: "ペイジ", en: "Page" },
+  { number: 12, ja: "ナイト", en: "Knight" },
+  { number: 13, ja: "クイーン", en: "Queen" },
+  { number: 14, ja: "キング", en: "King" },
 ];
 
 // 個別の絵が描かれた小アルカナ。ここにないカードはスート共通の絵に数字を重ねる。
@@ -99,14 +92,7 @@ const minorArcana: TarotCard[] = (Object.keys(suitLabels) as Suit[]).flatMap((su
       arcana: "minor",
       number: rank.number,
       suit,
-      upright: {
-        keywords: [...rank.upright, suitLabel.theme],
-        shortMeaning: `${suitLabel.theme}に関して、${rank.upright.join("・")}の流れを示す。`,
-      },
-      reversed: {
-        keywords: [...rank.reversed, `${suitLabel.theme}の見直し`],
-        shortMeaning: `${suitLabel.theme}に関して、${rank.reversed.join("・")}に注意が必要な状態を示す。`,
-      },
+      ...minorMeanings[suit][rank.number - 1],
       imagePath: hasOwnArt ? `cards/${id}.webp` : `cards/minor_${suitLabel.imagePrefix}.webp`,
       sharedArt: !hasOwnArt,
     };

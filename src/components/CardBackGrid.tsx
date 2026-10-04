@@ -6,6 +6,7 @@ import { cutPileCount } from "../utils/tarot";
 import { CardView } from "./CardView";
 import { OraclePortrait } from "./OraclePortrait";
 import { RiffleShuffle, riffleCycle } from "./RiffleShuffle";
+import { celticCrossLayout } from "../data/spreads";
 
 // 混ぜる → 手を止めて揃える → 上から三つに切り分ける → 一つ選ぶ → 選んだ山を最後に上へ重ねる → 広げる → 引く
 type Phase = "shuffling" | "squaring" | "cutting" | "choosing" | "lifting" | "gathering" | "dealing" | "ready";
@@ -110,13 +111,21 @@ const layoutFan = (width: number, count: number, slotCount: number, rows: number
   // 弧の中央は高く、両端ほど下がる。置き場の幅の下にある扇の底から少し離して置く。
   const edge = Math.min(1, (rowWidth / 2 + cardWidth / 2) / (span / 2));
   const slotTop = lift + (rows - 1) * rowGap + cardHeight + Math.round(sag * edge * edge) + (rows === 6 ? 28 : 36);
-  const slots = Array.from({ length: slotCount }, (_, index) => {
+  let slots = Array.from({ length: slotCount }, (_, index) => {
     // 七枚は蹄鉄の形に、両端を少し下げる。
     const t = slotCount === 1 ? 0 : (index / (slotCount - 1)) * 2 - 1;
     const arch = slotCount >= 5 ? Math.round(t * t * slotHeight * 0.22) : 0;
     return { x: (width - rowWidth) / 2 + index * (slotWidth + slotGap), y: slotTop + arch, width: slotWidth, height: slotHeight };
   });
-  const slotsBottom = slotTop + slotHeight + (slotCount >= 5 ? Math.round(slotHeight * 0.22) : 0) + 34;
+  let slotsBottom = slotTop + slotHeight + (slotCount >= 5 ? Math.round(slotHeight * 0.22) : 0) + 34;
+  if (slotCount === 10) {
+    const crossWidth = Math.floor(Math.min(cardWidth * (rows === 6 ? 0.7 : 0.85), (width - 32) / 5));
+    const crossHeight = Math.round(crossWidth * 1.5);
+    const crossTop = fanBottom + 22;
+    const offset = (width - crossWidth * 5) / 2;
+    slots = celticCrossLayout.map(({ x, y }) => ({ x: offset + x * crossWidth, y: crossTop + y * crossHeight, width: crossWidth, height: crossHeight }));
+    slotsBottom = crossTop + crossHeight * 5.35 + 28;
+  }
 
   return {
     cardWidth,
@@ -372,11 +381,11 @@ export const CardBackGrid = ({
     dealing: "残りを重ねて、あなたの山を上に。……広げますよ。",
     ready: isComplete
       ? "揃いましたね。そのカードを、わたしに渡してください。"
-      : `目が止まったカード、指が呼ばれたカードに触れて。あと${remaining}枚。`,
+      : `次は${positions[selectedCards.length]?.name}。目が止まったカードに触れて。あと${remaining}枚。`,
   }[phase];
 
   return (
-    <section className={`table-panel is-${phase}`} ref={panelRef}>
+    <section className={`table-panel is-${phase}${requiredCount === 10 ? " has-celtic-cross" : ""}`} ref={panelRef}>
       <p className="table-question"><span>あなたの問い</span>{question}</p>
       <div className="section-heading">
         <div className="oracle-guide">
@@ -453,7 +462,7 @@ export const CardBackGrid = ({
               aria-hidden="true"
               style={{ left: slot.x, top: slot.y, width: slot.width, height: slot.height }}
             >
-              <span>{positions[slotIndex]?.name}</span>
+              <span>{requiredCount === 10 ? slotIndex + 1 : positions[slotIndex]?.name}</span>
             </div>
           )) : null}
 
@@ -487,7 +496,7 @@ export const CardBackGrid = ({
                   ...(carry ? { "--carry-lift": `${-carry.lift}px`, "--carry-turn": `${carry.turn}deg`, "--carry-delay": `${carry.delay}ms` } : {}),
                 } as CSSProperties}
               >
-                <span className="card-back-art" />
+                <span className={`card-back-art${requiredCount === 10 && selected?.selectedOrder === 2 ? " is-crossing" : ""}`} />
               </button>
             );
           }) : null}

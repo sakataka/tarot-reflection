@@ -57,6 +57,8 @@ export type ReadingCard = {
 export type Exchange = {
   question: string;
   answer: string;
+  // 聞き返しに添えた札。旧記録と、補足を引かない聞き返しでは省略する。
+  clarifier?: { cardId: string; orientation: Orientation };
 };
 
 export type Reading = {

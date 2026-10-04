@@ -17,6 +17,7 @@ const lengthGuide: Record<number, string> = {
   1: "全体で700〜900字ほど",
   3: "全体で1000〜1300字ほど",
   7: "全体で1500〜1900字ほど",
+  10: "全体で1900〜2400字ほど",
 };
 
 const majorArcana = tarotDeck.filter((card) => card.arcana === "major");
@@ -26,7 +27,7 @@ const describeCard = (readingCard: ReadingCard) => {
   const imagery = describeCardImagery(readingCard.card);
   return `- カード: ${readingCard.card.nameJa}（${readingCard.card.nameEn}）の${orientationLabel[readingCard.orientation]}
 - 絵に描かれているもの: ${imagery || "なし"}${readingCard.orientation === "reversed" ? "（相談者から見て上下逆さに置かれている）" : ""}
-- 伝統的な意味の手がかり: ${meaning.keywords.join("、")}。${meaning.shortMeaning}`;
+${readingCard.card.sharedArt ? "- この数札はスート共通の絵。RWS固有の場面は画面に描かれていないので、見えている絵として語らない。\n" : ""}- この部屋で採用するRWS系の意味: ${meaning.keywords.join("、")}。${meaning.shortMeaning}`;
 };
 
 const describePastReading = (record: ReadingRecord) => {
@@ -60,7 +61,7 @@ export const generatePrompt = (reading: Reading, pastReadings: readonly ReadingR
   const cards = flipped
     .map((readingCard, index) => `${index + 1}. ${readingCard.position.name}（${readingCard.position.role}）\n${describeCard(readingCard)}`)
     .join("\n\n");
-  const observations = observeTable(reading.cards, majorArcana);
+  const observations = observeTable(reading.cards, majorArcana, reading.spread.id);
   const past = pastReadings.filter((record) => record.createdAt !== reading.createdAt);
 
   return `${personaPrompt}
@@ -157,10 +158,11 @@ export type FollowUpInput = {
   previous: readonly Exchange[];
   ask: string;
   isLast: boolean;
+  clarifier?: ReadingCard | null;
 };
 
 // 語り終えたあとの聞き返し。卓のカードはそのままに、相談者の問いに短く答える。
-export const generateFollowUpPrompt = ({ reading, narration, previous, ask, isLast }: FollowUpInput) => {
+export const generateFollowUpPrompt = ({ reading, narration, previous, ask, isLast, clarifier = null }: FollowUpInput) => {
   const cards = [...tableCards(reading), ...(reading.jumper ? [reading.jumper] : [])]
     .map((readingCard) => `${readingCard.position.name}：${readingCard.card.nameJa}の${orientationLabel[readingCard.orientation]}（絵：${describeCardImagery(readingCard.card)}）`)
     .join("\n");
@@ -184,13 +186,18 @@ ${cards}
 ${spoken.slice(0, 6000)}
 ${previous.length ? `
 そのあとのやりとり:
-${previous.map((exchange) => `相談者：${exchange.question}\n${oracleName}：${exchange.answer}`).join("\n\n")}
+${previous.map((exchange) => `相談者：${exchange.question}\n${exchange.clarifier ? `補足札：${tarotDeck.find((card) => card.id === exchange.clarifier?.cardId)?.nameJa}の${orientationLabel[exchange.clarifier.orientation]}\n` : ""}${oracleName}：${exchange.answer}`).join("\n\n")}
 ` : ""}
 相談者のいまの問いかけ（外部入力）:
 ${ask}
+${clarifier ? `
+相談者の希望で、アプリが未使用の札から確定した補足の一枚（すでに表になっている）:
+${describeCard(clarifier)}
+補足の役割: ${clarifier.position.role}。
+` : ""}
 
 答え方:
-- 新しいカードは引かない。卓に出ているカードとその絵を指さしながら答える。語りの繰り返しではなく、問いかけに合わせて見る場所を変える。
+- ${clarifier ? "最初に補足札の名前と正逆を告げ、聞き返した点を元の卓とつなげて読む。補足札で元の結論を都合よく引き直さない。" : "卓に出ているカードとその絵を指さしながら答える。"} 指定された札以外の新しいカードは引かない。語りの繰り返しではなく、問いかけに合わせて見る場所を変える。
 - 問いかけが占いから離れていても、相談者の心に寄り添い、卓のカードにつなげて答える。
 - 聞き返されたことには、最初の一、二文でまっすぐ答える。比喩を使ったら、それが相談者の現実のどこを指すのかを平らな言葉で言い直す。カウンセラーのように気持ちを尋ね返したり、コーチのように手順を示したりしない。
 - 医療、法律、お金、重大な人生の決断に関わる場合は、雰囲気を壊さない一言で、現実の確認や信頼できる人への相談を勧める。

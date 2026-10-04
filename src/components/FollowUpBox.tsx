@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { requestBackend, streamBackend } from "../backendClient";
 import type { Exchange, Reading } from "../types/tarot";
-import { maxFollowUps, tablePayload } from "../utils/history";
+import { maxFollowUps, tablePayload, type CardRecord } from "../utils/history";
 import { cleanNarrationText, splitParagraphs } from "../utils/narration";
 import { maxReplyLength as maxAskLength } from "../utils/limits";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
+import { tarotDeck } from "../data/tarotDeck";
+import { CardView } from "./CardView";
 
 type FollowUpBoxProps = {
   reading: Reading;
@@ -16,11 +18,17 @@ type FollowUpBoxProps = {
 
 
 // 占い師と相談者のやりとりを並べる。記録の読み返しでも使う。
+const ClarifierCard = ({ card: record }: { card: CardRecord }) => {
+  const card = tarotDeck.find((item) => item.id === record.cardId);
+  return card ? <div className="clarifier-card"><p className="ornament-kicker">補足の一枚</p><CardView card={card} orientation={record.orientation} /></div> : null;
+};
+
 export const ExchangeList = ({ exchanges }: { exchanges: readonly Exchange[] }) => (
   <div className="exchange-list">
     {exchanges.map((exchange, index) => (
       <div className="exchange" key={index}>
         <p className="exchange-ask"><span>あなた</span>{exchange.question}</p>
+        {exchange.clarifier ? <ClarifierCard card={exchange.clarifier} /> : null}
         <div className="exchange-answer">
           <span>{oracleName}</span>
           {splitParagraphs(cleanNarrationText(exchange.answer)).map((paragraph, paragraphIndex) => <p key={paragraphIndex}>{paragraph}</p>)}
@@ -30,7 +38,7 @@ export const ExchangeList = ({ exchanges }: { exchanges: readonly Exchange[] }) 
   </div>
 );
 
-// 語り終えたあと、二度まで占い師に聞き返せる。新しいカードは引かず、卓のカードを見直してもらう。
+// 聞き返しには任意で補足札を一枚添える。確定済みの札と答えを再試行で失わない。
 export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: FollowUpBoxProps) => {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [ask, setAsk] = useState("");
@@ -38,6 +46,9 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
   const [error, setError] = useState("");
   const [saveFailed, setSaveFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const busyRef = useRef(false);
+  const [drawClarifier, setDrawClarifier] = useState(false);
+  const [reserved, setReserved] = useState<{ question: string; clarifier: CardRecord | null } | null>(null);
   const remaining = maxFollowUps - exchanges.length;
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -50,6 +61,8 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       setExchanges((current) => [...current, exchange]);
       setPending(null);
       setAsk("");
+      setReserved(null);
+      setDrawClarifier(false);
       onRecordsChange();
       playChime();
     } catch {
@@ -58,42 +71,57 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     }
   };
 
-  const send = () => {
+  const send = async () => {
     const question = ask.trim();
-    if (!question || pending || remaining <= 0) return;
+    if (!question || pending || remaining <= 0 || busyRef.current) return;
+    busyRef.current = true;
     const abort = new AbortController();
     abortRef.current = abort;
     setError("");
     setSaveFailed(false);
     setPending({ question, answer: "" });
-    let answer = "";
-    streamBackend(
-      "follow-up/stream",
-      {
-        ...tablePayload(reading),
-        narration,
-        previous: exchanges,
-        ask: question,
-        recordId,
-      },
-      {
-        signal: abort.signal,
-        onDelta: (text) => {
-          answer += text;
-          setPending({ question, answer });
-        },
-      },
-    )
-      .then(() => {
-        const exchange = { question, answer: answer.trim() };
-        setPending(exchange);
-        return save(exchange);
-      })
-      .catch((caughtError: unknown) => {
-        if (abort.signal.aborted) return;
-        setError(caughtError instanceof Error ? caughtError.message : "言葉が届きませんでした。");
-        setPending(null);
+    try {
+      const prepared = await requestBackend<{ previous: Exchange[]; clarifier: CardRecord | null; completed: boolean }>(`readings/${recordId}/follow-up`, {
+        method: "POST", body: { ask: question, drawClarifier },
       });
+      if (abort.signal.aborted) return;
+      setExchanges(prepared.previous);
+      if (prepared.completed) {
+        setPending(null); setReserved(null); setAsk(""); setDrawClarifier(false); onRecordsChange();
+        return;
+      }
+      setReserved({ question, clarifier: prepared.clarifier });
+      const extra = prepared.clarifier ? { clarifier: prepared.clarifier } : {};
+      setPending({ question, answer: "", ...extra });
+      let answer = "";
+      await streamBackend(
+        "follow-up/stream",
+        {
+          ...tablePayload(reading),
+          narration,
+          previous: prepared.previous,
+          ask: question,
+          recordId,
+          drawClarifier,
+        },
+        {
+          signal: abort.signal,
+          onDelta: (text) => {
+            answer += text;
+            setPending({ question, answer, ...extra });
+          },
+        },
+      );
+      const exchange = { question, answer: answer.trim(), ...extra };
+      setPending(exchange);
+      await save(exchange);
+    } catch (caughtError: unknown) {
+      if (abort.signal.aborted) return;
+      setError(caughtError instanceof Error ? caughtError.message : "言葉が届きませんでした。");
+      setPending(null);
+    } finally {
+      busyRef.current = false;
+    }
   };
 
   return (
@@ -108,6 +136,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       {pending ? (
         <div className="exchange is-pending" aria-live="polite">
           <p className="exchange-ask"><span>あなた</span>{pending.question}</p>
+          {pending.clarifier ? <ClarifierCard card={pending.clarifier} /> : null}
           {pending.answer.trim() ? (
             <div className="exchange-answer">
               <span>{oracleName}</span>
@@ -119,7 +148,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
               ))}
             </div>
           ) : (
-            <p className="thinking-words is-steady">{oracleName}が卓のカードを見つめ直しています…</p>
+            <p className="thinking-words is-steady">{oracleName}が{pending.clarifier ? "補足の一枚と卓のカード" : "卓のカード"}を見つめ直しています…</p>
           )}
         </div>
       ) : null}
@@ -130,16 +159,20 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       ) : null}
 
       {remaining > 0 && !pending ? (
-        <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); send(); }}>
+        <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); void send(); }}>
           <textarea
             value={ask}
+            readOnly={Boolean(reserved)}
             maxLength={maxAskLength}
             rows={2}
             placeholder="たとえば「山の底のカードが、もう少し気になります」"
             aria-label={`${oracleName}に聞き返す`}
             onChange={(event) => setAsk(event.target.value)}
           />
-          <button className="secondary-button" type="submit" disabled={!ask.trim()}>聞き返す</button>
+          <label className="clarifier-choice"><input type="checkbox" checked={drawClarifier} disabled={Boolean(reserved)} onChange={(event) => setDrawClarifier(event.target.checked)} />補足の一枚を引いてもらう</label>
+          <p className="clarifier-note">元の占いを掘り下げる一枚です。{reserved ? "先ほどと同じ問いと札で、言葉を待ち直します。" : "引かずに聞き返すこともできます。"}</p>
+          {reserved?.clarifier ? <ClarifierCard card={reserved.clarifier} /> : null}
+          <button className="secondary-button" type="submit" disabled={!ask.trim()}>{reserved ? "同じ聞き返しをもう一度送る" : "聞き返す"}</button>
         </form>
       ) : null}
 

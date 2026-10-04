@@ -4,6 +4,22 @@ import { generateClarifyPrompt } from "../src/utils/prompt";
 import { buildFollowUpRequest, buildPromptFromInterpretationInput } from "./interpretationRequest";
 
 describe("buildPromptFromInterpretationInput", () => {
+  test("reads all ten Celtic positions and the bottom card without claiming sequential cards are neighbours", () => {
+    const cards = tarotDeck.slice(0, 10).map((card) => ({ cardId: card.id, orientation: "upright" }));
+    const prompt = buildPromptFromInterpretationInput({ question: "検証", spreadId: "celtic-cross", cards, root: { cardId: "swords_09", orientation: "reversed" } });
+    expect(prompt).toContain("10. 行く先");
+    expect(prompt).toContain("11. 山の底");
+    expect(prompt).toContain("11枚すべてについて");
+    expect(prompt).toContain("1900〜2400");
+    expect(prompt).not.toContain("は隣り合い");
+    expect(() => buildPromptFromInterpretationInput({ spreadId: "celtic-cross", cards: cards.slice(0, 7) })).toThrow("Card count");
+  });
+
+  test("passes card-specific meanings but does not invent scenes on shared artwork", () => {
+    const prompt = buildPromptFromInterpretationInput({ spreadId: "one-card", cards: [{ cardId: "swords_09", orientation: "upright" }] });
+    expect(prompt).toContain("不安、眠れぬ思い、自責");
+    expect(prompt).toContain("RWS固有の場面は画面に描かれていない");
+  });
   test("builds a prompt from known spread and card ids", () => {
     const prompt = buildPromptFromInterpretationInput({
       question: "今週の流れを見たい",
@@ -83,6 +99,18 @@ describe("conversation with the oracle", () => {
     cards: [{ cardId: "major_17_star", orientation: "upright" }],
     clarification: { question: "どこへ行きたいのかしら？", answer: "海の近く" },
   };
+  test("describes the confirmed clarifier and rejects duplicates including past clarifiers", () => {
+    const clarifier = { cardId: "swords_09", orientation: "reversed" };
+    const prompt = buildFollowUpRequest({ ...table, ask: "不安は？", clarifier }).prompt;
+    expect(prompt).toContain("ソードの9");
+    expect(prompt).toContain("逆位置");
+    expect(prompt).toContain("元の結論を都合よく引き直さない");
+    expect(() => buildFollowUpRequest({ ...table, ask: "問い", clarifier: table.cards[0] })).toThrow("twice");
+    const previous = [{ question: "以前", answer: "あ".repeat(1500), clarifier }];
+    expect(() => buildFollowUpRequest({ ...table, ask: "問い", previous, clarifier })).toThrow("twice");
+    expect(buildFollowUpRequest({ ...table, ask: "問い", previous }).prompt).toContain("あ".repeat(1500));
+    expect(() => buildFollowUpRequest({ ...table, ask: "問い", clarifier: { cardId: "fake", orientation: "upright" } })).toThrow("Unknown card");
+  });
 
   test("introduces the oracle only on the first visit when asking back", () => {
     expect(generateClarifyPrompt("引っ越すべきか", { firstVisit: true })).toContain("一度だけ「ヴェスペラ」と名乗る");

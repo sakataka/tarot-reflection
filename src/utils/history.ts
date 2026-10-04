@@ -20,6 +20,8 @@ export type ReadingRecord = {
   // カードを引く前の問い返しと、読み終えたあとの聞き返し。
   clarification?: Exchange | null;
   followUps?: Exchange[];
+  // 未回答の聞き返しで確定した札。通信をやり直しても引き直さない。
+  pendingFollowUp?: { question: string; clarifier: CardRecord | null };
   createdAt: string;
 };
 

@@ -102,7 +102,7 @@ export type TableObservation = {
   text: string;
 };
 
-export const observeTable = (cards: readonly ReadingCard[], majorArcana: readonly TarotCard[]): TableObservation[] => {
+export const observeTable = (cards: readonly ReadingCard[], majorArcana: readonly TarotCard[], spreadId?: string): TableObservation[] => {
   const observations: TableObservation[] = [];
   const total = cards.length;
   const majors = cards.filter(({ card }) => card.arcana === "major");
@@ -110,6 +110,8 @@ export const observeTable = (cards: readonly ReadingCard[], majorArcana: readonl
 
   // 元素の関係は一枚引きでは生まれない。隣り合う札の組み合わせを並び順に見る。
   for (let index = 0; index + 1 < total; index += 1) {
+    // 十字の配布順は空間上の隣接ではない。連番を隣同士として元素で解釈しない。
+    if (spreadId === "celtic-cross") break;
     const left = cards[index];
     const right = cards[index + 1];
     const leftElement = cardElement(left.card);

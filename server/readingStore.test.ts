@@ -18,6 +18,42 @@ const input = {
 };
 
 describe("readingStore", () => {
+  test("reserves a unique clarifier once, survives restart, rejects replacement and saves with the exchange", async () => {
+    const path = join(directory, "clarifier.json");
+    const store = createReadingStore(path);
+    const record = await store.add(input);
+    const results = await Promise.all([store.prepareFollowUp(record.id, "何を見直す？", true), store.prepareFollowUp(record.id, "何を見直す？", true)]);
+    const first = results[0].pendingFollowUp!.clarifier!;
+    expect(results[1].pendingFollowUp!.clarifier).toEqual(first);
+    expect(["major_00_fool", "cups_02", "wands_05"]).not.toContain(first.cardId);
+    const restarted = createReadingStore(path);
+    expect((await restarted.prepareFollowUp(record.id, "何を見直す？", false)).pendingFollowUp!.clarifier).toEqual(first);
+    await expect(restarted.prepareFollowUp(record.id, "別の問い", true)).rejects.toThrow("先ほど");
+    await expect(restarted.addFollowUp(record.id, { question: "何を見直す？", answer: "答え", clarifier: { cardId: "major_00_fool", orientation: "upright" } })).rejects.toThrow("reserved");
+    await expect(restarted.addFollowUp(record.id, { question: "何を見直す？", answer: "答え" })).rejects.toThrow("reserved");
+    const exchange = { question: "何を見直す？", answer: "答え", clarifier: first };
+    expect(await restarted.addFollowUp(record.id, exchange)).toBe(true);
+    expect(await restarted.addFollowUp(record.id, exchange)).toBe(true);
+    const recovery = await restarted.prepareFollowUp(record.id, exchange.question, true);
+    expect(recovery.pendingFollowUp).toBeUndefined();
+    expect(recovery.followUps).toEqual([exchange]);
+    const second = (await restarted.prepareFollowUp(record.id, "最後に？", true)).pendingFollowUp!.clarifier!;
+    expect(second.cardId).not.toBe(first.cardId);
+    await restarted.addFollowUp(record.id, { question: "最後に？", answer: "二つ目", clarifier: second });
+    await expect(restarted.prepareFollowUp(record.id, "三つ目？", true)).rejects.toThrow("No more");
+    expect((await restarted.prepareFollowUp(record.id, "最後に？", true)).followUps).toHaveLength(2);
+  });
+
+  test("a follow-up without a clarifier leaves the deck unchanged and rejects unreserved cards", async () => {
+    const store = createReadingStore(join(directory, "without-clarifier.json"));
+    const record = await store.add(input);
+    await expect(store.addFollowUp(record.id, { question: "問い", answer: "答え", clarifier: { cardId: "swords_09", orientation: "upright" } })).rejects.toThrow("reserved");
+    const prepared = await store.prepareFollowUp(record.id, "もう少し", false);
+    expect(prepared.pendingFollowUp!.clarifier).toBeNull();
+    expect((await store.prepareFollowUp(record.id, "もう少し", true)).pendingFollowUp!.clarifier).toBeNull();
+    await store.addFollowUp(record.id, { question: "もう少し", answer: "既存の札で答えます" });
+    expect((await store.list())[0].followUps?.[0].clarifier).toBeUndefined();
+  });
   test("saves, lists newest first, ignores duplicates and removes records", async () => {
     const store = createReadingStore(join(directory, "readings.json"));
     const first = await store.add(input);

@@ -5,6 +5,7 @@ import { maxQuestionLength } from "../src/utils/limits";
 import { buildFollowUpRequest, buildPromptFromInterpretationInput } from "./interpretationRequest";
 import { askOracle } from "./oracleEngine";
 import { createReadingStore } from "./readingStore";
+import { readingFromRecord, tablePayload } from "../src/utils/history";
 
 // LocalWeb passes PORT (localweb dev / LaunchAgent). There is no fallback, so a standalone run never takes another app's port.
 const port = Number(process.env.PORT);
@@ -38,6 +39,17 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/readings") {
       return handleReadings(request);
+    }
+
+    const prepareMatch = url.pathname.match(/^\/api\/readings\/([\w-]+)\/follow-up$/);
+    if (prepareMatch && request.method === "POST") {
+      try {
+        const body = await request.json() as { ask?: unknown; drawClarifier?: unknown };
+        const record = await store.prepareFollowUp(prepareMatch[1], typeof body.ask === "string" ? body.ask : "", body.drawClarifier === true);
+        return jsonResponse({ previous: record.followUps ?? [], clarifier: record.pendingFollowUp?.clarifier ?? null, completed: !record.pendingFollowUp });
+      } catch (error) {
+        return jsonResponse({ error: error instanceof Error ? error.message : "補足の一枚を準備できませんでした。" }, 400);
+      }
     }
 
     const followUpMatch = url.pathname.match(/^\/api\/readings\/([\w-]+)\/follow-ups$/);
@@ -102,16 +114,26 @@ async function handleFollowUpStream(request: Request) {
   if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
   let followUp: ReturnType<typeof buildFollowUpRequest>;
   let engine: EngineId;
+  let clarifier: import("../src/utils/history").CardRecord | null = null;
   try {
-    const body = await request.json().catch(() => null);
-    engine = engineOf(body);
-    followUp = buildFollowUpRequest(body);
+    const rawBody: unknown = await request.json().catch(() => null);
+    const body = (rawBody && typeof rawBody === "object" ? rawBody : {}) as { recordId?: unknown; ask?: unknown; drawClarifier?: unknown };
+    engine = engineOf(rawBody);
+    const record = await store.prepareFollowUp(typeof body.recordId === "string" ? body.recordId : "", typeof body.ask === "string" ? body.ask : "", body.drawClarifier === true);
+    if (!record.pendingFollowUp) {
+      const answer = record.followUps?.at(-1)?.answer ?? "";
+      return new Response(`${JSON.stringify({ type: "delta", text: answer })}\n${JSON.stringify({ type: "done" })}\n`, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } });
+    }
+    const reading = readingFromRecord(record);
+    if (!reading) throw new Error("Reading cannot be restored.");
+    clarifier = record.pendingFollowUp?.clarifier ?? null;
+    followUp = buildFollowUpRequest({ ...tablePayload(reading), narration: record.narration, previous: record.followUps ?? [], ask: record.pendingFollowUp?.question, recordId: record.id, clarifier });
   } catch (error) {
     return jsonResponse({ error: error instanceof Error ? error.message : "Invalid request." }, 400);
   }
   return streamOracle(request, engine, followUp.prompt, {
     onComplete: async (answer) => {
-      if (followUp.recordId) await store.addFollowUp(followUp.recordId, { question: followUp.ask, answer }).catch(() => false);
+      if (followUp.recordId) await store.addFollowUp(followUp.recordId, { question: followUp.ask, answer, ...(clarifier ? { clarifier } : {}) }).catch(() => false);
     },
   });
 }

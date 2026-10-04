@@ -1,4 +1,4 @@
-import { jumperPosition, rootPosition, spreads } from "../src/data/spreads";
+import { clarifierPosition, jumperPosition, rootPosition, spreads } from "../src/data/spreads";
 import { tarotDeck } from "../src/data/tarotDeck";
 import type { Exchange, Orientation, Reading, ReadingCard, SpreadPosition } from "../src/types/tarot";
 import { maxFollowUps, type ReadingRecord } from "../src/utils/history";
@@ -41,7 +41,12 @@ const text = (value: unknown, max: number) => (typeof value === "string" ? value
 
 export const parseExchange = (value: unknown): Exchange | null => {
   const body = (value && typeof value === "object" ? value : {}) as { question?: unknown; answer?: unknown };
-  const exchange = { question: text(body.question, maxExchangeLength), answer: text(body.answer, maxExchangeLength) };
+  const exchange: Exchange = { question: text(body.question, maxExchangeLength), answer: text(body.answer, 20_000) };
+  const clarifier = (body as { clarifier?: unknown }).clarifier;
+  if (clarifier) {
+    const parsed = parseCard(clarifier, clarifierPosition);
+    exchange.clarifier = { cardId: parsed.card.id, orientation: parsed.orientation };
+  }
   return exchange.question && exchange.answer ? exchange : null;
 };
 
@@ -86,6 +91,7 @@ export function buildFollowUpRequest(input: unknown): FollowUpRequest {
     previous?: unknown;
     ask?: unknown;
     recordId?: unknown;
+    clarifier?: unknown;
   };
   const reading = parseReadingInput(input);
   const ask = text(body.ask, maxReplyLength);
@@ -93,8 +99,17 @@ export function buildFollowUpRequest(input: unknown): FollowUpRequest {
   const previous = Array.isArray(body.previous) ? body.previous.map(parseExchange).filter((item) => item !== null) : [];
   if (previous.length >= maxFollowUps) throw new Error("No more questions tonight.");
   const narration = typeof body.narration === "string" ? body.narration.slice(0, 20_000) : "";
+  const clarifier = body.clarifier ? parseCard(body.clarifier, clarifierPosition) : null;
+  const usedIds = [...reading.cards, reading.root, reading.jumper].filter((card) => card !== null).map((card) => card.card.id);
+  for (const exchange of previous) {
+    if (exchange.clarifier) {
+      if (usedIds.includes(exchange.clarifier.cardId)) throw new Error("The same card appears twice.");
+      usedIds.push(exchange.clarifier.cardId);
+    }
+  }
+  if (clarifier && usedIds.includes(clarifier.card.id)) throw new Error("The same card appears twice.");
   return {
-    prompt: generateFollowUpPrompt({ reading, narration, previous, ask, isLast: previous.length === maxFollowUps - 1 }),
+    prompt: generateFollowUpPrompt({ reading, narration, previous, ask, clarifier, isLast: previous.length === maxFollowUps - 1 }),
     recordId: typeof body.recordId === "string" ? body.recordId : "",
     ask,
   };

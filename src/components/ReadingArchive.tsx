@@ -9,6 +9,7 @@ import { ExchangeList } from "./FollowUpBox";
 import { MoonGlyph } from "./MoonGlyph";
 import { NarrationView } from "./NarrationView";
 import { ReadingHeading, TableStrip } from "./ReadingTable";
+import { CelticCross } from "./CelticCross";
 
 type ReadingArchiveProps = {
   records: ReadingRecord[];
@@ -102,6 +103,7 @@ const ArchivedReading = ({ record, onBack, onDelete }: {
       </div>
       <ReadingHeading reading={reading} />
       <TableStrip reading={reading} revealed={Array.from({ length: cardCount }, () => true)} />
+      <CelticCross reading={reading} revealed={Array.from({ length: cardCount }, () => true)} />
       <section className="oracle-panel is-open">
         <div className="oracle-heading">
           <p className="ornament-kicker">{oracleName}の言葉</p>

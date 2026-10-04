@@ -10,7 +10,7 @@ export const SpreadSelector = ({ spreads, selectedSpreadId, onChange }: SpreadSe
   <div className="spread-selector" role="radiogroup" aria-label="スプレッド選択">
     {spreads.map((spread, index) => (
       <button
-        className={spread.id === selectedSpreadId ? "spread-option is-selected" : "spread-option"}
+        className={`spread-option preview-${spread.id}${spread.id === selectedSpreadId ? " is-selected" : ""}`}
         key={spread.id}
         type="button"
         role="radio"

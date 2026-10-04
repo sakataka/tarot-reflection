@@ -6,6 +6,7 @@ import { playFlip } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
 import { PromptBox } from "./PromptBox";
 import { ReadingHeading, TableStrip } from "./ReadingTable";
+import { CelticCross } from "./CelticCross";
 
 type ReadingStageProps = {
   reading: Reading;
@@ -39,6 +40,7 @@ export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange, 
     <div className="reading-stage">
       <ReadingHeading reading={reading} />
       <TableStrip reading={reading} revealed={revealed} current={current} hovered={hovered} />
+      <CelticCross reading={reading} revealed={revealed} />
       <PromptBox active={active} pace={pace} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onWaitingHover={setHovered} onSaved={onSaved} onNewQuestion={onNewQuestion} onOpenRecords={onOpenRecords} />
     </div>
   );

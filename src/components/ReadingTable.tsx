@@ -9,7 +9,7 @@ export const orientationLabel = {
   reversed: "逆位置",
 } as const;
 
-const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII"];
+const romanNumerals = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 
 // めくる順の番号を、卓の上での呼び名にする。スプレッドの札はローマ数字、山の底は月。
 export const cardMark = (reading: Reading, cardIndex: number) =>
