@@ -233,8 +233,8 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
     })
     .filter(({ segment, ordinal, text }) => (isGatedSegment(segment) ? ordinal < entered : text.length > 0));
   const awaiting = awaitingOrdinal === null ? null : segments.filter(isGatedSegment)[awaitingOrdinal] ?? null;
-  const isWaiting = !error && visibleSegments.length === 0;
-  const isSpeaking = !finished && !isWaiting && !error;
+  const isWaiting = !error && !awaiting && visibleSegments.length === 0;
+  const isSpeaking = !finished && !isWaiting && !error && !awaiting;
   const waitingWords = waitingSteps(tableCards(reading).map((readingCard) => readingCard.position.name));
 
   useEffect(() => {
@@ -336,7 +336,7 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
   };
 
   return (
-    <section className={finished ? "oracle-panel is-open" : "oracle-panel"} aria-busy={!finished && !error}>
+    <section className={finished ? "oracle-panel is-open" : "oracle-panel"} aria-busy={!finished && !error && !awaiting}>
       <div className="oracle-heading">
         <p className="ornament-kicker">{oracleName}の言葉</p>
         <h2>カードは、こう告げています</h2>
@@ -437,4 +437,3 @@ const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
     </div>
   );
 };
-

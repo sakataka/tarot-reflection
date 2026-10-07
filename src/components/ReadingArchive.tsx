@@ -15,16 +15,18 @@ type ReadingArchiveProps = {
   records: ReadingRecord[];
   selectedId: string | null;
   error: string;
+  loading: boolean;
   // 記録を消したあと、一覧の先頭にしばらく出す知らせ。
   notice: string;
   onSelect: (id: string | null) => void;
   onDelete: (id: string) => Promise<void>;
+  onReload: () => void;
 };
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleString("ja-JP", { month: "long", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit" });
 
-export const ReadingArchive = ({ records, selectedId, error, notice, onSelect, onDelete }: ReadingArchiveProps) => {
+export const ReadingArchive = ({ records, selectedId, error, loading, notice, onSelect, onDelete, onReload }: ReadingArchiveProps) => {
   const selected = records.find((record) => record.id === selectedId);
   // 一覧が浮かび上がる動きは最初の一度だけ。記録から戻ったときは、そのまま見せる。
   const listShown = useRef(false);
@@ -45,10 +47,16 @@ export const ReadingArchive = ({ records, selectedId, error, notice, onSelect, o
       </div>
 
       {notice ? <p className="archive-notice" role="status">{notice}</p> : null}
-      {error ? <p className="copy-fallback" role="alert">{error}</p> : null}
-      {records.length === 0 && !error ? <p className="catalog-empty">まだ記録はありません。語りを最後まで受け取ると、ここに残ります。</p> : null}
+      {loading ? <p className="catalog-empty" role="status">記録を読み込んでいます…</p> : null}
+      {error ? (
+        <div className="archive-load-error" role="alert">
+          <p className="copy-fallback">{error}</p>
+          <button className="secondary-button" type="button" onClick={onReload} disabled={loading}>記録を読み込み直す</button>
+        </div>
+      ) : null}
+      {records.length === 0 && !loading && !error ? <p className="catalog-empty">まだ記録はありません。語りを最後まで受け取ると、ここに残ります。</p> : null}
 
-      <ol className="archive-list">
+      <ol className="archive-list" aria-busy={loading}>
         {records.map((record) => {
           const moon = moonPhase(new Date(record.createdAt));
           const cards = record.cards

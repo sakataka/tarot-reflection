@@ -816,6 +816,7 @@ a.strip-card:hover { color: var(--gold-bright); }
 .archive-toolbar { max-width: 860px; margin: 0 auto 12px; }
 .archive-toolbar .text-button { padding-left: 0; }
 .archive-panel.is-settled { animation: none; }
+.archive-load-error { margin-bottom: 18px; }
 /* 記録を消したあとの知らせ。数秒で消える */
 .archive-notice { display: flex; align-items: center; gap: 10px; overflow: hidden; margin: 0 0 14px; padding: 10px 16px; border: 1px solid var(--line-strong); border-radius: 3px; background: rgba(201, 164, 92, .08); font-family: var(--serif); font-size: 13px; color: var(--ink); letter-spacing: .04em; animation: notice-life 5s ease both; }
 .archive-notice::before { content: "☾"; color: var(--gold); }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { requestBackend } from "./backendClient";
 import { AmbientLight } from "./components/AmbientLight";
@@ -54,6 +54,8 @@ const App = () => {
   const [view, setView] = useState<View>("reading");
   const [records, setRecords] = useState<ReadingRecord[]>([]);
   const [recordsError, setRecordsError] = useState("");
+  const [recordsLoading, setRecordsLoading] = useState(true);
+  const recordsLoadId = useRef(0);
   const [archiveSelectedId, setArchiveSelectedId] = useState<string | null>(null);
   const [archiveNotice, setArchiveNotice] = useState("");
   const [shuffleCount, setShuffleCount] = useState(0);
@@ -69,12 +71,22 @@ const App = () => {
   );
 
   const loadRecords = useCallback(() => {
+    // 入室と更新が重なっても、古い応答で最新の記録や表示状態を戻さない。
+    const loadId = ++recordsLoadId.current;
+    setRecordsLoading(true);
+    setRecordsError("");
     requestBackend<{ readings: ReadingRecord[] }>("readings")
       .then(({ readings }) => {
+        if (loadId !== recordsLoadId.current) return;
         setRecords(readings);
         setRecordsError("");
       })
-      .catch(() => setRecordsError("記録を読み込めませんでした。サーバーが起動しているか確かめてください。"));
+      .catch(() => {
+        if (loadId === recordsLoadId.current) setRecordsError("記録を読み込めませんでした。サーバーが起動しているか確かめて、読み込み直してください。");
+      })
+      .finally(() => {
+        if (loadId === recordsLoadId.current) setRecordsLoading(false);
+      });
   }, []);
 
   useEffect(loadRecords, [loadRecords]);
@@ -311,7 +323,9 @@ const App = () => {
             records={records}
             selectedId={archiveSelectedId}
             error={recordsError}
+            loading={recordsLoading}
             notice={archiveNotice}
+            onReload={loadRecords}
             onSelect={(id) => { setArchiveNotice(""); setArchiveSelectedId(id); }}
             onDelete={deleteRecord}
           />
