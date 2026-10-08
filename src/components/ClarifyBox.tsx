@@ -3,6 +3,7 @@ import { streamBackend } from "../backendClient";
 import type { Exchange } from "../types/tarot";
 import { maxReplyLength as maxAnswerLength } from "../utils/limits";
 import { oracleName } from "../utils/persona";
+import { LetterPaper } from "./LetterPaper";
 import { OraclePortrait } from "./OraclePortrait";
 
 type ClarifyBoxProps = {
@@ -62,20 +63,16 @@ export const ClarifyBox = ({ active, question, onProceed, onEdit }: ClarifyBoxPr
       </div>
 
       {done ? (
-        <label className="field clarify-answer">
-          <span className="field-heading">
-            <strong>あなたの答え</strong>
-            <small>{answer.length} / {maxAnswerLength}</small>
-          </span>
-          <textarea
-            ref={answerRef}
-            value={answer}
-            maxLength={maxAnswerLength}
-            rows={3}
-            placeholder="思いつくままで構いません"
-            onChange={(event) => setAnswer(event.target.value)}
-          />
-        </label>
+        <LetterPaper
+          className="clarify-answer"
+          textareaRef={answerRef}
+          value={answer}
+          maxLength={maxAnswerLength}
+          rows={3}
+          label={`${oracleName}への答え`}
+          placeholder="思いつくままで構いません"
+          onChange={setAnswer}
+        />
       ) : null}
 
       <div className="clarify-actions">

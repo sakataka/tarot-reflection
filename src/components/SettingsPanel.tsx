@@ -1,14 +1,20 @@
+import { useEffect, useState } from "react";
 import { engines, type EngineId } from "../utils/engine";
 import type { NarrationPace } from "../utils/pace";
 import { oracleName } from "../utils/persona";
+import { whisperAvailable } from "../utils/whisper";
 
 type SettingsPanelProps = {
   engine: EngineId;
   pace: NarrationPace;
   soundOn: boolean;
+  ambienceOn: boolean;
+  whisperOn: boolean;
   onEngineChange: (engine: EngineId) => void;
   onPaceChange: (pace: NarrationPace) => void;
   onSoundChange: (soundOn: boolean) => void;
+  onAmbienceChange: (ambienceOn: boolean) => void;
+  onWhisperChange: (whisperOn: boolean) => void;
   onClose: () => void;
   backLabel: string;
 };
@@ -28,6 +34,16 @@ const paceOptions: Option<NarrationPace>[] = [
 const soundOptions: Option<boolean>[] = [
   { value: true, label: "鳴らす", note: "カードを混ぜる音、めくる音、言葉が届いた合図。" },
   { value: false, label: "鳴らさない", note: "音を立てずに占います。" },
+];
+
+const ambienceOptions: Option<boolean>[] = [
+  { value: true, label: "流す", note: "低い部屋鳴り、蝋燭の芯がはぜる音、夜は遠くの虫の声。ごく小さく流します。" },
+  { value: false, label: "流さない", note: "部屋は静まりかえったまま。" },
+];
+
+const whisperOptions = (available: boolean): Option<boolean>[] => [
+  { value: true, label: "囁いてもらう", note: available ? `答えの枠が開くと、${oracleName}が声に出して告げます。` : "声の準備（音声合成のトークン）がまだありません。整うと囁きます。" },
+  { value: false, label: "文字だけ", note: "答えは文字で受け取ります。囁きは、押せばいつでも聴けます。" },
 ];
 
 const SettingGroup = <T extends string | boolean>({ title, options, value, onChange }: {
@@ -67,13 +83,22 @@ const SettingGroup = <T extends string | boolean>({ title, options, value, onCha
 );
 
 // 占いの卓の外にある、舞台裏の設定。選んだものはこのブラウザに覚えておく。
-export const SettingsPanel = ({ engine, pace, soundOn, onEngineChange, onPaceChange, onSoundChange, onClose, backLabel }: SettingsPanelProps) => (
+export const SettingsPanel = ({ engine, pace, soundOn, ambienceOn, whisperOn, onEngineChange, onPaceChange, onSoundChange, onAmbienceChange, onWhisperChange, onClose, backLabel }: SettingsPanelProps) => {
+  const [voiceReady, setVoiceReady] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void whisperAvailable().then((ok) => alive && setVoiceReady(ok));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  return (
   <section className="guide-panel settings-panel">
     <div className="catalog-heading">
       <div>
-        <p className="ornament-kicker">Settings</p>
+        <p className="ornament-kicker">Backstage</p>
         <h1>設定</h1>
-        <p>選んだものは、このブラウザに覚えておきます。</p>
+        <p>卓の外の、舞台裏の選択です。選んだものは、このブラウザに覚えておきます。</p>
       </div>
     </div>
 
@@ -85,9 +110,12 @@ export const SettingsPanel = ({ engine, pace, soundOn, onEngineChange, onPaceCha
     />
     <SettingGroup title="語りの見せ方" options={paceOptions} value={pace} onChange={onPaceChange} />
     <SettingGroup title="効果音" options={soundOptions} value={soundOn} onChange={onSoundChange} />
+    <SettingGroup title="部屋の音" options={ambienceOptions} value={ambienceOn} onChange={onAmbienceChange} />
+    <SettingGroup title="答えの囁き" options={whisperOptions(voiceReady)} value={whisperOn} onChange={onWhisperChange} />
 
     <div className="guide-back">
       <button className="secondary-button" type="button" onClick={onClose}>{backLabel}</button>
     </div>
   </section>
-);
+  );
+};

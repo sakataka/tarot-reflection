@@ -4,18 +4,22 @@ import type { Reading } from "../types/tarot";
 import { tablePayload, type ReadingRecord } from "../utils/history";
 import { isGatedSegment, narrationToPlainText, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
 import type { NarrationPace } from "../utils/pace";
+import { answerLabel } from "../utils/moment";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
+import { Farewell } from "./Farewell";
 import { FollowUpBox } from "./FollowUpBox";
 import { NarrationView } from "./NarrationView";
 import { OraclePortrait } from "./OraclePortrait";
 import { cardMark, narrationCardId, orientationLabel } from "./ReadingTable";
+import { Whisper } from "./Whisper";
 
 type PromptBoxProps = {
   reading: Reading;
   active: boolean;
   pace: NarrationPace;
+  whisperOn: boolean;
   onRecordsChange: () => void;
   revealed: boolean[];
   onRevealCard: (cardIndex: number) => void;
@@ -23,8 +27,8 @@ type PromptBoxProps = {
   // 言葉を待つ間、占い師の手がかざされているカード（上の帯で光らせる）。
   onWaitingHover?: (cardIndex: number | null) => void;
   onSaved?: (record: ReadingRecord) => void;
-  onNewQuestion: () => void;
-  onOpenRecords: () => void;
+  onDarken: () => void;
+  onRelight: () => void;
 };
 
 const ordinalJa = ["一", "二", "三", "四", "五", "六", "七"];
@@ -55,7 +59,7 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 // 語りは区切りごとに止まり、相談者が促すと次のカードをめくる。本物の卓で、一枚ずつ間を置くように。
-export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, onRevealCard, onCurrentChange, onWaitingHover, onSaved, onNewQuestion, onOpenRecords }: PromptBoxProps) => {
+export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, revealed, onRevealCard, onCurrentChange, onWaitingHover, onSaved, onDarken, onRelight }: PromptBoxProps) => {
   const cardCount = tableCards(reading).length;
   const [raw, setRaw] = useState("");
   const [streamDone, setStreamDone] = useState(false);
@@ -67,6 +71,8 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [leaving, setLeaving] = useState(false);
+  const answerTitle = answerLabel(new Date(reading.createdAt));
   // 語りに入った区切り（カード・総括・答え）の数と、相談者の合図を待っている区切り。
   const [entered, setEntered] = useState(0);
   const [awaitingOrdinal, setAwaitingOrdinal] = useState<number | null>(null);
@@ -116,8 +122,8 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
       .catch((caughtError: unknown) => {
         if (abort.signal.aborted) return;
         setError(caughtError instanceof TypeError
-          ? `${oracleName}のところまで声が届きませんでした。サーバーが起動しているか確かめて、もう一度呼んでみてください。`
-          : caughtError instanceof Error ? caughtError.message : "今夜はうまく言葉が降りてきませんでした。少し間を置いて、もう一度呼んでみてください。");
+          ? "蝋燭がふっと揺れて、言葉が途切れました。（占いのサーバーに届きませんでした。起動しているか確かめてください）"
+          : caughtError instanceof Error ? `言葉がうまく降りてきませんでした。（${caughtError.message}）` : "言葉がうまく降りてきませんでした。少し間を置いて、もう一度呼んでください。");
       });
 
     return () => abort.abort();
@@ -234,6 +240,9 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
     .filter(({ segment, ordinal, text }) => (isGatedSegment(segment) ? ordinal < entered : text.length > 0));
   const awaiting = awaitingOrdinal === null ? null : segments.filter(isGatedSegment)[awaitingOrdinal] ?? null;
   const isWaiting = !error && !awaiting && visibleSegments.length === 0;
+  // 答えの一文は、語りが届き終えてから囁きの声に回す。枠が開いたら囁く。
+  const messageText = streamDone ? segments.find((segment) => segment.kind === "message")?.text.trim() ?? "" : "";
+  const messageShown = visibleSegments.some(({ segment }) => segment.kind === "message");
   const isSpeaking = !finished && !isWaiting && !error && !awaiting;
   const waitingWords = waitingSteps(tableCards(reading).map((readingCard) => readingCard.position.name));
 
@@ -324,7 +333,7 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
 
   const copyAnswer = async () => {
     try {
-      await navigator.clipboard.writeText(narrationToPlainText(segments, cardLabel));
+      await navigator.clipboard.writeText(narrationToPlainText(segments, cardLabel, answerTitle));
       setCopyState("copied");
     } catch {
       setCopyState("failed");
@@ -350,11 +359,18 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
       ) : null}
 
       {visibleSegments.length > 0 ? (
-        <NarrationView reading={reading} segments={visibleSegments} speaking={isSpeaking && !awaiting} animate={!instant} />
+        <NarrationView
+          reading={reading}
+          segments={visibleSegments}
+          speaking={isSpeaking && !awaiting}
+          animate={!instant}
+          showNotes={finished}
+          messageSlot={messageText ? <Whisper text={messageText} enabled={whisperOn} prefetch auto={messageShown} /> : null}
+        />
       ) : null}
 
       {awaiting && !error ? (
-        <Gate reading={reading} segment={awaiting} buttonRef={gateRef} onOpen={openGate} />
+        <Gate reading={reading} segment={awaiting} buttonRef={gateRef} answerTitle={answerTitle} onOpen={openGate} />
       ) : null}
 
       {isSpeaking ? <div className="narration-tail" aria-hidden="true" /> : null}
@@ -372,12 +388,12 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
         <div className="answer-box">
           <p className="answer-closing">カードの言葉は答えではなく、足元を照らす灯りです。どちらへ歩くかは、あなたが決めてよいのです。</p>
           <div className="answer-actions">
-            <button className="secondary-button" type="button" onClick={copyAnswer}>
-              {copyState === "copied" ? "書き写しました" : "言葉をコピーする"}
+            <button className="text-button" type="button" onClick={copyAnswer}>
+              {copyState === "copied" ? "書き写しました" : "言葉を書き写す"}
             </button>
-            {recordId ? <p className="answer-saved">☾ この夜の言葉は「記録」に残しました</p> : null}
+            {recordId ? <p className="answer-saved">☾ この夜の言葉は、帳面に綴じました</p> : null}
             {copyState === "failed" ? (
-              <p className="copy-fallback">コピーできませんでした。本文を選んで書き写してください。</p>
+              <p className="copy-fallback">うまく書き写せませんでした。本文を選んで写してください。</p>
             ) : null}
           </div>
         </div>
@@ -386,19 +402,29 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
       {streamDone && !recordId ? (
         <div className="oracle-save" role={saveError ? "alert" : "status"}>
           <p className="copy-fallback">{saveError
-            ? "記録を残せませんでした。言葉はこの画面で読めます。画面を閉じる前に、もう一度保存してください。"
-            : "今夜の言葉を記録しています。"}</p>
-          {saveError ? <button className="secondary-button" type="button" onClick={() => { setSaveError(false); setSaveAttempt((count) => count + 1); }}>記録の保存をやり直す</button> : null}
-          {finished ? <p className="copy-fallback">記録を保存すると、聞き返せます。</p> : null}
+            ? "帳面のインクがかすれて、書き留められませんでした。言葉はこの画面で読めます。閉じる前に、もう一度綴じてください。"
+            : `${oracleName}が、帳面に書き留めています…`}</p>
+          {saveError ? <button className="secondary-button" type="button" onClick={() => { setSaveError(false); setSaveAttempt((count) => count + 1); }}>もう一度、帳面に綴じる</button> : null}
+          {finished ? <p className="copy-fallback">帳面に綴じ終えると、聞き返せます。</p> : null}
         </div>
       ) : null}
       {finished && recordId ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} onRecordsChange={onRecordsChange} /> : null}
 
       {finished ? (
         <div className="reading-end">
-          <button className="secondary-button" type="button" onClick={onNewQuestion}>別の問いを置く</button>
-          {recordId ? <button className="text-button" type="button" onClick={onOpenRecords}>これまでの記録を見る</button> : null}
+          <p>聞きたいことを聞き終えたら、卓を閉じましょう。</p>
+          <button className="secondary-button" type="button" onClick={() => setLeaving(true)}>卓を閉じる</button>
         </div>
+      ) : null}
+
+      {leaving ? (
+        <Farewell
+          reading={reading}
+          answer={messageText || answerFallback(segments)}
+          onCancel={() => setLeaving(false)}
+          onDarken={onDarken}
+          onRelight={onRelight}
+        />
       ) : null}
     </section>
   );
@@ -406,20 +432,21 @@ export const PromptBox = ({ reading, active, pace, onRecordsChange, revealed, on
 
 type GateProps = {
   reading: Reading;
+  answerTitle: string;
   segment: NarrationSegment;
   buttonRef: RefObject<HTMLButtonElement | null>;
   onOpen: () => void;
 };
 
 // 語りの区切りで、次に何が起きるかを示して相談者の合図を待つ。
-const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
+const Gate = ({ reading, segment, buttonRef, answerTitle, onOpen }: GateProps) => {
   const flipped = tableCards(reading);
   const next = segment.kind === "card" ? flipped[segment.cardIndex] : null;
   const isRoot = segment.kind === "card" && segment.cardIndex >= reading.cards.length;
   const count = flipped.length;
   const label = segment.kind === "card"
     ? isRoot ? "山の底をめくる" : count === 1 ? "カードをめくる" : segment.cardIndex === 0 ? "カードを返していく" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
-    : segment.kind === "close" ? "では、どういうことか" : "今夜の答えを聞く";
+    : segment.kind === "close" ? "では、どういうことか" : `${answerTitle}を聞く`;
   const hint = next
     ? count > 1 && segment.kind === "card" && segment.cardIndex === 0
       ? `${count}枚を、順に表に返します`
@@ -436,4 +463,11 @@ const Gate = ({ reading, segment, buttonRef, onOpen }: GateProps) => {
       </button>
     </div>
   );
+};
+
+// 答えの合図が抜けた語りでも、総括の最後の一文を封書に綴じる。
+const answerFallback = (segments: NarrationSegment[]) => {
+  const tail = segments.filter((segment) => segment.kind === "close" || segment.kind === "message").at(-1)?.text.trim() ?? "";
+  const sentences = tail.split(/(?<=。)/).filter((sentence) => sentence.trim());
+  return sentences.at(-1)?.trim() ?? "";
 };

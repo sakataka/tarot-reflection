@@ -57,7 +57,7 @@ export const Prelude = ({ moon }: { moon: MoonPhase }) => {
           <path className="prelude-lit" d={litMoonPath(moon.age, 30)} />
         </g>
       </svg>
-      <p className="prelude-title">Tarot Reflection</p>
+      <p className="prelude-title">Moonlit Tarot</p>
       <p className="prelude-sub">{moon.name}・月齢 {moon.age.toFixed(1)}</p>
     </div>
   );

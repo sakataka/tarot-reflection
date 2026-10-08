@@ -1,3 +1,4 @@
+import { oracleName } from "../utils/persona";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { tarotDeck } from "../data/tarotDeck";
 import type { Suit, TarotCard } from "../types/tarot";
@@ -105,9 +106,9 @@ export const CardCatalog = () => {
     <section className="catalog-panel" aria-labelledby="catalog-title">
       <div className="catalog-heading">
         <div>
-          <p className="ornament-kicker">Cards</p>
-          <h1 id="catalog-title">カード図鑑</h1>
-          <p>78枚のカードと、正位置・逆位置それぞれの基本的な意味。</p>
+          <p className="ornament-kicker">The Card Box</p>
+          <h1 id="catalog-title">札箱</h1>
+          <p>{oracleName}が使い込んだ78枚。一枚ずつ取り出して、正位置・逆位置それぞれの意味を確かめられます。</p>
         </div>
       </div>
 

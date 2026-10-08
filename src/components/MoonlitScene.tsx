@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { moonIllumination, synodicMonth, type MoonPhase } from "../utils/moment";
+import { moonIllumination, synodicMonth, type MoonPhase, type RoomHour } from "../utils/moment";
 
 type MoonlitSceneProps = {
   moon: MoonPhase;
+  hour?: RoomHour;
+};
+
+// 窓の外の時刻。地平の光の色と強さ、星の見え方、全体の明るさ。
+const skies: Record<RoomHour, { glow: [number, number, number]; amount: number; stars: number; lift: number }> = {
+  night: { glow: [0, 0, 0], amount: 0, stars: 1, lift: 0 },
+  dusk: { glow: [.95, .45, .32], amount: .55, stars: .55, lift: .05 },
+  morning: { glow: [.95, .7, .62], amount: .6, stars: .15, lift: .14 },
+  day: { glow: [.62, .72, .86], amount: .16, stars: 0, lift: .1 },
 };
 
 // 庭の絵に描かれた月の位置（画像 1280×854 の中の中心と半径）。
@@ -34,6 +43,10 @@ uniform float uLit;
 uniform float uReveal;
 uniform vec2 uMoon;
 uniform float uMoonR;
+uniform vec3 uGlow;
+uniform float uGlowAmt;
+uniform float uStars;
+uniform float uLift;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
@@ -85,7 +98,13 @@ void main() {
   // 空の星を瞬かせる。
   float sky = 1. - smoothstep(.36, .5, uv.y);
   float star = smoothstep(.62, .8, luminance) * sky * step(1.35, r);
-  color += color * star * (.5 + .5 * sin(uTime * (1.5 + hash(floor(uv * 400.)) * 2.) + hash(floor(uv * 300.)) * 6.28)) * .55;
+  color += color * star * (.5 + .5 * sin(uTime * (1.5 + hash(floor(uv * 400.)) * 2.) + hash(floor(uv * 300.)) * 6.28)) * .55 * uStars;
+  color -= color * star * (1. - uStars) * .35;
+
+  // 明け方・夕暮れ・昼は、山の端に光がにじみ、空が少し持ち上がる。
+  float horizon = exp(-pow((uv.y - .44) / .11, 2.)) * (1. - smoothstep(.48, .56, uv.y));
+  color += uGlow * horizon * uGlowAmt;
+  color += uGlow * sky * uLift;
 
   // 夜の色へ寄せ、外側を沈め、粒子を重ねる。
   vec2 v = screen - .5;
@@ -109,12 +128,14 @@ const compile = (gl: WebGLRenderingContext, type: number, source: string) => {
 const prefersReducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 
 // 導入の風景。WebGL が使えなければ、同じ絵をそのまま置く。
-export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
+export const MoonlitScene = ({ moon, hour = "night" }: MoonlitSceneProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [live, setLive] = useState(false);
   // 月齢は描画のたびにわずかに進むので、絵を描き直さずに最新の値だけを渡す。
   const moonRef = useRef(moon);
   moonRef.current = moon;
+  const hourRef = useRef(hour);
+  hourRef.current = hour;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -143,6 +164,7 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       res: uniform("uRes"), img: uniform("uImg"), focus: uniform("uFocus"), pointer: uniform("uPointer"),
       time: uniform("uTime"), scroll: uniform("uScroll"), phase: uniform("uPhase"), lit: uniform("uLit"),
       reveal: uniform("uReveal"), moon: uniform("uMoon"), moonR: uniform("uMoonR"),
+      glow: uniform("uGlow"), glowAmt: uniform("uGlowAmt"), stars: uniform("uStars"), lift: uniform("uLift"),
     };
     gl.uniform2f(u.img, imageSize[0], imageSize[1]);
     gl.uniform2f(u.moon, moonCenter[0], moonCenter[1]);
@@ -185,6 +207,11 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
       const scroll = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height)));
       gl.uniform1f(u.phase, moonRef.current.age / synodicMonth);
       gl.uniform1f(u.lit, moonIllumination(moonRef.current.age));
+      const sky = skies[hourRef.current];
+      gl.uniform3f(u.glow, sky.glow[0], sky.glow[1], sky.glow[2]);
+      gl.uniform1f(u.glowAmt, sky.amount);
+      gl.uniform1f(u.stars, sky.stars);
+      gl.uniform1f(u.lift, sky.lift);
       gl.uniform1f(u.time, still ? 2 : elapsed);
       gl.uniform2f(u.pointer, pointer.x, pointer.y);
       gl.uniform1f(u.scroll, scroll);
@@ -248,7 +275,7 @@ export const MoonlitScene = ({ moon }: MoonlitSceneProps) => {
   }, []);
 
   return (
-    <div className={live ? "moonlit-scene is-live" : "moonlit-scene"}>
+    <div className={`moonlit-scene is-${hour}${live ? " is-live" : ""}`}>
       <img src="cards/selection_oracle.webp" alt="" aria-hidden="true" />
       <canvas ref={canvasRef} aria-hidden="true" />
     </div>

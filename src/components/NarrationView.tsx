@@ -1,6 +1,6 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import type { Reading, ReadingCard } from "../types/tarot";
-import { moonPhase } from "../utils/moment";
+import { answerLabel, moonPhase } from "../utils/moment";
 import { splitParagraphs, type NarrationSegment } from "../utils/narration";
 import { tableCards } from "../utils/tarot";
 import { CardView } from "./CardView";
@@ -17,14 +17,19 @@ type NarrationViewProps = {
   speaking?: boolean;
   // 語りに合わせてめくる演出をするか（記録の読み返しでは最初から表）。
   animate?: boolean;
+  // 札の意味（裏書き）を添えるか。語りの最中は出さず、語り終えてから開けるようにする。
+  showNotes?: boolean;
+  // 答えの枠の下に添えるもの（囁きを聴く、など）。
+  messageSlot?: ReactNode;
 };
 
 // 卓から持ち上げたカードを、語りの頭で大きく見せる。語りと同時に表へ返す。
-const CardStage = ({ readingCard, mark, animate, note }: {
+const CardStage = ({ readingCard, mark, animate, note, showNotes }: {
   readingCard: ReadingCard;
   mark: string;
   animate: boolean;
   note?: string;
+  showNotes: boolean;
 }) => {
   const [faceDown, setFaceDown] = useState(animate);
   const meaning = readingCard.orientation === "upright" ? readingCard.card.upright : readingCard.card.reversed;
@@ -51,8 +56,14 @@ const CardStage = ({ readingCard, mark, animate, note }: {
         <small>{mark}・{readingCard.position.name}</small>
         <span className="card-stage-role">{note ?? readingCard.position.role}</span>
         <strong>{readingCard.card.nameJa}</strong>
-        <em>{readingCard.card.nameEn}・{orientationLabel[readingCard.orientation]}</em>
-        <span className="card-stage-keywords">{meaning.keywords.join("・")}</span>
+        <em>{orientationLabel[readingCard.orientation]}</em>
+        {showNotes ? (
+          <details className="card-notes">
+            <summary>札の裏書き</summary>
+            <p><span lang="en">{readingCard.card.nameEn}</span></p>
+            <p className="card-stage-keywords">{meaning.keywords.join("・")}</p>
+          </details>
+        ) : null}
       </div>
     </div>
   );
@@ -70,7 +81,7 @@ const TableOverview = ({ reading }: { reading: Reading }) => (
   </div>
 );
 
-export const NarrationView = ({ reading, segments, speaking = false, animate = false }: NarrationViewProps) => {
+export const NarrationView = ({ reading, segments, speaking = false, animate = false, showNotes = true, messageSlot }: NarrationViewProps) => {
   const flipped = tableCards(reading);
   const lastVisible = segments.length - 1;
 
@@ -90,7 +101,7 @@ export const NarrationView = ({ reading, segments, speaking = false, animate = f
         if (segment.kind === "card") {
           return (
             <div className="narration-segment is-card" id={narrationCardId(segment.cardIndex)} key={`card-${segment.cardIndex}`}>
-              <CardStage readingCard={flipped[segment.cardIndex]} mark={cardMark(reading, segment.cardIndex)} animate={animate} />
+              <CardStage readingCard={flipped[segment.cardIndex]} mark={cardMark(reading, segment.cardIndex)} animate={animate} showNotes={showNotes} />
               {body}
             </div>
           );
@@ -107,18 +118,19 @@ export const NarrationView = ({ reading, segments, speaking = false, animate = f
         if (segment.kind === "message") {
           return (
             <div className="narration-segment is-message" id="narration-message" key="message">
-              <p className="narration-kicker">今夜の答え</p>
+              <p className="narration-kicker">{answerLabel(new Date(reading.createdAt))}</p>
               <div className="message-words">
                 <MoonGlyph age={moonPhase(new Date(reading.createdAt)).age} className="message-emblem" />
                 {body}
               </div>
+              {messageSlot}
             </div>
           );
         }
         return (
           <div className="narration-segment is-intro" key="intro">
             {reading.jumper ? (
-              <CardStage readingCard={reading.jumper} mark="✦" animate={false} note="混ぜている途中で、自分から出てきたカード" />
+              <CardStage readingCard={reading.jumper} mark="✦" animate={false} note="混ぜている途中で、自分から出てきたカード" showNotes={showNotes} />
             ) : null}
             {body}
           </div>

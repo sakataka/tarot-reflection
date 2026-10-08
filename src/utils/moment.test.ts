@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { moonPhase, readingDayKey, timeBand } from "./moment";
+import { answerLabel, lunationOf, moonPhase, readingDayKey, roomHour, timeBand } from "./moment";
 
 describe("moonPhase", () => {
   test("recognises known new and full moons", () => {
@@ -24,5 +24,30 @@ describe("time", () => {
   test("keeps late night questions in the same reading night until dawn", () => {
     expect(readingDayKey(new Date(2026, 8, 28, 3, 30))).toBe("2026-09-27");
     expect(readingDayKey(new Date(2026, 8, 28, 4, 30))).toBe("2026-09-28");
+  });
+});
+
+describe("room hour", () => {
+  test("names the answer after the hour it was asked", () => {
+    expect(answerLabel(new Date(2026, 9, 5, 22, 0))).toBe("今夜の答え");
+    expect(answerLabel(new Date(2026, 9, 5, 3, 0))).toBe("今夜の答え");
+    expect(answerLabel(new Date(2026, 9, 5, 7, 3))).toBe("今朝の答え");
+    expect(answerLabel(new Date(2026, 9, 5, 13, 0))).toBe("今日の答え");
+  });
+
+  test("tells dusk from night", () => {
+    expect(roomHour(new Date(2026, 9, 5, 18, 0))).toBe("dusk");
+    expect(roomHour(new Date(2026, 9, 5, 19, 0))).toBe("night");
+  });
+});
+
+describe("lunation", () => {
+  test("groups nights between two new moons", () => {
+    // 2026-09-11 の新月から 2026-10-10 ごろの新月まで（平均の月齢で数えるので、半日ほどずれる）。
+    const early = lunationOf(new Date("2026-09-13T21:00:00+09:00"));
+    const late = lunationOf(new Date("2026-10-08T21:00:00+09:00"));
+    expect(late.index).toBe(early.index);
+    expect(early.start.getTime()).toBeLessThan(new Date("2026-09-13T00:00:00+09:00").getTime());
+    expect(lunationOf(new Date("2026-10-12T21:00:00+09:00")).index).toBe(early.index + 1);
   });
 });

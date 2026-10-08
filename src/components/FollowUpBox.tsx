@@ -4,10 +4,12 @@ import type { Exchange, Reading } from "../types/tarot";
 import { maxFollowUps, tablePayload, type CardRecord } from "../utils/history";
 import { cleanNarrationText, splitParagraphs } from "../utils/narration";
 import { maxReplyLength as maxAskLength } from "../utils/limits";
+import { tonightWord } from "../utils/moment";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tarotDeck } from "../data/tarotDeck";
 import { CardView } from "./CardView";
+import { LetterPaper } from "./LetterPaper";
 
 type FollowUpBoxProps = {
   reading: Reading;
@@ -67,7 +69,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       playChime();
     } catch {
       setSaveFailed(true);
-      setError("答えは届きましたが、記録を残せませんでした。もう一度保存してください。");
+      setError("答えは届きましたが、帳面に書き留められませんでした。もう一度綴じてください。");
     }
   };
 
@@ -117,7 +119,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       await save(exchange);
     } catch (caughtError: unknown) {
       if (abort.signal.aborted) return;
-      setError(caughtError instanceof Error ? caughtError.message : "言葉が届きませんでした。");
+      setError(caughtError instanceof Error ? `言葉が途切れました。（${caughtError.message}）` : "言葉が途切れました。もう一度、聞き返してください。");
       setPending(null);
     } finally {
       busyRef.current = false;
@@ -128,7 +130,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     <div className="follow-up">
       <div className="follow-up-heading">
         <p className="ornament-kicker">もう少しだけ</p>
-        <p>気になったことがあれば、{oracleName}に聞き返せます。{remaining > 0 ? `今夜はあと${remaining}度まで。` : ""}</p>
+        <p>気になったことがあれば、{oracleName}に聞き返せます。{remaining > 0 ? `${tonightWord(new Date(reading.createdAt))}はあと${remaining}度まで。` : ""}</p>
       </div>
 
       <ExchangeList exchanges={exchanges} />
@@ -155,19 +157,20 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
 
       {error ? <p className="copy-fallback" role="alert">{error}</p> : null}
       {saveFailed && pending ? (
-        <button className="secondary-button" type="button" onClick={() => void save(pending)}>聞き返しの保存をやり直す</button>
+        <button className="secondary-button" type="button" onClick={() => void save(pending)}>もう一度、帳面に綴じる</button>
       ) : null}
 
       {remaining > 0 && !pending ? (
         <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); void send(); }}>
-          <textarea
+          <LetterPaper
+            className="follow-up-paper"
             value={ask}
             readOnly={Boolean(reserved)}
             maxLength={maxAskLength}
             rows={2}
             placeholder="たとえば「山の底のカードが、もう少し気になります」"
-            aria-label={`${oracleName}に聞き返す`}
-            onChange={(event) => setAsk(event.target.value)}
+            label={`${oracleName}に聞き返す`}
+            onChange={setAsk}
           />
           <label className="clarifier-choice"><input type="checkbox" checked={drawClarifier} disabled={Boolean(reserved)} onChange={(event) => setDrawClarifier(event.target.checked)} />補足の一枚を引いてもらう</label>
           <p className="clarifier-note">元の占いを掘り下げる一枚です。{reserved ? "先ほどと同じ問いと札で、言葉を待ち直します。" : "引かずに聞き返すこともできます。"}</p>
@@ -176,7 +179,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
         </form>
       ) : null}
 
-      {remaining <= 0 ? <p className="follow-up-closed">今夜の卓は、ここで閉じましょう。</p> : null}
+      {remaining <= 0 ? <p className="follow-up-closed">この卓で聞けるのは、ここまで。</p> : null}
     </div>
   );
 };

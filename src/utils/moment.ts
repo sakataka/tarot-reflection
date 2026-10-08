@@ -53,6 +53,40 @@ const timeBands: { from: number; name: string }[] = [
 export const timeBand = (date: Date) =>
   [...timeBands].reverse().find((band) => date.getHours() >= band.from)?.name ?? "夜";
 
+// 部屋の時刻。窓の外の明るさと、ヴェスペラの言葉づかい（今夜・今朝・今日）を決める。
+// 部屋はいつも灯りを落としているが、昼はカーテンを引き、明け方は窓が白み、夕暮れは灯りを入れたところ。
+export type RoomHour = "night" | "morning" | "day" | "dusk";
+
+export const roomHour = (date: Date): RoomHour => {
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 10) return "morning";
+  if (hour >= 10 && hour < 17) return "day";
+  if (hour >= 17 && hour < 19) return "dusk";
+  return "night";
+};
+
+const hourWords: Record<RoomHour, string> = { night: "今夜", dusk: "今夜", morning: "今朝", day: "今日" };
+
+// 「今夜の答え」のように、占った時刻に合わせて呼ぶ。
+export const tonightWord = (date: Date) => hourWords[roomHour(date)];
+export const answerLabel = (date: Date) => `${tonightWord(date)}の答え`;
+
+// 部屋に入ったときの、ヴェスペラの最初の一言。
+export const roomGreeting: Record<RoomHour, [string, string]> = {
+  night: ["ようこそ。灯りを少し落としましょう。", "いま心にかかっていることを、ひとつだけ聞かせてください。"],
+  dusk: ["ちょうど蝋燭に火を入れたところです。", "日が落ちきる前に、心にかかっていることをひとつだけ聞かせて。"],
+  morning: ["夜が明けてしまいましたね。窓の白むのは、気にしないで。", "眠れなかった夜のぶんも、ひとつだけ聞かせてください。"],
+  day: ["外はまだ明るいけれど、カーテンを引きましょう。", "ここは昼でも夜の部屋。心にかかっていることを、ひとつだけ聞かせて。"],
+};
+
+// 占い師に渡す、部屋の様子。
+const roomScene: Record<RoomHour, string> = {
+  night: "夜の部屋。蝋燭の灯りだけがある。",
+  dusk: "日が落ちかけ、蝋燭に火を入れたばかりの部屋。",
+  morning: "夜が明け、窓が白みはじめている。蝋燭はまだ灯したまま。",
+  day: "外はまだ明るいが、厚いカーテンを引いて蝋燭を灯した部屋。",
+};
+
 // 占いの一日は夜明け（4時）で区切る。夜更けの問いは、まだ「今夜」のうちに数える。
 const dayBoundaryHour = 4;
 
@@ -64,5 +98,13 @@ export const readingDayKey = (date: Date) => {
 export const describeMoment = (date: Date) => {
   const moon = moonPhase(date);
   const dateLabel = date.toLocaleDateString("ja-JP", { month: "long", day: "numeric", weekday: "long" });
-  return `${dateLabel}の${timeBand(date)}。月齢${moon.age.toFixed(1)}の${moon.name}（${moon.waxing ? "満ちていく" : "欠けていく"}月）。${moon.mood}。`;
+  return `${dateLabel}の${timeBand(date)}。${roomScene[roomHour(date)]}月齢${moon.age.toFixed(1)}の${moon.name}（${moon.waxing ? "満ちていく" : "欠けていく"}月）。${moon.mood}。`;
+};
+
+// 新月から次の新月までの一巡り（朔望月）。帳面は、この巡りごとに夜を綴じる。
+export type Lunation = { index: number; start: Date };
+
+export const lunationOf = (date: Date): Lunation => {
+  const index = Math.floor((date.getTime() - referenceNewMoon) / dayMs / synodicMonth);
+  return { index, start: new Date(referenceNewMoon + index * synodicMonth * dayMs) };
 };

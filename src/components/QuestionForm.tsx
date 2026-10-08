@@ -2,8 +2,9 @@ import type { ReactNode } from "react";
 import type { Spread } from "../types/tarot";
 import type { ReadingRecord } from "../utils/history";
 import { maxQuestionLength } from "../utils/limits";
-import type { MoonPhase } from "../utils/moment";
+import { roomGreeting, type MoonPhase, type RoomHour } from "../utils/moment";
 import { oracleName } from "../utils/persona";
+import { LetterPaper } from "./LetterPaper";
 import { MoonGlyph } from "./MoonGlyph";
 import { MoonlitScene } from "./MoonlitScene";
 import { RevealText } from "./RevealText";
@@ -15,7 +16,7 @@ type QuestionFormProps = {
   selectedSpreadId: string;
   canShuffle: boolean;
   moon: MoonPhase;
-  isNight: boolean;
+  hour: RoomHour;
   sameNightReading?: ReadingRecord;
   onOpenRecord: (record: ReadingRecord) => void;
   onOpenGuide: () => void;
@@ -32,7 +33,7 @@ export const QuestionForm = ({
   selectedSpreadId,
   canShuffle,
   moon,
-  isNight,
+  hour,
   sameNightReading,
   onOpenRecord,
   onOpenGuide,
@@ -41,16 +42,17 @@ export const QuestionForm = ({
   onSpreadChange,
   onConfide,
 }: QuestionFormProps) => {
-  const tonight = isNight ? "今夜" : "今日";
+  const tonight = hour === "morning" ? "今朝" : hour === "day" ? "今日" : "今夜";
+  const [greeting, request] = roomGreeting[hour];
   const selectedSpread = spreads.find((spread) => spread.id === selectedSpreadId) ?? spreads[0];
 
   return (
     <section className={clarifySlot ? "intro-panel is-confiding" : "intro-panel"}>
       <div className="intro-hero">
-        <MoonlitScene moon={moon} />
+        <MoonlitScene moon={moon} hour={hour} />
         <div className="intro-copy">
           <p className="ornament-kicker">Moonlit Tarot</p>
-          <h1><RevealText lines={["今夜のカードに、", "胸の内をたずねる"]} delay={500} /></h1>
+          <h1><RevealText lines={[`${tonight}のカードに、`, "胸の内をたずねる"]} delay={500} /></h1>
           <p className="tonight-moon">
             <MoonGlyph age={moon.age} className="tonight-moon-glyph" />
             {tonight}は<strong>{moon.name}</strong>
@@ -58,7 +60,7 @@ export const QuestionForm = ({
             <span className="tonight-moon-mood">{moon.mood}。</span>
           </p>
           <p className="intro-greeting">
-            ようこそ。灯りを少し落としましょう。<br />いま心にかかっていることを、ひとつだけ聞かせてください。
+            {greeting}<br />{request}
             <span className="intro-signature">占い部屋の主　{oracleName}</span>
           </p>
         </div>
@@ -67,31 +69,25 @@ export const QuestionForm = ({
       {clarifySlot ? (
         // 打ち明けたあとは、書いた問いと並べ方を控えめに残し、占い師とのやりとりに目を向ける。
         <div className="confided">
-          <p className="confided-label">あなたの問い</p>
           <p className="confided-question">{question.trim()}</p>
-          <p className="confided-spread">{selectedSpread.name}で占います</p>
+          <p className="confided-spread">{selectedSpread.name}で</p>
         </div>
       ) : (
         <>
-          <label className="field question-field">
-            <span className="field-heading">
-              <strong>あなたの問い</strong>
-              <small>{question.length} / {maxQuestionLength}</small>
-            </span>
-            <textarea
-              value={question}
-              maxLength={maxQuestionLength}
-              rows={4}
-              placeholder="たとえば「転職を考えています。この迷いは、どこから来ているのでしょう」"
-              onChange={(event) => onQuestionChange(event.target.value)}
-            />
-            <small className="field-note">まとまっていなくて構いません。話すように書いた言葉のぶんだけ、カードは応えてくれます。</small>
-          </label>
+          <LetterPaper
+            value={question}
+            maxLength={maxQuestionLength}
+            rows={4}
+            label={`${oracleName}に打ち明ける問い`}
+            placeholder="たとえば「転職を考えています。この迷いは、どこから来ているのでしょう」"
+            note="まとまっていなくて構いません。話すように書いた言葉のぶんだけ、カードは応えてくれます。"
+            onChange={onQuestionChange}
+          />
 
           <div className="field spread-field">
             <span className="field-heading">
               <strong>カードの並べ方</strong>
-              <button className="text-button guide-link" type="button" onClick={onOpenGuide}>はじめての方へ</button>
+              <button className="text-button guide-link" type="button" onClick={onOpenGuide}>この部屋の作法</button>
             </span>
             <SpreadSelector spreads={spreads} selectedSpreadId={selectedSpreadId} onChange={onSpreadChange} />
             <p className="spread-description" aria-live="polite">{selectedSpread.description}</p>
@@ -115,7 +111,7 @@ export const QuestionForm = ({
             <span>{oracleName}に打ち明ける</span>
             <span aria-hidden="true">✦</span>
           </button>
-          <small>{canShuffle ? "カードに触れる前に、少しだけ話を聞かせてください" : "問いを書くと、打ち明けられます"}</small>
+          <small>{canShuffle ? "カードに触れる前に、少しだけ話を聞かせてください" : "紙に問いを書くと、打ち明けられます"}</small>
         </div>
       ))}
     </section>

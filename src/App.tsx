@@ -7,6 +7,7 @@ import { CardCatalog } from "./components/CardCatalog";
 import { ClarifyBox } from "./components/ClarifyBox";
 import { GuidePanel } from "./components/GuidePanel";
 import { Prelude } from "./components/Prelude";
+import { ProgressCandle } from "./components/ProgressCandle";
 import { QuestionForm } from "./components/QuestionForm";
 import { ReadingArchive } from "./components/ReadingArchive";
 import { ReadingStage } from "./components/ReadingStage";
@@ -15,22 +16,26 @@ import { defaultSpread, spreads } from "./data/spreads";
 import type { DrawnCard, Exchange, Reading, SelectedCard } from "./types/tarot";
 import { readStoredEngine, storeEngine, type EngineId } from "./utils/engine";
 import { findSameNightReading, type ReadingRecord } from "./utils/history";
-import { moonPhase, timeBand } from "./utils/moment";
+import { moonPhase, roomHour } from "./utils/moment";
+import { readStoredAmbience, startAmbience, stopAmbience, storeAmbience } from "./utils/ambience";
 import { readStoredPace, storePace, type NarrationPace } from "./utils/pace";
 import { isSoundEnabled, playFlip, playPick, playPlace, setSoundEnabled } from "./utils/sound";
 import { createReading, cutDeck, settleShuffle, shuffleDeckForReading } from "./utils/tarot";
+import { readStoredWhisper, storeWhisper } from "./utils/whisper";
 
 type View = "reading" | "catalog" | "archive" | "guide" | "settings";
 type AsideView = Exclude<View, "reading">;
 
 // 占いの卓の外にある部屋。押しても名前は変えず、開いている部屋だけを灯す。
+// 帳面・札箱・作法は部屋の中の物。設定だけは卓の外（舞台裏）なので、少し離して置く。
 const navItems: { id: AsideView; label: string }[] = [
-  { id: "archive", label: "記録" },
-  { id: "catalog", label: "図鑑" },
-  { id: "guide", label: "案内" },
+  { id: "archive", label: "帳面" },
+  { id: "catalog", label: "札箱" },
+  { id: "guide", label: "作法" },
   { id: "settings", label: "設定" },
 ];
-const nightBands = new Set(["夕暮れ", "夜", "真夜中", "夜明け前"]);
+// 進み具合は段の番号ではなく、卓の蝋燭の減り方で示す。
+const ritualStages = ["打ち明ける", "カードを引く", "言葉を聴く"];
 
 // 画面の段が変わるときは、前の景色が墨のように溶けて次が浮かぶ。対応していない環境や動きを控える設定では、そのまま切り替える。
 const withSceneChange = (update: () => void) => {
@@ -62,6 +67,10 @@ const App = () => {
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
   const [engine, setEngine] = useState(readStoredEngine);
   const [pace, setPace] = useState(readStoredPace);
+  const [ambienceOn, setAmbienceOn] = useState(readStoredAmbience);
+  const [whisperOn, setWhisperOn] = useState(readStoredWhisper);
+  // 席を立って灯りを消したあとは、部屋の音も止めておく。
+  const [roomDark, setRoomDark] = useState(false);
   // 途中の卓を誤って崩さないよう、「最初から」は二度押しで確かめる。
   const [confirmingReset, setConfirmingReset] = useState(false);
 
@@ -82,7 +91,7 @@ const App = () => {
         setRecordsError("");
       })
       .catch(() => {
-        if (loadId === recordsLoadId.current) setRecordsError("記録を読み込めませんでした。サーバーが起動しているか確かめて、読み込み直してください。");
+        if (loadId === recordsLoadId.current) setRecordsError("帳面が開けませんでした。（占いのサーバーに届きませんでした。起動しているか確かめてください）");
       })
       .finally(() => {
         if (loadId === recordsLoadId.current) setRecordsLoading(false);
@@ -197,7 +206,7 @@ const App = () => {
     const removed = records.find((record) => record.id === id);
     const question = removed?.question.replace(/\s+/g, " ").trim() ?? "";
     setRecords((current) => current.filter((record) => record.id !== id));
-    setArchiveNotice(question ? `「${question.length > 24 ? `${question.slice(0, 24)}…` : question}」の記録を消しました` : "記録を一件消しました");
+    setArchiveNotice(question ? `「${question.length > 24 ? `${question.slice(0, 24)}…` : question}」の頁を破りました` : "頁を一枚破りました");
     setArchiveSelectedId(null);
   };
 
@@ -230,6 +239,16 @@ const App = () => {
     setPace(next);
   };
 
+  const changeAmbience = (next: boolean) => {
+    storeAmbience(next);
+    setAmbienceOn(next);
+  };
+
+  const changeWhisper = (next: boolean) => {
+    storeWhisper(next);
+    setWhisperOn(next);
+  };
+
   const changeSound = (next: boolean) => {
     setSoundEnabled(next);
     setSoundOn(next);
@@ -240,7 +259,7 @@ const App = () => {
   const activeStep = reading ? 3 : shuffledCards.length > 0 ? 2 : 1;
   const now = new Date();
   const moon = moonPhase(now);
-  const isNight = nightBands.has(timeBand(now));
+  const hour = roomHour(now);
   const sameNightReading = activeStep === 1 ? findSameNightReading(records, question, now) : undefined;
   const isCatalogOpen = view === "catalog";
   const isAsideOpen = view !== "reading";
@@ -250,7 +269,24 @@ const App = () => {
     window.scrollTo({ top: 0, behavior: "auto" });
   }, [activeStep, view, archiveSelectedId]);
 
-  const backLabel = activeStep > 1 ? "卓に戻る" : "占いに戻る";
+  // 窓の外の明るさ（明け方・昼・夕暮れ・夜）を、部屋全体の色に映す。
+  useEffect(() => {
+    document.documentElement.dataset.hour = hour;
+  }, [hour]);
+
+  // 部屋の音は、ブラウザが音を許す最初の操作のあとで流しはじめる。
+  useEffect(() => {
+    if (!ambienceOn || roomDark) {
+      stopAmbience();
+      return;
+    }
+    const begin = () => startAmbience(hour);
+    const events = ["pointerdown", "keydown"] as const;
+    events.forEach((name) => window.addEventListener(name, begin, { once: true }));
+    return () => events.forEach((name) => window.removeEventListener(name, begin));
+  }, [ambienceOn, roomDark, hour]);
+
+  const backLabel = "卓へ戻る";
 
   return (
     <div className="app">
@@ -259,12 +295,12 @@ const App = () => {
       <header className="site-header">
         <button className="brand" type="button" onClick={() => openView("reading")} aria-label={backLabel}>
           <span className="brand-moon" aria-hidden="true">☾</span>
-          <span className="brand-name">Tarot Reflection</span>
+          <span className="brand-name">Moonlit Tarot</span>
         </button>
         <nav className="site-nav" aria-label="メニュー">
           {navItems.map((item) => (
             <button
-              className={view === item.id ? "nav-item is-active" : "nav-item"}
+              className={`nav-item${view === item.id ? " is-active" : ""}${item.id === "settings" ? " is-backstage" : ""}`}
               type="button"
               key={item.id}
               aria-current={view === item.id ? "page" : undefined}
@@ -276,20 +312,13 @@ const App = () => {
         </nav>
         {!isAsideOpen ? (
           <div className="header-progress">
-            <ol className="ritual-steps" aria-label="リーディングの進行">
-              {["問いを置く", "カードを引く", "言葉を受け取る"].map((label, index) => {
-                const step = index + 1;
-                return (
-                  <li className={step === activeStep ? "ritual-step is-active" : step < activeStep ? "ritual-step is-done" : "ritual-step"} key={label} aria-current={step === activeStep ? "step" : undefined}>
-                    <span aria-hidden="true">{["I", "II", "III"][index]}</span>
-                    <small>{label}</small>
-                  </li>
-                );
-              })}
-            </ol>
+            <p className="ritual-candle" role="status" aria-label={`いまは「${ritualStages[activeStep - 1]}」のところ（三つのうち${["一", "二", "三"][activeStep - 1]}つ目）`}>
+              <ProgressCandle step={activeStep} />
+              <small aria-hidden="true">{ritualStages[activeStep - 1]}</small>
+            </p>
             {activeStep > 1 ? (
               <button className={confirmingReset ? "header-reset is-confirming" : "header-reset"} type="button" onClick={requestReset}>
-                {confirmingReset ? "本当に最初から？" : "最初から"}
+                {confirmingReset ? "本当に片づけますか" : "卓を片づける"}
               </button>
             ) : null}
           </div>
@@ -312,9 +341,13 @@ const App = () => {
             engine={engine}
             pace={pace}
             soundOn={soundOn}
+            ambienceOn={ambienceOn}
+            whisperOn={whisperOn}
             onEngineChange={changeEngine}
             onPaceChange={changePace}
             onSoundChange={changeSound}
+            onAmbienceChange={(next) => { changeAmbience(next); if (next) startAmbience(hour); }}
+            onWhisperChange={changeWhisper}
             onClose={() => openView("reading")}
             backLabel={backLabel}
           />
@@ -328,6 +361,7 @@ const App = () => {
             onReload={loadRecords}
             onSelect={(id) => { setArchiveNotice(""); setArchiveSelectedId(id); }}
             onDelete={deleteRecord}
+            whisperOn={whisperOn}
           />
         ) : null}
 
@@ -339,7 +373,7 @@ const App = () => {
               selectedSpreadId={selectedSpread.id}
               canShuffle={canShuffle}
               moon={moon}
-              isNight={isNight}
+              hour={hour}
               sameNightReading={sameNightReading}
               onOpenRecord={openRecord}
               onOpenGuide={() => openView("guide")}
@@ -379,10 +413,14 @@ const App = () => {
               reading={reading}
               active={!isAsideOpen}
               pace={pace}
+              whisperOn={whisperOn}
               onSaved={handleSaved}
               onRecordsChange={loadRecords}
-              onNewQuestion={() => withSceneChange(handleReset)}
-              onOpenRecords={() => toggleView("archive")}
+              onDarken={() => setRoomDark(true)}
+              onRelight={() => {
+                if (ambienceOn) startAmbience(hour);
+                withSceneChange(() => { setRoomDark(false); handleReset(); });
+              }}
             />
           </div>
         ) : null}

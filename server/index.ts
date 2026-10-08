@@ -5,6 +5,7 @@ import { maxQuestionLength } from "../src/utils/limits";
 import { buildFollowUpRequest, buildPromptFromInterpretationInput } from "./interpretationRequest";
 import { askOracle } from "./oracleEngine";
 import { createReadingStore } from "./readingStore";
+import { createWhisper, whisperAvailable, WhisperError } from "./whisper";
 import { readingFromRecord, tablePayload } from "../src/utils/history";
 
 // LocalWeb passes PORT (localweb dev / LaunchAgent). There is no fallback, so a standalone run never takes another app's port.
@@ -35,6 +36,10 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/follow-up/stream") {
       return handleFollowUpStream(request);
+    }
+
+    if (url.pathname === "/api/whisper") {
+      return handleWhisper(request);
     }
 
     if (url.pathname === "/api/readings") {
@@ -187,6 +192,19 @@ function streamOracle(
       "Cache-Control": "no-store",
     },
   });
+}
+
+// 「今夜の答え」の囁き。GET で声の準備があるかを返し、POST で音声（MP3）を返す。
+async function handleWhisper(request: Request) {
+  if (request.method === "GET") return jsonResponse({ available: whisperAvailable() });
+  if (request.method !== "POST") return jsonResponse({ error: "Method not allowed." }, 405);
+  const body = (await request.json().catch(() => null)) as { text?: unknown } | null;
+  try {
+    const audio = await createWhisper(typeof body?.text === "string" ? body.text : "", request.signal);
+    return new Response(audio, { headers: { "Content-Type": "audio/mpeg", "Cache-Control": "no-store" } });
+  } catch (error) {
+    return jsonResponse({ error: error instanceof Error ? error.message : "声を作れませんでした。" }, error instanceof WhisperError ? error.status : 502);
+  }
 }
 
 async function handleReadings(request: Request) {

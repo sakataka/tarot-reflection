@@ -28,7 +28,7 @@ export const setSoundEnabled = (next: boolean) => {
   }
 };
 
-const getContext = () => {
+export const getContext = () => {
   if (typeof window === "undefined" || !("AudioContext" in window)) {
     return null;
   }
@@ -155,4 +155,12 @@ export const playChime = () =>
       tone(audio, output, now + index * 0.12, { frequency, duration: 2.4 - index * 0.4, gain: 0.07 });
       tone(audio, output, now + index * 0.12, { frequency: frequency * 2.01, duration: 0.8, gain: 0.015 });
     });
+  });
+
+// 蝋燭を吹き消す息。柔らかいノイズが、低いほうへ抜けていく。
+export const playSnuff = () =>
+  withAudio((audio, output) => {
+    const now = audio.currentTime;
+    brush(audio, output, now, { duration: 0.55, frequency: 1300, sweepTo: 260, q: 0.5, gain: 0.32 });
+    brush(audio, output, now + 0.08, { duration: 0.4, frequency: 600, sweepTo: 180, q: 0.4, gain: 0.18 });
   });

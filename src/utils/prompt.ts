@@ -3,7 +3,7 @@ import { spreads } from "../data/spreads";
 import { tarotDeck } from "../data/tarotDeck";
 import type { Exchange, Reading, ReadingCard } from "../types/tarot";
 import type { ReadingRecord } from "./history";
-import { describeMoment } from "./moment";
+import { answerLabel, describeMoment, tonightWord } from "./moment";
 import { oracleName, personaPrompt } from "./persona";
 import { observeTable } from "./tableReading";
 import { tableCards } from "./tarot";
@@ -63,6 +63,9 @@ export const generatePrompt = (reading: Reading, pastReadings: readonly ReadingR
     .join("\n\n");
   const observations = observeTable(reading.cards, majorArcana, reading.spread.id);
   const past = pastReadings.filter((record) => record.createdAt !== reading.createdAt);
+  const askedAt = new Date(reading.createdAt);
+  const answer = answerLabel(askedAt);
+  const tonight = tonightWord(askedAt);
 
   return `${personaPrompt}
 
@@ -96,7 +99,7 @@ ${past.map(describePastReading).join("\n")}
 - ${flipped.length}枚すべてについて、1から順に一度ずつ合図を書く。合図より前に、まだめくっていないカードの名前や絵に触れない。${rootNumber ? `
 - ${rootNumber}番の「山の底」は、並べたカードをすべてめくったあとに「最後に、山の一番下を」のような一言を添えてめくる。問いの底に静かに流れているものとして、ほかのカードと同じ短さで告げる。` : ""}
 - すべてのカードをめくり終えたら、その行だけに [[close]] と書き、そのあとに「では、これはどういうことか」を語る。
-- 最後にその行だけに [[message]] と書き、そのあとに「今夜の答え」を一、二文（60字以内）で書いて終える。画面ではこの一文が、卓全体の結論として枠に入れて示される。
+- 最後にその行だけに [[message]] と書き、そのあとに「${answer}」を一、二文（60字以内）で書いて終える。画面ではこの一文が、卓全体の結論として枠に入れて示される。
 
 語りの組み立て（テンポを大切にする）:
 本物の占い師は、カードを一枚ずつ手早く返しながら「これは〜」「これは〜」と告げていき、並びが見えたところで「では、どういうことか」と腰を据えて読み解く。この呼吸で語る。
@@ -104,7 +107,7 @@ ${past.map(describePastReading).join("\n")}
   - 問い返しへの相談者の答えを受け取ったことが分かるように、その言葉に一度だけ触れる。` : ""}
   - いまという時（月の形や時刻）に一言だけ触れてよい。月の満ち欠けを問いに重ねるのは、自然につながるときだけにする。${reading.jumper ? `
   - こぼれたカードには、前置きの中で必ず触れる（「混ぜている途中で、一枚が自分から出てきましたね」のように）。意味づけは一文にとどめ、総括でつながったらそこでもう一度触れてよい。` : ""}${past.length ? `
-  - 以前の占いは、今夜の問いやカードとはっきりつながるときだけ、前置きか総括で一言触れる（「前にいらしたとき、〜が出ていましたね」）。つながらなければ一切触れない。以前の問いの中身を詳しく蒸し返さない。` : ""}
+  - 以前の占いは、${tonight}の問いやカードとはっきりつながるときだけ、前置きか総括で一言触れる（「前にいらしたとき、〜が出ていましたね」）。つながらなければ一切触れない。以前の問いの中身を詳しく蒸し返さない。` : ""}
 - 各カード（合図のあと）: ${reading.cards.length === 1 ? "一枚だけなので、二段落まで語ってよい。" : "一枚ごとに長く留まらず、一段落（二〜四文、120字前後）で告げて次へ進む。深い読み解きは総括に回す。"}
   - 一文目で「過去に出たのは、塔の逆さ。」「現在は、カップの8。」のように、位置とカードを短く言い切る。
   - 続けて、絵に描かれているものを一つだけ拾い（例：灯りの向き、水面、鎖の緩さ）、それがこの位置で何を告げているかを、問いに引き寄せて平らな言葉で言う（「つまり、〜ということ」）。キーワードを並べて説明しない。
@@ -113,8 +116,8 @@ ${past.map(describePastReading).join("\n")}
   - 「では、この${flipped.length}枚が並ぶと、どういうことか。」のような一言で腰を据える。
   - めくったカードを一つの流れとしてつなぎ、問いに対してカードが何を告げているかを、最初の段落のうちにはっきり言葉にする。相談者が読み終えて「結局どういうことか」と迷わないように、核心は平らな言葉で言い切る。
   - 卓を見渡したときの手がかりから一つか二つを選び、「カップが一枚もありませんね」「数の芯には隠者がいます」のように卓を見て気づいた調子で添え、それが問いにとって何を意味するかまで言う。
-  - 最後に、今夜か明日にできるささやかなことを一つだけ、語りの流れの中で手渡すように添える。
-- [[message]] のあとの「今夜の答え」は、相談者の問いにまっすぐ応える言葉にする。はぐらかさず、けれど運命を断定しない（例：「いまは決める時ではなく、確かめる時。答えは、あなたがまだ口にしていない望みの側にあります」）。「〜でしょう」を連ねず、静かに言い切る。前の総括の文をそのまま繰り返さない。
+  - 最後に、${tonight === "今夜" ? "今夜か明日" : "今日のうち"}にできるささやかなことを一つだけ、語りの流れの中で手渡すように添える。
+- [[message]] のあとの「${answer}」は、相談者の問いにまっすぐ応える言葉にする。はぐらかさず、けれど運命を断定しない（例：「いまは決める時ではなく、確かめる時。答えは、あなたがまだ口にしていない望みの側にあります」）。「〜でしょう」を連ねず、静かに言い切る。前の総括の文をそのまま繰り返さない。
 - 分量は${lengthGuide[reading.cards.length] ?? "相談者が一息で読める長さ"}。そのうち半分ほどを総括に使う。段落は短めに区切る。
 
 語り方:
@@ -169,7 +172,7 @@ export const generateFollowUpPrompt = ({ reading, narration, previous, ask, isLa
   const spoken = narration
     .replace(/\[\[\s*card\s*:\s*(\d+)\s*\]\]/gi, "（$1枚目をめくる）")
     .replace(/\[\[\s*close\s*\]\]/gi, "（締めくくり）")
-    .replace(/\[\[\s*message\s*\]\]/gi, "（今夜の答え）");
+    .replace(/\[\[\s*message\s*\]\]/gi, `（${answerLabel(new Date(reading.createdAt))}）`);
 
   return `${personaPrompt}
 
@@ -202,5 +205,5 @@ ${describeCard(clarifier)}
 - 聞き返されたことには、最初の一、二文でまっすぐ答える。比喩を使ったら、それが相談者の現実のどこを指すのかを平らな言葉で言い直す。カウンセラーのように気持ちを尋ね返したり、コーチのように手順を示したりしない。
 - 医療、法律、お金、重大な人生の決断に関わる場合は、雰囲気を壊さない一言で、現実の確認や信頼できる人への相談を勧める。
 - 一〜三段落、全体で200〜400字。見出し・箇条書き・太字・絵文字は使わない。合図の記号も書かない。
-- ${isLast ? "これが今夜最後の問いかけ。答えのあとに、今夜の卓を閉じる短い一言を添える。" : "答えの最後に、次の問いを促す言葉は添えない。"}`;
+- ${isLast ? `これが${tonightWord(new Date(reading.createdAt))}最後の問いかけ。答えのあとに、卓を閉じる短い一言を添える。` : "答えの最後に、次の問いを促す言葉は添えない。"}`;
 };

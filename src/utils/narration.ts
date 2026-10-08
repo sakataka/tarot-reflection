@@ -1,5 +1,5 @@
 // 占い師の語りは、カードをめくる合図 [[card:N]]、締めの合図 [[close]]、
-// 今夜の答えを一言にまとめる合図 [[message]] で区切られて届く。
+// 「今夜の答え」を一言にまとめる合図 [[message]] で区切られて届く。
 // 届いた途中の文字列からも、表示してよい部分だけを段ごとに切り出す。
 
 export type NarrationSegment =
@@ -76,12 +76,12 @@ export const segmentStarts = (segments: NarrationSegment[]) => {
   });
 };
 
-export const narrationToPlainText = (segments: NarrationSegment[], cardLabel: (cardIndex: number) => string) =>
+export const narrationToPlainText = (segments: NarrationSegment[], cardLabel: (cardIndex: number) => string, answerTitle = "今夜の答え") =>
   segments
     .map((segment) => {
       if (segment.kind === "card") return `― ${cardLabel(segment.cardIndex)} ―\n\n${segment.text.trim()}`;
       if (segment.kind === "close") return `―\n\n${segment.text.trim()}`;
-      if (segment.kind === "message") return `― 今夜の答え ―\n\n${segment.text.trim()}`;
+      if (segment.kind === "message") return `― ${answerTitle} ―\n\n${segment.text.trim()}`;
       return segment.text.trim();
     })
     .join("\n\n");

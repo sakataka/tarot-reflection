@@ -12,14 +12,15 @@ type ReadingStageProps = {
   reading: Reading;
   active: boolean;
   pace: NarrationPace;
+  whisperOn: boolean;
   onRecordsChange: () => void;
   onSaved?: (record: ReadingRecord) => void;
-  onNewQuestion: () => void;
-  onOpenRecords: () => void;
+  onDarken: () => void;
+  onRelight: () => void;
 };
 
 // カードは伏せたまま卓に置き、占い師が語りながら一枚ずつ表に返す。最後に山の底をめくる。
-export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange, onNewQuestion, onOpenRecords }: ReadingStageProps) => {
+export const ReadingStage = ({ reading, active, pace, whisperOn, onSaved, onRecordsChange, onDarken, onRelight }: ReadingStageProps) => {
   const total = tableCards(reading).length;
   const [revealed, setRevealed] = useState<boolean[]>(() => Array.from({ length: total }, () => false));
   const [current, setCurrent] = useState<number | null>(null);
@@ -41,7 +42,7 @@ export const ReadingStage = ({ reading, active, pace, onSaved, onRecordsChange, 
       <ReadingHeading reading={reading} />
       <TableStrip reading={reading} revealed={revealed} current={current} hovered={hovered} />
       <CelticCross reading={reading} revealed={revealed} />
-      <PromptBox active={active} pace={pace} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onWaitingHover={setHovered} onSaved={onSaved} onNewQuestion={onNewQuestion} onOpenRecords={onOpenRecords} />
+      <PromptBox active={active} pace={pace} whisperOn={whisperOn} onRecordsChange={onRecordsChange} reading={reading} revealed={revealed} onRevealCard={revealCard} onCurrentChange={setCurrent} onWaitingHover={setHovered} onSaved={onSaved} onDarken={onDarken} onRelight={onRelight} />
     </div>
   );
 };
