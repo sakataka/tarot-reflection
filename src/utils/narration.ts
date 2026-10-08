@@ -75,13 +75,3 @@ export const segmentStarts = (segments: NarrationSegment[]) => {
     return start;
   });
 };
-
-export const narrationToPlainText = (segments: NarrationSegment[], cardLabel: (cardIndex: number) => string, answerTitle = "今夜の答え") =>
-  segments
-    .map((segment) => {
-      if (segment.kind === "card") return `― ${cardLabel(segment.cardIndex)} ―\n\n${segment.text.trim()}`;
-      if (segment.kind === "close") return `―\n\n${segment.text.trim()}`;
-      if (segment.kind === "message") return `― ${answerTitle} ―\n\n${segment.text.trim()}`;
-      return segment.text.trim();
-    })
-    .join("\n\n");

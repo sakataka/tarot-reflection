@@ -45,10 +45,11 @@ export const ClarifyBox = ({ active, question, onProceed, onEdit }: ClarifyBoxPr
   const proceedWithAnswer = () => onProceed(answer.trim() ? { question: words.trim(), answer: answer.trim() } : null);
 
   return (
-    <section className="clarify-box" ref={boxRef} aria-live="polite">
+    // 届く言葉だけを読み上げの対象にする。入力欄を含めると、音声入力の途中で読み上げが割り込む。
+    <section className="clarify-box" ref={boxRef}>
       <div className={done || error ? "clarify-oracle has-spoken" : "clarify-oracle"}>
         <OraclePortrait pose="listening" />
-        <div className="clarify-speech">
+        <div className="clarify-speech" aria-live="polite">
           <p className="ornament-kicker">{oracleName}</p>
           {!done && !error && !words.trim() ? <p className="thinking-words is-steady">あなたの問いに、じっと耳を傾けています…</p> : null}
           {/* 届いた言葉から順に見せる。話し終えるまで筆先を灯す。 */}

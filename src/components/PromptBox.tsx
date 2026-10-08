@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { requestBackend, streamBackend } from "../backendClient";
 import type { Reading } from "../types/tarot";
 import { tablePayload, type ReadingRecord } from "../utils/history";
-import { isGatedSegment, narrationToPlainText, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
+import { isGatedSegment, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
 import type { NarrationPace } from "../utils/pace";
 import { answerLabel } from "../utils/moment";
 import { oracleName } from "../utils/persona";
@@ -12,7 +12,7 @@ import { Farewell } from "./Farewell";
 import { FollowUpBox } from "./FollowUpBox";
 import { NarrationView } from "./NarrationView";
 import { OraclePortrait } from "./OraclePortrait";
-import { cardMark, narrationCardId, orientationLabel } from "./ReadingTable";
+import { cardMark, narrationCardId } from "./ReadingTable";
 import { Whisper } from "./Whisper";
 
 type PromptBoxProps = {
@@ -70,7 +70,6 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
   const instant = prefersReducedMotion() || pace === "instant";
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [leaving, setLeaving] = useState(false);
   const answerTitle = answerLabel(new Date(reading.createdAt));
   // 語りに入った区切り（カード・総括・答え）の数と、相談者の合図を待っている区切り。
@@ -325,21 +324,6 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
       });
   }, [streamDone, raw, reading, saveAttempt]);
 
-  const flipped = tableCards(reading);
-  const cardLabel = (cardIndex: number) => {
-    const readingCard = flipped[cardIndex];
-    return `${readingCard.position.name}・${readingCard.card.nameJa}（${orientationLabel[readingCard.orientation]}）`;
-  };
-
-  const copyAnswer = async () => {
-    try {
-      await navigator.clipboard.writeText(narrationToPlainText(segments, cardLabel, answerTitle));
-      setCopyState("copied");
-    } catch {
-      setCopyState("failed");
-    }
-  };
-
   const retry = () => {
     setAttempt((count) => count + 1);
   };
@@ -384,20 +368,7 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
         </div>
       ) : null}
 
-      {finished ? (
-        <div className="answer-box">
-          <p className="answer-closing">カードの言葉は答えではなく、足元を照らす灯りです。どちらへ歩くかは、あなたが決めてよいのです。</p>
-          <div className="answer-actions">
-            <button className="text-button" type="button" onClick={copyAnswer}>
-              {copyState === "copied" ? "書き写しました" : "言葉を書き写す"}
-            </button>
-            {recordId ? <p className="answer-saved">☾ この夜の言葉は、帳面に綴じました</p> : null}
-            {copyState === "failed" ? (
-              <p className="copy-fallback">うまく書き写せませんでした。本文を選んで写してください。</p>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+      {finished && recordId ? <p className="answer-saved">☾ 帳面に綴じました</p> : null}
 
       {streamDone && !recordId ? (
         <div className="oracle-save" role={saveError ? "alert" : "status"}>
@@ -405,14 +376,12 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
             ? "帳面のインクがかすれて、書き留められませんでした。言葉はこの画面で読めます。閉じる前に、もう一度綴じてください。"
             : `${oracleName}が、帳面に書き留めています…`}</p>
           {saveError ? <button className="secondary-button" type="button" onClick={() => { setSaveError(false); setSaveAttempt((count) => count + 1); }}>もう一度、帳面に綴じる</button> : null}
-          {finished ? <p className="copy-fallback">帳面に綴じ終えると、聞き返せます。</p> : null}
         </div>
       ) : null}
       {finished && recordId ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} onRecordsChange={onRecordsChange} /> : null}
 
       {finished ? (
         <div className="reading-end">
-          <p>聞きたいことを聞き終えたら、卓を閉じましょう。</p>
           <button className="secondary-button" type="button" onClick={() => setLeaving(true)}>卓を閉じる</button>
         </div>
       ) : null}
@@ -447,15 +416,13 @@ const Gate = ({ reading, segment, buttonRef, answerTitle, onOpen }: GateProps) =
   const label = segment.kind === "card"
     ? isRoot ? "山の底をめくる" : count === 1 ? "カードをめくる" : segment.cardIndex === 0 ? "カードを返していく" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
     : segment.kind === "close" ? "では、どういうことか" : `${answerTitle}を聞く`;
-  const hint = next
-    ? count > 1 && segment.kind === "card" && segment.cardIndex === 0
-      ? `${count}枚を、順に表に返します`
-      : `${segment.kind === "card" ? cardMark(reading, segment.cardIndex) : ""}・${next.position.name} ― ${next.position.role}`
-    : segment.kind === "close" ? "すべてのカードが表になりました。並びを読み解きます" : "カードが告げていることを、ひとことに";
+  const hint = next && !(count > 1 && segment.kind === "card" && segment.cardIndex === 0)
+    ? `${segment.kind === "card" ? cardMark(reading, segment.cardIndex) : ""}・${next.position.name}`
+    : "";
 
   return (
     <div className="narration-gate">
-      <p>{hint}</p>
+      {hint ? <p>{hint}</p> : null}
       <button ref={buttonRef} className="gate-button" type="button" onClick={onOpen}>
         <span aria-hidden="true">✦</span>
         <span>{label}</span>

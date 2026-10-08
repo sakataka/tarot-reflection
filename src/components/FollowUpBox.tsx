@@ -4,7 +4,6 @@ import type { Exchange, Reading } from "../types/tarot";
 import { maxFollowUps, tablePayload, type CardRecord } from "../utils/history";
 import { cleanNarrationText, splitParagraphs } from "../utils/narration";
 import { maxReplyLength as maxAskLength } from "../utils/limits";
-import { tonightWord } from "../utils/moment";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tarotDeck } from "../data/tarotDeck";
@@ -130,7 +129,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     <div className="follow-up">
       <div className="follow-up-heading">
         <p className="ornament-kicker">もう少しだけ</p>
-        <p>気になったことがあれば、{oracleName}に聞き返せます。{remaining > 0 ? `${tonightWord(new Date(reading.createdAt))}はあと${remaining}度まで。` : ""}</p>
+        {remaining > 0 ? <p>{remaining > 1 ? "まだ聞きたいことがあるのなら。" : "あと一つだけ、聞きましょう。"}</p> : null}
       </div>
 
       <ExchangeList exchanges={exchanges} />
@@ -168,12 +167,10 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
             readOnly={Boolean(reserved)}
             maxLength={maxAskLength}
             rows={2}
-            placeholder="たとえば「山の底のカードが、もう少し気になります」"
             label={`${oracleName}に聞き返す`}
             onChange={setAsk}
           />
           <label className="clarifier-choice"><input type="checkbox" checked={drawClarifier} disabled={Boolean(reserved)} onChange={(event) => setDrawClarifier(event.target.checked)} />補足の一枚を引いてもらう</label>
-          <p className="clarifier-note">元の占いを掘り下げる一枚です。{reserved ? "先ほどと同じ問いと札で、言葉を待ち直します。" : "引かずに聞き返すこともできます。"}</p>
           {reserved?.clarifier ? <ClarifierCard card={reserved.clarifier} /> : null}
           <button className="secondary-button" type="submit" disabled={!ask.trim()}>{reserved ? "同じ聞き返しをもう一度送る" : "聞き返す"}</button>
         </form>

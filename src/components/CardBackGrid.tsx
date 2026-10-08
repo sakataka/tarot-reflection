@@ -140,12 +140,23 @@ const layoutFan = (width: number, count: number, slotCount: number, rows: number
 };
 
 // 置き場に載せるための transform。カードは下辺の中央を軸に拡大されるので、その分をずらす。
-const slotTransform = (layout: FanLayout, slot: FanLayout["slots"][number]) => {
+// 置いた札は、手で置いたぶんだけわずかに傾く。
+const slotTransform = (layout: FanLayout, slot: FanLayout["slots"][number], turn = 0) => {
   const scale = slot.width / layout.cardWidth;
   const x = slot.x - layout.cardWidth / 2 + (layout.cardWidth * scale) / 2;
   const y = slot.y - layout.cardHeight + layout.cardHeight * scale;
-  return `translate(${x}px, ${y}px) scale(${scale})`;
+  return `translate(${x}px, ${y}px) scale(${scale}) rotate(${turn.toFixed(2)}deg)`;
 };
+
+// 人の手で扱った札は、きっちりとは揃わない。札ごとに決まった小さなずれ（-1〜1）を返す。
+const handJitter = (id: string, salt: number) => {
+  let hash = 2166136261 ^ salt;
+  for (let index = 0; index < id.length; index += 1) hash = Math.imul(hash ^ id.charCodeAt(index), 16777619);
+  return ((hash >>> 0) % 2001) / 1000 - 1;
+};
+
+// 切り分けた山は、置いた手の向きで少しずつ傾く。
+const pileTurns = [-2.6, 2.1, -0.8];
 
 // 切り分けた山の置き場所。いちばん上の山を左へ、次を右へ運び、残りは中央に残る。
 const pileSlots = [-1, 1, 0];
@@ -318,14 +329,18 @@ export const CardBackGrid = ({
   // 集めるときは、選んだ山（並べ替え後の先頭）を最後に載せる。
   const chosenSize = chosenPile === null ? 0 : Math.min(pileSize, cards.length - chosenPile * pileSize);
 
-  const cardTransform = (index: number, selected?: SelectedCard): { transform: string; zIndex: number; delay: number } => {
+  const cardTransform = (index: number, id: string, selected?: SelectedCard): { transform: string; zIndex: number; delay: number } => {
     if (!layout || !piles) return { transform: "", zIndex: index, delay: 0 };
+    const jx = handJitter(id, 1);
+    const jy = handJitter(id, 2);
+    const jr = handJitter(id, 3);
     if (isSpread) {
       const slot = selected ? layout.slots[selected.selectedOrder - 1] : undefined;
-      if (slot) return { transform: slotTransform(layout, slot), zIndex: cards.length + selected!.selectedOrder, delay: 0 };
+      // 引いた札は、扇から抜き取る間をおいてから置き場へ運ぶ。
+      if (slot) return { transform: slotTransform(layout, slot, jr * 1.8), zIndex: cards.length + selected!.selectedOrder, delay: phase === "ready" ? 120 : 0 };
       const target = layout.positions[index];
       return {
-        transform: `translate(${target.x}px, ${target.y}px) rotate(${target.angle}deg)`,
+        transform: `translate(${(target.x + jx * 1.6).toFixed(1)}px, ${(target.y + jy * 2).toFixed(1)}px) rotate(${(target.angle + jr * 0.9).toFixed(2)}deg)`,
         zIndex: index,
         delay: phase === "dealing" ? dealLead + layout.dealOrder[index] * dealStagger : 0,
       };
@@ -336,8 +351,11 @@ export const CardBackGrid = ({
       const target = piles.positions[pile];
       // 選んだ山は手に持ち上げる。選ぶ前は、指を乗せた山が少し浮く。
       const lift = phase === "lifting" && pile === chosenPile ? 30 : phase === "choosing" && pile === hoveredPile ? 10 : 0;
+      // 山の縁は札ごとにわずかにずれ、山全体も置いた向きに少し傾く。持ち上げた山は手の中で揃う。
+      const loose = phase === "lifting" && pile === chosenPile ? 0.35 : 1;
+      const turn = pileTurns[pile] * (lift >= 30 ? 0.3 : 1) + jr * 1.1 * loose;
       return {
-        transform: `translate(${target.x}px, ${target.y - depth * 0.35 - lift}px) scale(${piles.scale * (lift >= 30 ? 1.06 : 1)})`,
+        transform: `translate(${(target.x + jx * 1.8 * loose).toFixed(1)}px, ${(target.y - depth * 0.35 - lift + jy * 0.6).toFixed(1)}px) rotate(${turn.toFixed(2)}deg) scale(${piles.scale * (lift >= 30 ? 1.06 : 1)})`,
         // 上の山ほど先に持ち上げて運ぶ。運んでいる山は、残りの山より上を通る。
         zIndex: (cutPileCount - pile) * 1000 + depth,
         delay: phase === "cutting" ? pile * cutStagger : 0,
@@ -346,8 +364,10 @@ export const CardBackGrid = ({
     // 混ぜている間と集めている間は一つの山。先頭（選んだ山）が一番上に来る。
     const depth = cards.length - index;
     const isChosen = phase === "gathering" && index < chosenSize;
+    // 揃えている山はまだ少し乱れていて、重ね終えた山はほぼ揃う。
+    const loose = phase === "squaring" ? 1.4 : phase === "gathering" ? 0.6 : 0;
     return {
-      transform: `translate(${layout.stack.x}px, ${layout.stack.y - depth * 0.12}px) scale(${phase === "gathering" || phase === "squaring" ? piles.scale : 1})`,
+      transform: `translate(${(layout.stack.x + jx * loose).toFixed(1)}px, ${(layout.stack.y - depth * 0.12).toFixed(1)}px) rotate(${(jr * loose * 0.8).toFixed(2)}deg) scale(${phase === "gathering" || phase === "squaring" ? piles.scale : 1})`,
       zIndex: depth + (isChosen ? cards.length : 0),
       delay: isChosen ? gatherStagger : 0,
     };
@@ -358,7 +378,7 @@ export const CardBackGrid = ({
     if (phase === "cutting") {
       const pile = Math.floor(index / pileSize);
       const slot = pileSlots[pile];
-      return slot === 0 ? null : { lift: 30, turn: slot * -4, delay: pile * cutStagger };
+      return slot === 0 ? null : { lift: pile === 0 ? 34 : 26, turn: slot * -5, delay: pile * cutStagger };
     }
     if (phase === "gathering") {
       const pile = pileOfCard.current.get(cardId);
@@ -475,7 +495,9 @@ export const CardBackGrid = ({
           {layout ? cards.map((drawnCard, index) => {
             const selected = selectedById.get(drawnCard.card.id);
             const disabled = phase !== "ready" || (!selected && selectedCards.length >= requiredCount);
-            const placement = cardTransform(index, selected);
+            const placement = cardTransform(index, drawnCard.card.id, selected);
+            // 引いた札は、運ぶ向きへ少し傾けて持つ。
+            const pickTurn = selected && layout ? Math.max(-7, Math.min(7, (layout.slots[selected.selectedOrder - 1].x - layout.positions[index].x) / 45)) : 0;
             const carry = carryOf(index, drawnCard.card.id);
             const position = selected ? positions[selected.selectedOrder - 1] : undefined;
 
@@ -494,6 +516,7 @@ export const CardBackGrid = ({
                   ...(phase === "dealing" ? { animationDelay: `${placement.delay}ms` } : { transitionDelay: `${placement.delay}ms` }),
                   zIndex: placement.zIndex,
                   ...(carry ? { "--carry-lift": `${-carry.lift}px`, "--carry-turn": `${carry.turn}deg`, "--carry-delay": `${carry.delay}ms` } : {}),
+                  ...(selected ? { "--pick-turn": `${pickTurn.toFixed(2)}deg` } : {}),
                 } as CSSProperties}
               >
                 <span className={`card-back-art${requiredCount === 10 && selected?.selectedOrder === 2 ? " is-crossing" : ""}`} />
@@ -501,9 +524,6 @@ export const CardBackGrid = ({
             );
           }) : null}
         </div>
-        <p className="oracle-invitation">
-          {phase === "ready" ? "引いたカードにもう一度触れると、山へ戻せます。" : " "}
-        </p>
       </div>
 
       <div className="reveal-action">

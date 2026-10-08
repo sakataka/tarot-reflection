@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { narrationToPlainText, parseNarration, segmentStarts } from "./narration";
+import { parseNarration, segmentStarts } from "./narration";
 
 describe("parseNarration", () => {
   test("splits intro, cards and closing by markers", () => {
@@ -24,10 +24,9 @@ describe("parseNarration", () => {
     expect(segments).toEqual([{ kind: "card", cardIndex: 0, text: "見出し\n太字の語り続き" }]);
   });
 
-  test("computes segment offsets and plain text", () => {
+  test("computes segment offsets", () => {
     const segments = parseNarration("はじめ[[card:1]]一枚目[[close]]おわり", true, 1);
     expect(segmentStarts(segments)).toEqual([0, 3, 6]);
-    expect(narrationToPlainText(segments, () => "現在・星")).toBe("はじめ\n\n― 現在・星 ―\n\n一枚目\n\n―\n\nおわり");
   });
 
   test("keeps the closing message after the closing, and ignores markers after it", () => {
@@ -37,6 +36,5 @@ describe("parseNarration", () => {
       { kind: "close", text: "見渡して。" },
       { kind: "message", text: "今は待つとき。" },
     ]);
-    expect(narrationToPlainText(segments, () => "現在・星")).toContain("― 今夜の答え ―\n\n今は待つとき。");
   });
 });

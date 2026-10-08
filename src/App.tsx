@@ -152,6 +152,8 @@ const App = () => {
     }
 
     playPick();
+    // 置き場に札が落ち着く音。運ぶ動き（約0.9秒）に合わせる。
+    window.setTimeout(playPlace, 880);
     setSelectedCards([
       ...selectedCards,
       {
@@ -314,7 +316,6 @@ const App = () => {
           <div className="header-progress">
             <p className="ritual-candle" role="status" aria-label={`いまは「${ritualStages[activeStep - 1]}」のところ（三つのうち${["一", "二", "三"][activeStep - 1]}つ目）`}>
               <ProgressCandle step={activeStep} />
-              <small aria-hidden="true">{ritualStages[activeStep - 1]}</small>
             </p>
             {activeStep > 1 ? (
               <button className={confirmingReset ? "header-reset is-confirming" : "header-reset"} type="button" onClick={requestReset}>

@@ -57,7 +57,6 @@ export const QuestionForm = ({
             <MoonGlyph age={moon.age} className="tonight-moon-glyph" />
             {tonight}は<strong>{moon.name}</strong>
             <span className="tonight-moon-age">月齢 {moon.age.toFixed(1)}</span>
-            <span className="tonight-moon-mood">{moon.mood}。</span>
           </p>
           <p className="intro-greeting">
             {greeting}<br />{request}
@@ -77,10 +76,8 @@ export const QuestionForm = ({
           <LetterPaper
             value={question}
             maxLength={maxQuestionLength}
-            rows={4}
+            rows={7}
             label={`${oracleName}に打ち明ける問い`}
-            placeholder="たとえば「転職を考えています。この迷いは、どこから来ているのでしょう」"
-            note="まとまっていなくて構いません。話すように書いた言葉のぶんだけ、カードは応えてくれます。"
             onChange={onQuestionChange}
           />
 
@@ -90,7 +87,6 @@ export const QuestionForm = ({
               <button className="text-button guide-link" type="button" onClick={onOpenGuide}>この部屋の作法</button>
             </span>
             <SpreadSelector spreads={spreads} selectedSpreadId={selectedSpreadId} onChange={onSpreadChange} />
-            <p className="spread-description" aria-live="polite">{selectedSpread.description}</p>
           </div>
         </>
       )}
@@ -111,7 +107,6 @@ export const QuestionForm = ({
             <span>{oracleName}に打ち明ける</span>
             <span aria-hidden="true">✦</span>
           </button>
-          <small>{canShuffle ? "カードに触れる前に、少しだけ話を聞かせてください" : "紙に問いを書くと、打ち明けられます"}</small>
         </div>
       ))}
     </section>
