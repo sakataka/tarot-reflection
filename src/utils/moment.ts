@@ -71,14 +71,6 @@ const hourWords: Record<RoomHour, string> = { night: "今夜", dusk: "今夜", m
 export const tonightWord = (date: Date) => hourWords[roomHour(date)];
 export const answerLabel = (date: Date) => `${tonightWord(date)}の答え`;
 
-// 部屋に入ったときの、ヴェスペラの最初の一言。
-export const roomGreeting: Record<RoomHour, [string, string]> = {
-  night: ["ようこそ。灯りを少し落としましょう。", "いま心にかかっていることを、ひとつだけ聞かせてください。"],
-  dusk: ["ちょうど蝋燭に火を入れたところです。", "日が落ちきる前に、心にかかっていることをひとつだけ聞かせて。"],
-  morning: ["夜が明けてしまいましたね。窓の白むのは、気にしないで。", "眠れなかった夜のぶんも、ひとつだけ聞かせてください。"],
-  day: ["外はまだ明るいけれど、カーテンを引きましょう。", "ここは昼でも夜の部屋。心にかかっていることを、ひとつだけ聞かせて。"],
-};
-
 // 占い師に渡す、部屋の様子。
 const roomScene: Record<RoomHour, string> = {
   night: "夜の部屋。蝋燭の灯りだけがある。",

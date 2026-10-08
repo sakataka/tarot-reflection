@@ -5,6 +5,7 @@ import { tablePayload, type ReadingRecord } from "../utils/history";
 import { isGatedSegment, parseNarration, segmentStarts, type NarrationSegment } from "../utils/narration";
 import type { NarrationPace } from "../utils/pace";
 import { answerLabel } from "../utils/moment";
+import { fetchWhisper, whisperAvailable } from "../utils/whisper";
 import { oracleName } from "../utils/persona";
 import { playChime } from "../utils/sound";
 import { tableCards } from "../utils/tarot";
@@ -48,12 +49,9 @@ const tickInterval = 40;
 const pauseAfterSentence = 260;
 const pauseAfterParagraph = 650;
 const pauseAfterFlip = 1300;
-// 二枚目からは合図を待たず、一枚告げ終えるごとにこの間を置いて次を返す。
-const pauseBetweenCards = 1100;
 const pauseBeforeClosing = 900;
-
-// 相談者の合図を待つ区切り。最初の一枚、総括、今夜の答え。二枚目以降のカードは続けて返す。
-const needsCue = (segment: NarrationSegment, ordinal: number) => segment.kind !== "card" || ordinal === 0;
+// 囁きの声が届かないまま待たせない上限。過ぎたら文字で示す。
+const whisperWaitLimit = 25_000;
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -71,16 +69,29 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  // 「今夜の答え」は、声の準備があれば先に囁き、言い終えてから文字で示す。
+  const [voiceReady, setVoiceReady] = useState(false);
+  const [voiceDone, setVoiceDone] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void whisperAvailable().then((ok) => alive && setVoiceReady(ok));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const voiceFirst = whisperOn && voiceReady && !instant;
   const answerTitle = answerLabel(new Date(reading.createdAt));
   // 語りに入った区切り（カード・総括・答え）の数と、相談者の合図を待っている区切り。
   const [entered, setEntered] = useState(0);
   const [awaitingOrdinal, setAwaitingOrdinal] = useState<number | null>(null);
 
   // タイマーからは最新の値を読む。
-  const live = useRef({ raw, streamDone, cursor, instant, revealed, carry: 0, pauseUntil: 0, lastTick: 0, entered: 0, gatesOpened: 0, beatFor: -1 });
+  const live = useRef({ raw, streamDone, cursor, instant, revealed, voiceFirst, voiceDone, carry: 0, pauseUntil: 0, lastTick: 0, entered: 0, gatesOpened: 0 });
   live.current.raw = raw;
   live.current.streamDone = streamDone;
   live.current.instant = instant;
+  live.current.voiceFirst = voiceFirst;
+  live.current.voiceDone = voiceDone;
   live.current.revealed = revealed;
   const revealRef = useRef(onRevealCard);
   revealRef.current = onRevealCard;
@@ -107,7 +118,7 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
     live.current.pauseUntil = 0;
     live.current.entered = 0;
     live.current.gatesOpened = 0;
-    live.current.beatFor = -1;
+    setVoiceDone(false);
 
     streamBackend(
       "interpret/stream",
@@ -151,16 +162,8 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
         if (nextGated !== undefined && starts[nextGated] <= state.cursor) {
           const segment = segments[nextGated];
           if (!state.instant && state.gatesOpened <= state.entered) {
-            if (needsCue(segment, state.entered)) {
-              setAwaitingOrdinal(state.entered);
-              return;
-            }
-            // 続けて返すカードは、一呼吸おいてからめくる。
-            if (state.beatFor !== state.entered) {
-              state.beatFor = state.entered;
-              state.pauseUntil = now + pauseBetweenCards;
-              return;
-            }
+            setAwaitingOrdinal(state.entered);
+            return;
           }
           state.entered += 1;
           setEntered(state.entered);
@@ -180,6 +183,8 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
         }
 
         if (state.cursor >= total) {
+          // 答えを囁いている間は、語り終えたことにしない。
+          if (state.streamDone && state.voiceFirst && !state.voiceDone && segments.some((segment) => segment.kind === "message")) return;
           if (state.streamDone) {
             // 合図が抜けたカードも、語り終えたら表に返しておく。
             state.revealed.forEach((isRevealed, index) => {
@@ -193,6 +198,15 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
         }
 
         const nextBoundary = starts.find((start) => start > state.cursor) ?? total;
+        // カードの段落（と、囁く答え）は、届き終えてから一度に示す。
+        const currentIndex = starts.reduce((found, start, index) => (start <= state.cursor ? index : found), -1);
+        const current = segments[currentIndex];
+        if (!state.instant && current && (current.kind === "card" || (current.kind === "message" && state.voiceFirst))) {
+          if (currentIndex === segments.length - 1 && !state.streamDone) return;
+          state.cursor = nextBoundary;
+          setCursor(nextBoundary);
+          continue;
+        }
         if (state.instant) {
           state.cursor = nextBoundary;
           setCursor(state.cursor);
@@ -242,6 +256,16 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
   // 答えの一文は、語りが届き終えてから囁きの声に回す。枠が開いたら囁く。
   const messageText = streamDone ? segments.find((segment) => segment.kind === "message")?.text.trim() ?? "" : "";
   const messageShown = visibleSegments.some(({ segment }) => segment.kind === "message");
+  const messageHeld = voiceFirst && messageShown && !voiceDone;
+  // 語りが届き終えたら、答えの声を裏で先に作っておく。枠が開いたときに待たせない。
+  useEffect(() => {
+    if (voiceFirst && messageText) fetchWhisper(messageText).catch(() => undefined);
+  }, [voiceFirst, messageText]);
+  useEffect(() => {
+    if (!messageHeld) return;
+    const timer = window.setTimeout(() => setVoiceDone(true), whisperWaitLimit);
+    return () => window.clearTimeout(timer);
+  }, [messageHeld]);
   const isSpeaking = !finished && !isWaiting && !error && !awaiting;
   const waitingWords = waitingSteps(tableCards(reading).map((readingCard) => readingCard.position.name));
 
@@ -349,7 +373,8 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
           speaking={isSpeaking && !awaiting}
           animate={!instant}
           showNotes={finished}
-          messageSlot={messageText ? <Whisper text={messageText} enabled={whisperOn} prefetch auto={messageShown} /> : null}
+          messageHeld={messageHeld}
+          messageSlot={messageText ? <Whisper text={messageText} enabled={whisperOn} prefetch auto={messageShown} onDone={() => setVoiceDone(true)} /> : null}
         />
       ) : null}
 

@@ -8,7 +8,6 @@ export const CelticCross = ({ reading, revealed }: { reading: Reading; revealed:
   return (
     <details className="celtic-overview">
       <summary>十字の並びを見渡す</summary>
-      <p className="celtic-caption">中央にIとII、右は下からVII〜X</p>
       <div className="celtic-map" aria-label="ケルト十字の配置">
         {reading.cards.map((item, index) => (
           <div className={`celtic-map-slot${index === 1 ? " is-crossing" : ""}`} key={item.position.id}

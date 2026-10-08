@@ -11,12 +11,14 @@ type WhisperProps = {
   prefetch?: boolean;
   // 答えの枠が開いたら、一度だけ自分から囁く。
   auto?: boolean;
+  // 自分から囁き終えたとき（声が出せなかったときも）に知らせる。
+  onDone?: () => void;
 };
 
 type State = "idle" | "waiting" | "playing" | "failed";
 
 // 「今夜の答え」をヴェスペラの声で囁く。声の準備がないときは何も出さない。
-export const Whisper = ({ text, enabled, prefetch = false, auto = false }: WhisperProps) => {
+export const Whisper = ({ text, enabled, prefetch = false, auto = false, onDone }: WhisperProps) => {
   const [available, setAvailable] = useState(false);
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
@@ -24,6 +26,13 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
   const autoPlayed = useRef(false);
   const playbackRequest = useRef(0);
   const words = text.trim();
+  const doneRef = useRef(onDone);
+  doneRef.current = onDone;
+  const finish = () => {
+    const done = doneRef.current;
+    doneRef.current = undefined;
+    done?.();
+  };
 
   useEffect(() => {
     let alive = true;
@@ -57,6 +66,7 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
       audio.onended = () => {
         setState("idle");
         duckAmbience(false);
+        finish();
       };
       duckAmbience(true);
       await audio.play();
@@ -68,6 +78,7 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
     } catch (caught) {
       if (request !== playbackRequest.current) return;
       duckAmbience(false);
+      finish();
       setState("failed");
       setError(caught instanceof Error && caught.name !== "NotAllowedError" ? caught.message : "");
     }
@@ -85,6 +96,7 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
     audioRef.current?.pause();
     duckAmbience(false);
     setState("idle");
+    finish();
   };
 
   if (!available || !words) return null;

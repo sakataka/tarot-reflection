@@ -401,7 +401,7 @@ export const CardBackGrid = ({
     dealing: "残りを重ねて、あなたの山を上に。……広げますよ。",
     ready: isComplete
       ? "揃いましたね。そのカードを、わたしに渡してください。"
-      : `次は${positions[selectedCards.length]?.name}。目が止まったカードに触れて。あと${remaining}枚。`,
+      : `次は${positions[selectedCards.length]?.name}。目が止まったカードに触れて。`,
   }[phase];
 
   return (
@@ -426,10 +426,6 @@ export const CardBackGrid = ({
             </p>
           </div>
         ) : null}
-        <div className="selection-counter" aria-live="polite">
-          <strong>{selectedCards.length}</strong>
-          <span>/ {requiredCount} 枚</span>
-        </div>
       </div>
 
       <div className="tarot-table">
@@ -526,18 +522,7 @@ export const CardBackGrid = ({
         </div>
       </div>
 
-      <div className="reveal-action">
-        <p>
-          {phase === "shuffling"
-            ? "ここだ、と思ったところで山に触れるか"
-            : phase === "choosing"
-              ? "三つの山から、ひとつを選んでください"
-              : phase !== "ready"
-                ? " "
-                : isComplete
-                  ? `カードが揃いました。${oracleName}に渡しましょう`
-                  : `あと ${remaining} 枚、呼ばれる気がするカードを`}
-        </p>
+      <div className={phase === "shuffling" || phase === "dealing" || phase === "ready" ? "reveal-action" : "reveal-action is-empty"}>
         <div className="reveal-buttons">
           {phase === "shuffling" ? (
             <button className="primary-button" type="button" disabled={!canStop} onClick={stopShuffle}>

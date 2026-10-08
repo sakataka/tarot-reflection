@@ -87,7 +87,7 @@ export const ReadingHeading = ({ reading }: { reading: Reading }) => {
       ) : null}
       <p className="reading-date">
         {createdAt.toLocaleString("ja-JP", { dateStyle: "long", timeStyle: "short" })}
-        ・<MoonGlyph age={moon.age} className="inline-moon" />{moon.name}・{reading.spread.name}
+        ・<MoonGlyph age={moon.age} className="inline-moon" />{moon.name}
       </p>
     </section>
   );

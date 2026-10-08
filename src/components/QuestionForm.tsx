@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Spread } from "../types/tarot";
 import type { ReadingRecord } from "../utils/history";
 import { maxQuestionLength } from "../utils/limits";
-import { roomGreeting, type MoonPhase, type RoomHour } from "../utils/moment";
+import type { MoonPhase, RoomHour } from "../utils/moment";
 import { oracleName } from "../utils/persona";
 import { LetterPaper } from "./LetterPaper";
 import { MoonGlyph } from "./MoonGlyph";
@@ -43,33 +43,25 @@ export const QuestionForm = ({
   onConfide,
 }: QuestionFormProps) => {
   const tonight = hour === "morning" ? "今朝" : hour === "day" ? "今日" : "今夜";
-  const [greeting, request] = roomGreeting[hour];
-  const selectedSpread = spreads.find((spread) => spread.id === selectedSpreadId) ?? spreads[0];
 
   return (
     <section className={clarifySlot ? "intro-panel is-confiding" : "intro-panel"}>
       <div className="intro-hero">
         <MoonlitScene moon={moon} hour={hour} />
         <div className="intro-copy">
-          <p className="ornament-kicker">Moonlit Tarot</p>
           <h1><RevealText lines={[`${tonight}のカードに、`, "胸の内をたずねる"]} delay={500} /></h1>
           <p className="tonight-moon">
             <MoonGlyph age={moon.age} className="tonight-moon-glyph" />
             {tonight}は<strong>{moon.name}</strong>
             <span className="tonight-moon-age">月齢 {moon.age.toFixed(1)}</span>
           </p>
-          <p className="intro-greeting">
-            {greeting}<br />{request}
-            <span className="intro-signature">占い部屋の主　{oracleName}</span>
-          </p>
         </div>
       </div>
 
       {clarifySlot ? (
-        // 打ち明けたあとは、書いた問いと並べ方を控えめに残し、占い師とのやりとりに目を向ける。
+        // 打ち明けたあとは、書いた問いを控えめに残し、占い師とのやりとりに目を向ける。
         <div className="confided">
           <p className="confided-question">{question.trim()}</p>
-          <p className="confided-spread">{selectedSpread.name}で</p>
         </div>
       ) : (
         <>

@@ -21,6 +21,8 @@ type NarrationViewProps = {
   showNotes?: boolean;
   // 答えの枠の下に添えるもの（囁きを聴く、など）。
   messageSlot?: ReactNode;
+  // 囁いている間は、答えの文字を伏せておく。
+  messageHeld?: boolean;
 };
 
 // 卓から持ち上げたカードを、語りの頭で大きく見せる。語りと同時に表へ返す。
@@ -81,7 +83,7 @@ const TableOverview = ({ reading }: { reading: Reading }) => (
   </div>
 );
 
-export const NarrationView = ({ reading, segments, speaking = false, animate = false, showNotes = true, messageSlot }: NarrationViewProps) => {
+export const NarrationView = ({ reading, segments, speaking = false, animate = false, showNotes = true, messageSlot, messageHeld = false }: NarrationViewProps) => {
   const flipped = tableCards(reading);
   const lastVisible = segments.length - 1;
 
@@ -119,9 +121,9 @@ export const NarrationView = ({ reading, segments, speaking = false, animate = f
           return (
             <div className="narration-segment is-message" id="narration-message" key="message">
               <p className="narration-kicker">{answerLabel(new Date(reading.createdAt))}</p>
-              <div className="message-words">
+              <div className={messageHeld ? "message-words is-held" : "message-words"}>
                 <MoonGlyph age={moonPhase(new Date(reading.createdAt)).age} className="message-emblem" />
-                {body}
+                {messageHeld ? <p className="message-hush" aria-hidden="true"><i /><i /><i /></p> : body}
               </div>
               {messageSlot}
             </div>
