@@ -22,6 +22,7 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
   const [error, setError] = useState("");
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const autoPlayed = useRef(false);
+  const playbackRequest = useRef(0);
   const words = text.trim();
 
   useEffect(() => {
@@ -33,6 +34,7 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
   }, []);
 
   useEffect(() => () => {
+    playbackRequest.current += 1;
     audioRef.current?.pause();
     duckAmbience(false);
   }, []);
@@ -43,10 +45,12 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
 
   const play = async () => {
     if (!words) return;
+    const request = ++playbackRequest.current;
     setError("");
     setState("waiting");
     try {
       const url = await fetchWhisper(words);
+      if (request !== playbackRequest.current) return;
       audioRef.current?.pause();
       const audio = new Audio(url);
       audioRef.current = audio;
@@ -56,8 +60,13 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
       };
       duckAmbience(true);
       await audio.play();
+      if (request !== playbackRequest.current) {
+        audio.pause();
+        return;
+      }
       setState("playing");
     } catch (caught) {
+      if (request !== playbackRequest.current) return;
       duckAmbience(false);
       setState("failed");
       setError(caught instanceof Error && caught.name !== "NotAllowedError" ? caught.message : "");
@@ -72,6 +81,7 @@ export const Whisper = ({ text, enabled, prefetch = false, auto = false }: Whisp
   }, [available, enabled, auto, words]);
 
   const stop = () => {
+    playbackRequest.current += 1;
     audioRef.current?.pause();
     duckAmbience(false);
     setState("idle");
