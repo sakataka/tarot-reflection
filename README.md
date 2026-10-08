@@ -73,7 +73,7 @@ LOCALWEB_API_PORT=<api-port> bun run dev:frontend
 - 部屋の音（`src/utils/ambience.ts`）: 低い部屋鳴り、蝋燭の芯がはぜる音、夜と夕暮れは遠くの虫、朝は遠い鳥を、Web Audio でごく小さく合成し続けます。ブラウザが音を許す最初の操作のあとで流れはじめ、「設定」で止められます。答えを囁いている間は音を下げます。
 - 答えの囁き（`server/whisper.ts`）: 「今夜の答え」の一、二文だけを、ヴェスペラの声で囁きます。声は Gemini Narration Lab（このMacの音声合成API）でサーバーが作り、`TAROT_DATA_DIR` 側の `whispers/` に保存して使い回します。トークンがなければ囁きの表示は出ず、文字だけで占えます。生成に失敗しても自動では作り直しません（有料のため）。
 
-囁きを使うには、Gemini Narration Lab の画面右上「API連携」で、IDを `tarot-reflection` にしてトークンを発行し、このrepoの `.env` に次の2行を入れてサーバーを起動し直します（`.env.example` に雛形があります）。声は `TAROT_VOICE`、読み方の指示は `TAROT_VOICE_STYLE` で変えられます（初期値は大人びた女性の声 `Gacrux`）。
+囁きを使うには、Gemini Narration Lab の画面右上「API連携」で、IDを `tarot-reflection` にしてトークンを発行し、このrepoの `.env` に次の2行を入れてサーバーを起動し直します（`.env.example` に雛形があります）。声は `TAROT_VOICE`、読み方の指示は `TAROT_VOICE_STYLE` で変えられます（初期値は日本語の語り手の声 `ja-jp-storyteller-3`。48歳・低め・引き込む力と共感）。
 
 ```dotenv
 NARRATION_API_URL=http://gemini-narration.localhost/api/v1

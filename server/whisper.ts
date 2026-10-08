@@ -8,7 +8,7 @@ import { defaultStorePath } from "./readingStore";
 
 export const maxWhisperLength = 200;
 
-const defaultVoice = "Gacrux";
+const defaultVoice = "ja-jp-storyteller-3";
 const defaultStyle = "四十代半ばの占い師の女性が、蝋燭の灯りの向こうから、相談者ひとりに向けて囁くように。低く、ゆっくり、間をたっぷり取って。神秘的で、ほんの少し艶をにじませ、最後の言葉は静かに言い切る。";
 
 const settings = () => ({
