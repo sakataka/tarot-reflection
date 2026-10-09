@@ -362,7 +362,6 @@ const App = () => {
             onReload={loadRecords}
             onSelect={(id) => { setArchiveNotice(""); setArchiveSelectedId(id); }}
             onDelete={deleteRecord}
-            whisperOn={whisperOn}
           />
         ) : null}
 
@@ -403,7 +402,6 @@ const App = () => {
               onCut={handleCut}
               onToggleCard={handleToggleCard}
               onReveal={handleReveal}
-              onReshuffle={handleShuffle}
             />
           </div>
         ) : null}

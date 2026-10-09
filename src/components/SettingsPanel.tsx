@@ -42,8 +42,8 @@ const ambienceOptions: Option<boolean>[] = [
 ];
 
 const whisperOptions = (available: boolean): Option<boolean>[] => [
-  { value: true, label: "囁いてもらう", note: available ? `答えの枠が開くと、${oracleName}が声に出して告げます。` : "声の準備（音声合成のトークン）がまだありません。整うと囁きます。" },
-  { value: false, label: "文字だけ", note: "答えは文字で受け取ります。囁きは、押せばいつでも聴けます。" },
+  { value: true, label: "囁いてもらう", note: available ? `最後に${oracleName}が札を振り返って答えを囁き、言い終えてから文字が浮かびます。` : "声の準備（音声合成のトークン）がまだありません。整うと囁きます。" },
+  { value: false, label: "文字だけ", note: "答えは文字だけで受け取ります。" },
 ];
 
 const SettingGroup = <T extends string | boolean>({ title, options, value, onChange }: {

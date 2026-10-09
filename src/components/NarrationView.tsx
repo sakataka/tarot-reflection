@@ -100,6 +100,7 @@ export const NarrationView = ({ reading, segments, speaking = false, animate = f
           </p>
         ));
 
+        if (segment.kind === "recap") return null;
         if (segment.kind === "card") {
           return (
             <div className="narration-segment is-card" id={narrationCardId(segment.cardIndex)} key={`card-${segment.cardIndex}`}>

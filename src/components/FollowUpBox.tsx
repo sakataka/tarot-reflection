@@ -9,6 +9,7 @@ import { playChime } from "../utils/sound";
 import { tarotDeck } from "../data/tarotDeck";
 import { CardView } from "./CardView";
 import { LetterPaper } from "./LetterPaper";
+import { OraclePortrait } from "./OraclePortrait";
 
 type FollowUpBoxProps = {
   reading: Reading;
@@ -72,7 +73,8 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     }
   };
 
-  const send = async () => {
+  // 補足の一枚を引くかどうかは、送るボタンで選ぶ。言葉を待ち直すときは、先に選んだほうを使う。
+  const send = async (draw = drawClarifier) => {
     const question = ask.trim();
     if (!question || pending || remaining <= 0 || busyRef.current) return;
     busyRef.current = true;
@@ -83,7 +85,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     setPending({ question, answer: "" });
     try {
       const prepared = await requestBackend<{ previous: Exchange[]; clarifier: CardRecord | null; completed: boolean }>(`readings/${recordId}/follow-up`, {
-        method: "POST", body: { ask: question, drawClarifier },
+        method: "POST", body: { ask: question, drawClarifier: draw },
       });
       if (abort.signal.aborted) return;
       setExchanges(prepared.previous);
@@ -103,7 +105,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
           previous: prepared.previous,
           ask: question,
           recordId,
-          drawClarifier,
+          drawClarifier: draw,
         },
         {
           signal: abort.signal,
@@ -127,10 +129,14 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
 
   return (
     <div className="follow-up">
-      <div className="follow-up-heading">
-        <p className="ornament-kicker">もう少しだけ</p>
-        {remaining > 0 ? <p>{remaining > 1 ? "まだ聞きたいことがあるのなら。" : "あと一つだけ、聞きましょう。"}</p> : null}
-      </div>
+      {remaining > 0 ? (
+        <div className="follow-up-heading">
+          <OraclePortrait pose="listening" size="small" />
+          <p>{remaining > 1
+            ? "まだ胸に引っかかるものがあるなら、聞かせて。見えにくいところは、山からもう一枚引いて照らしましょう。"
+            : "最後にもう一つだけ、聞きましょう。"}</p>
+        </div>
+      ) : null}
 
       <ExchangeList exchanges={exchanges} />
 
@@ -160,7 +166,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       ) : null}
 
       {remaining > 0 && !pending ? (
-        <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); void send(); }}>
+        <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); void send(false); }}>
           <LetterPaper
             className="follow-up-paper"
             value={ask}
@@ -170,9 +176,19 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
             label={`${oracleName}に聞き返す`}
             onChange={setAsk}
           />
-          <label className="clarifier-choice"><input type="checkbox" checked={drawClarifier} disabled={Boolean(reserved)} onChange={(event) => setDrawClarifier(event.target.checked)} />補足の一枚を引いてもらう</label>
           {reserved?.clarifier ? <ClarifierCard card={reserved.clarifier} /> : null}
-          <button className="secondary-button" type="submit" disabled={!ask.trim()}>{reserved ? "同じ聞き返しをもう一度送る" : "聞き返す"}</button>
+          <div className="follow-up-actions">
+            {reserved ? (
+              <button className="secondary-button" type="button" disabled={!ask.trim()} onClick={() => void send()}>もう一度、聞く</button>
+            ) : (
+              <>
+                <button className="text-button" type="submit" disabled={!ask.trim()}>このまま聞く</button>
+                <button className="secondary-button" type="button" disabled={!ask.trim()} onClick={() => { setDrawClarifier(true); void send(true); }}>
+                  もう一枚引いて、照らす
+                </button>
+              </>
+            )}
+          </div>
         </form>
       ) : null}
 

@@ -39,7 +39,15 @@ export const ClarifyBox = ({ active, question, onProceed, onEdit }: ClarifyBoxPr
   useEffect(() => {
     if (!active) return;
     boxRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    if (done) answerRef.current?.focus({ preventScroll: true });
+    if (!done) return;
+    // 画面の送りと肖像の縮みが落ち着いてから、便箋にカーソルを置く。動いている最中に置くと、音声入力が便箋を見失うことがある。
+    const timer = window.setTimeout(() => {
+      const field = answerRef.current;
+      if (!field || document.activeElement === field) return;
+      field.focus({ preventScroll: true });
+      field.setSelectionRange(field.value.length, field.value.length);
+    }, 900);
+    return () => window.clearTimeout(timer);
   }, [done, active]);
 
   const proceedWithAnswer = () => onProceed(answer.trim() ? { question: words.trim(), answer: answer.trim() } : null);
@@ -71,7 +79,6 @@ export const ClarifyBox = ({ active, question, onProceed, onEdit }: ClarifyBoxPr
           maxLength={maxAnswerLength}
           rows={3}
           label={`${oracleName}への答え`}
-          placeholder="思いつくままで構いません"
           onChange={setAnswer}
         />
       ) : null}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { parseNarration, segmentStarts } from "./narration";
+import { isGatedSegment, parseNarration, segmentStarts } from "./narration";
 
 describe("parseNarration", () => {
   test("splits intro, cards and closing by markers", () => {
@@ -27,6 +27,13 @@ describe("parseNarration", () => {
   test("computes segment offsets", () => {
     const segments = parseNarration("はじめ[[card:1]]一枚目[[close]]おわり", true, 1);
     expect(segmentStarts(segments)).toEqual([0, 3, 6]);
+  });
+
+  test("keeps the spoken recap apart from the shown answer", () => {
+    const segments = parseNarration("[[card:1]]星。[[close]]見渡して。[[recap]]\n星は回復。[[message]]\n今は待つとき。", true, 1);
+    expect(segments.map((segment) => segment.kind)).toEqual(["card", "close", "recap", "message"]);
+    expect(segments[2].text).toBe("星は回復。");
+    expect(segments.filter(isGatedSegment).map((segment) => segment.kind)).toEqual(["card", "close", "message"]);
   });
 
   test("keeps the closing message after the closing, and ignores markers after it", () => {

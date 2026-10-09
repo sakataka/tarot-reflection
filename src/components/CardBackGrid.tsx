@@ -37,7 +37,6 @@ type CardBackGridProps = {
   onCut: (pileIndex: number) => void;
   onToggleCard: (drawnCard: DrawnCard) => void;
   onReveal: () => void;
-  onReshuffle: () => void;
 };
 
 type FanLayout = {
@@ -155,8 +154,11 @@ const handJitter = (id: string, salt: number) => {
   return ((hash >>> 0) % 2001) / 1000 - 1;
 };
 
-// 切り分けた山は、置いた手の向きで少しずつ傾く。
-const pileTurns = [-2.6, 2.1, -0.8];
+// 切り分けた山は、置いた手の向きで少しずつ傾き、置き場所も揃いきらない。
+const pileTurns = [-4.2, 3.4, -1.3];
+const pileNudges = [{ x: -7, y: 7 }, { x: 10, y: -5 }, { x: 2, y: 2 }];
+// 運ぶ山の札は一枚ずつわずかに遅れてついてくる（手の中で山がしなる）。
+const packetTrail = 2.2;
 
 // 切り分けた山の置き場所。いちばん上の山を左へ、次を右へ運び、残りは中央に残る。
 const pileSlots = [-1, 1, 0];
@@ -187,7 +189,6 @@ export const CardBackGrid = ({
   onCut,
   onToggleCard,
   onReveal,
-  onReshuffle,
 }: CardBackGridProps) => {
   const panelRef = useRef<HTMLElement>(null);
   const fieldRef = useRef<HTMLDivElement>(null);
@@ -353,12 +354,13 @@ export const CardBackGrid = ({
       const lift = phase === "lifting" && pile === chosenPile ? 30 : phase === "choosing" && pile === hoveredPile ? 10 : 0;
       // 山の縁は札ごとにわずかにずれ、山全体も置いた向きに少し傾く。持ち上げた山は手の中で揃う。
       const loose = phase === "lifting" && pile === chosenPile ? 0.35 : 1;
-      const turn = pileTurns[pile] * (lift >= 30 ? 0.3 : 1) + jr * 1.1 * loose;
+      const turn = pileTurns[pile] * (lift >= 30 ? 0.3 : 1) + jr * 2.4 * loose;
+      const nudge = pileNudges[pile];
       return {
-        transform: `translate(${(target.x + jx * 1.8 * loose).toFixed(1)}px, ${(target.y - depth * 0.35 - lift + jy * 0.6).toFixed(1)}px) rotate(${turn.toFixed(2)}deg) scale(${piles.scale * (lift >= 30 ? 1.06 : 1)})`,
+        transform: `translate(${(target.x + nudge.x + jx * 3.2 * loose).toFixed(1)}px, ${(target.y + nudge.y - depth * 0.35 - lift + jy * 1.4).toFixed(1)}px) rotate(${turn.toFixed(2)}deg) scale(${piles.scale * (lift >= 30 ? 1.06 : 1)})`,
         // 上の山ほど先に持ち上げて運ぶ。運んでいる山は、残りの山より上を通る。
         zIndex: (cutPileCount - pile) * 1000 + depth,
-        delay: phase === "cutting" ? pile * cutStagger : 0,
+        delay: phase === "cutting" ? pile * cutStagger + (pileSize - depth) * packetTrail : 0,
       };
     }
     // 混ぜている間と集めている間は一つの山。先頭（選んだ山）が一番上に来る。
@@ -378,7 +380,8 @@ export const CardBackGrid = ({
     if (phase === "cutting") {
       const pile = Math.floor(index / pileSize);
       const slot = pileSlots[pile];
-      return slot === 0 ? null : { lift: pile === 0 ? 34 : 26, turn: slot * -5, delay: pile * cutStagger };
+      const depthInPile = index - pile * pileSize;
+      return slot === 0 ? null : { lift: pile === 0 ? 34 : 26, turn: slot * -5, delay: pile * cutStagger + depthInPile * packetTrail };
     }
     if (phase === "gathering") {
       const pile = pileOfCard.current.get(cardId);
@@ -422,7 +425,6 @@ export const CardBackGrid = ({
             </div>
             <p>
               <strong>一枚、卓にこぼれました ― {jumper.card.nameJa}（{jumper.orientation === "upright" ? "正位置" : "逆位置"}）</strong>
-              <span>自分から出てきたカードは、見落とさないでほしい知らせ。脇に置いて、語りの最初に読みます。</span>
             </p>
           </div>
         ) : null}
@@ -460,13 +462,12 @@ export const CardBackGrid = ({
               onFocus={() => phase === "choosing" && setHoveredPile(pileIndex)}
               onBlur={() => setHoveredPile((current) => (current === pileIndex ? null : current))}
               style={{
-                left: position.x + (layout.cardWidth * (1 - piles.scale)) / 2,
-                top: position.y + layout.cardHeight * (1 - piles.scale) - 12,
+                left: position.x + pileNudges[pileIndex].x + (layout.cardWidth * (1 - piles.scale)) / 2,
+                top: position.y + pileNudges[pileIndex].y + layout.cardHeight * (1 - piles.scale) - 12,
                 width: layout.cardWidth * piles.scale,
                 height: layout.cardHeight * piles.scale + 12,
               }}
             >
-              <span>{slotNames[pileSlots[pileIndex]]}</span>
             </button>
           )) : null}
 
@@ -530,7 +531,6 @@ export const CardBackGrid = ({
             </button>
           ) : phase !== "ready" && phase !== "dealing" ? null : (
             <>
-              <button className="text-button" type="button" disabled={phase !== "ready"} onClick={onReshuffle}>混ぜ直す</button>
               <button className="primary-button" type="button" disabled={!isComplete} onClick={onReveal}>
                 <span>このカードで占う</span>
               </button>

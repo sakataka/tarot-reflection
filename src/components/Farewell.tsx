@@ -134,7 +134,7 @@ export const Farewell = ({ reading, answer, onCancel, onDarken, onRelight }: Far
               </button>
               <button className="text-button" type="button" onClick={onCancel}>まだ、卓にいる</button>
               {saving === "failed" ? <p className="copy-fallback" role="status">封書をうまく綴じられませんでした。答えは帳面に残っています。</p> : null}
-              {saving === "done" ? <p className="farewell-kept" role="status">今夜の月と答えを、一枚の絵にして保存しました。</p> : null}
+              {saving === "done" ? <p className="farewell-kept" role="status">封書は、あなたの手に。</p> : null}
             </div>
           ) : null}
         </div>

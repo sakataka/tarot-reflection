@@ -329,13 +329,9 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
 .clarifier-card .card-meta { text-align: center; }
 .clarifier-card .card-meta h3 { font-size: 16px; }
 .clarifier-card .card-meta p { font-size: 11px; }
-.clarifier-choice { grid-column: 1 / -1; }
-.clarifier-choice { display: flex; align-items: center; gap: 10px; font-family: var(--serif); color: var(--muted); font-size: 13px; letter-spacing: .08em; cursor: pointer; }
-.clarifier-choice input { width: 18px; height: 18px; accent-color: var(--gold); }
 .follow-up-form > .letter-paper, .follow-up-form > .clarifier-card { grid-column: 1 / -1; }
 .follow-up-paper.letter-paper { margin-top: 0; }
 .follow-up-paper.letter-paper textarea { min-height: 80px; font-size: 15px; }
-.follow-up-form > button { grid-column: 1 / -1; justify-self: end; }
 @media (max-width: 760px) {
   .spread-selector { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .table-strip.spread-10 { gap: 4px; }
@@ -493,29 +489,13 @@ textarea:focus { outline: none; border-color: var(--gold); box-shadow: inset 0 0
   padding: 0;
   animation: pile-in .5s .1s ease both;
 }
-.cut-pile span {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 10px);
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-family: var(--serif);
-  font-size: 12px;
-  letter-spacing: .1em;
-  color: var(--muted);
-  transition: color .25s;
-}
-.cut-pile::after { content: ""; position: absolute; inset: -6px -6px 6px; border-radius: 8px; box-shadow: 0 0 0 1px rgba(234, 208, 143, 0); transition: box-shadow .3s; pointer-events: none; }
+.cut-pile::after { content: ""; position: absolute; inset: -30% -45%; z-index: -1; border-radius: 50%; background: radial-gradient(ellipse, rgba(234, 208, 143, .22), transparent 62%); mix-blend-mode: screen; opacity: 0; transition: opacity .4s, transform .6s cubic-bezier(.45, .05, .25, 1); pointer-events: none; }
 .cut-pile:disabled { opacity: 1; cursor: default; }
-.cut-pile.is-chosen::after { box-shadow: 0 0 0 1px var(--gold-bright), 0 0 30px 6px rgba(234, 208, 143, .45); transform: translateY(-26px); transition: box-shadow .3s, transform .6s cubic-bezier(.45, .05, .25, 1); }
-.cut-pile.is-chosen span { color: var(--gold-bright); }
-.cut-pile.is-passed span { opacity: 0; transition: opacity .3s; }
+.cut-pile.is-chosen::after { opacity: 1; transform: translateY(-26px); }
 .cut-pile:focus-visible { outline: none; }
-.cut-pile:focus-visible::after { box-shadow: 0 0 0 1px var(--gold-bright), 0 0 26px 4px rgba(234, 208, 143, .35); }
-.cut-pile:focus-visible span { color: var(--gold-bright); }
+.cut-pile:focus-visible::after { opacity: .9; }
 @media (hover: hover) {
-  .cut-pile:hover::after { box-shadow: 0 0 0 1px var(--gold), 0 0 26px 4px rgba(234, 208, 143, .3); }
-  .cut-pile:hover span { color: var(--gold-bright); }
+  .cut-pile:hover::after { opacity: .8; }
 }
 @keyframes pile-in { from { opacity: 0; } to { opacity: 1; } }
 
@@ -829,8 +809,9 @@ a.strip-card:hover { color: var(--gold-bright); }
 
 /* 聞き返し */
 .follow-up { margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--line); }
-.follow-up-heading { text-align: center; margin-bottom: 18px; }
-.follow-up-heading p:not(.ornament-kicker) { margin-top: 6px; font-family: var(--serif); font-size: 13px; color: var(--muted); }
+.follow-up-heading { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.follow-up-heading p { font-family: var(--serif); font-size: 15px; line-height: 1.9; letter-spacing: .05em; color: var(--ink); animation: ink-in 1s ease both; }
+.follow-up-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
 .exchange-list { display: grid; gap: 22px; }
 .exchange { display: grid; gap: 12px; animation: ink-in .9s ease both; }
 .exchange + .exchange, .exchange-list + .exchange { margin-top: 22px; }
@@ -902,19 +883,6 @@ a.strip-card:hover { color: var(--gold-bright); }
 /* 便箋と同じ灯りの、卓を閉じる誘い */
 .reading-end p { font-family: var(--serif); font-size: 13px; letter-spacing: .06em; color: var(--muted); margin-bottom: 8px; }
 
-/* 答えの囁き */
-.whisper { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 14px; animation: ink-in 1s ease both; }
-.whisper-button { display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 16px; border: 1px solid var(--line); border-radius: 999px; background: rgba(12, 16, 32, .6); color: var(--muted); font-family: var(--serif); font-size: 12px; letter-spacing: .14em; transition: color .2s, border-color .2s; }
-.whisper-button:not(:disabled):hover { color: var(--gold-bright); border-color: var(--line-strong); }
-.whisper-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; }
-.whisper-wave i { width: 2px; height: 5px; border-radius: 1px; background: var(--gold); opacity: .7; }
-.whisper.is-playing .whisper-button { color: var(--gold-bright); border-color: var(--line-strong); }
-.whisper.is-playing .whisper-wave i, .whisper.is-waiting .whisper-wave i { animation: whisper-wave 1.1s ease-in-out infinite; }
-.whisper-wave i:nth-child(2) { animation-delay: .18s !important; }
-.whisper-wave i:nth-child(3) { animation-delay: .36s !important; }
-.whisper.is-waiting .whisper-wave i { opacity: .35; }
-@keyframes whisper-wave { 0%, 100% { height: 4px; } 50% { height: 13px; } }
-.whisper-note { font-family: var(--serif); font-size: 11px; color: var(--faint); }
 
 /* 帳面：月の巡りごとに、三十の小さな月と相談のあった夜 */
 .archive-lunations { display: grid; gap: 34px; }

@@ -10,7 +10,6 @@ import { MoonGlyph } from "./MoonGlyph";
 import { NarrationView } from "./NarrationView";
 import { ReadingHeading, TableStrip } from "./ReadingTable";
 import { CelticCross } from "./CelticCross";
-import { Whisper } from "./Whisper";
 
 type ReadingArchiveProps = {
   records: ReadingRecord[];
@@ -22,7 +21,6 @@ type ReadingArchiveProps = {
   onSelect: (id: string | null) => void;
   onDelete: (id: string) => Promise<void>;
   onReload: () => void;
-  whisperOn: boolean;
 };
 
 const formatDate = (iso: string) =>
@@ -62,7 +60,7 @@ const groupByLunation = (records: ReadingRecord[]) => {
   return groups.sort((a, b) => b.index - a.index);
 };
 
-export const ReadingArchive = ({ records, selectedId, error, loading, notice, whisperOn, onSelect, onDelete, onReload }: ReadingArchiveProps) => {
+export const ReadingArchive = ({ records, selectedId, error, loading, notice, onSelect, onDelete, onReload }: ReadingArchiveProps) => {
   const selected = records.find((record) => record.id === selectedId);
   // 一覧が浮かび上がる動きは最初の一度だけ。記録から戻ったときは、そのまま見せる。
   const listShown = useRef(false);
@@ -72,7 +70,7 @@ export const ReadingArchive = ({ records, selectedId, error, loading, notice, wh
   });
   const now = new Date();
   return selected ? (
-    <ArchivedReading record={selected} whisperOn={whisperOn} onBack={() => onSelect(null)} onDelete={onDelete} />
+    <ArchivedReading record={selected} onBack={() => onSelect(null)} onDelete={onDelete} />
   ) : (
     <section className={settled ? "archive-panel is-settled" : "archive-panel"}>
       <div className="catalog-heading">
@@ -138,9 +136,8 @@ export const ReadingArchive = ({ records, selectedId, error, loading, notice, wh
 // 月の巡りは平均の月齢で数えるので、日付までは言わず「何月の新月」と呼ぶ。
 const formatStart = (date: Date) => `${date.getMonth() + 1}月`;
 
-const ArchivedReading = ({ record, whisperOn, onBack, onDelete }: {
+const ArchivedReading = ({ record, onBack, onDelete }: {
   record: ReadingRecord;
-  whisperOn: boolean;
   onBack: () => void;
   onDelete: (id: string) => Promise<void>;
 }) => {
@@ -156,7 +153,6 @@ const ArchivedReading = ({ record, whisperOn, onBack, onDelete }: {
 
   const cardCount = tableCards(reading).length;
   const segments = parseNarration(record.narration, true, cardCount);
-  const message = segments.find((segment) => segment.kind === "message")?.text.trim() ?? "";
 
   return (
     <div className="archive-reading reading-stage">
@@ -180,7 +176,6 @@ const ArchivedReading = ({ record, whisperOn, onBack, onDelete }: {
         <NarrationView
           reading={reading}
           segments={segments.map((segment) => ({ segment, text: segment.text }))}
-          messageSlot={message ? <Whisper text={message} enabled={whisperOn} /> : null}
         />
         {record.followUps?.length ? <ExchangeList exchanges={record.followUps} /> : null}
         <DeleteRecord record={record} onDelete={onDelete} />

@@ -79,7 +79,10 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
       alive = false;
     };
   }, []);
-  const voiceFirst = whisperOn && voiceReady && !instant;
+  const [voiceStarted, setVoiceStarted] = useState(false);
+  // 声があれば答えを囁く。語りを話す速さで見せているときは、言い終えるまで文字を伏せる。
+  const voiceOn = whisperOn && voiceReady;
+  const voiceFirst = voiceOn && !instant;
   const answerTitle = answerLabel(new Date(reading.createdAt));
   // 語りに入った区切り（カード・総括・答え）の数と、相談者の合図を待っている区切り。
   const [entered, setEntered] = useState(0);
@@ -119,6 +122,7 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
     live.current.entered = 0;
     live.current.gatesOpened = 0;
     setVoiceDone(false);
+    setVoiceStarted(false);
 
     streamBackend(
       "interpret/stream",
@@ -201,7 +205,8 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
         // カードの段落（と、囁く答え）は、届き終えてから一度に示す。
         const currentIndex = starts.reduce((found, start, index) => (start <= state.cursor ? index : found), -1);
         const current = segments[currentIndex];
-        if (!state.instant && current && (current.kind === "card" || (current.kind === "message" && state.voiceFirst))) {
+        // 札の振り返りは声にだけ使うので、画面へは送らない。
+        if (current?.kind === "recap" || (!state.instant && current && (current.kind === "card" || (current.kind === "message" && state.voiceFirst)))) {
           if (currentIndex === segments.length - 1 && !state.streamDone) return;
           state.cursor = nextBoundary;
           setCursor(nextBoundary);
@@ -250,22 +255,25 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
       const ordinal = isGatedSegment(segment) ? gatedOrdinal++ : -1;
       return { segment, ordinal, text: segment.text.slice(0, Math.max(0, cursor - starts[index])) };
     })
-    .filter(({ segment, ordinal, text }) => (isGatedSegment(segment) ? ordinal < entered : text.length > 0));
+    .filter(({ segment, ordinal, text }) => segment.kind !== "recap" && (isGatedSegment(segment) ? ordinal < entered : text.length > 0));
   const awaiting = awaitingOrdinal === null ? null : segments.filter(isGatedSegment)[awaitingOrdinal] ?? null;
   const isWaiting = !error && !awaiting && visibleSegments.length === 0;
-  // 答えの一文は、語りが届き終えてから囁きの声に回す。枠が開いたら囁く。
+  // 答えの一文は、語りが届き終えてから囁きの声に回す。声では、札の振り返りに続けて答えを告げる。
   const messageText = streamDone ? segments.find((segment) => segment.kind === "message")?.text.trim() ?? "" : "";
+  const recapText = streamDone ? segments.find((segment) => segment.kind === "recap")?.text.trim() ?? "" : "";
+  const spokenText = messageText ? [recapText, messageText].filter(Boolean).join("\n") : "";
   const messageShown = visibleSegments.some(({ segment }) => segment.kind === "message");
   const messageHeld = voiceFirst && messageShown && !voiceDone;
-  // 語りが届き終えたら、答えの声を裏で先に作っておく。枠が開いたときに待たせない。
+  // 語りが届き終えたら、声を裏で先に作っておく。枠が開いたときに待たせない。
   useEffect(() => {
-    if (voiceFirst && messageText) fetchWhisper(messageText).catch(() => undefined);
-  }, [voiceFirst, messageText]);
+    if (voiceOn && spokenText) fetchWhisper(spokenText).catch(() => undefined);
+  }, [voiceOn, spokenText]);
+  // 声がいつまでも出はじめなければ、文字で示す。
   useEffect(() => {
-    if (!messageHeld) return;
+    if (!messageHeld || voiceStarted) return;
     const timer = window.setTimeout(() => setVoiceDone(true), whisperWaitLimit);
     return () => window.clearTimeout(timer);
-  }, [messageHeld]);
+  }, [messageHeld, voiceStarted]);
   const isSpeaking = !finished && !isWaiting && !error && !awaiting;
   const waitingWords = waitingSteps(tableCards(reading).map((readingCard) => readingCard.position.name));
 
@@ -374,7 +382,7 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
           animate={!instant}
           showNotes={finished}
           messageHeld={messageHeld}
-          messageSlot={messageText ? <Whisper text={messageText} enabled={whisperOn} prefetch auto={messageShown} onDone={() => setVoiceDone(true)} /> : null}
+          messageSlot={voiceOn && spokenText ? <Whisper text={spokenText} play={messageShown} onStart={() => setVoiceStarted(true)} onDone={() => setVoiceDone(true)} /> : null}
         />
       ) : null}
 

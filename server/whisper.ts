@@ -6,7 +6,7 @@ import { defaultStorePath } from "./readingStore";
 // 「今夜の答え」だけを、ヴェスペラの声で囁かせる。音声は Gemini Narration Lab（このMacの音声合成API）で作る。
 // トークンが無ければ声は出さず、文字だけで占いを続ける。
 
-export const maxWhisperLength = 200;
+export const maxWhisperLength = 400;
 
 const defaultVoice = "ja-jp-storyteller-3";
 const defaultStyle = "四十代半ばの妖艶な占い師の女性が、蝋燭の灯りの向こうから、相談者の耳もとに顔を寄せて囁くように。低く甘い声で、息を多めに含ませ、語尾をほんの少し引いて余韻を残す。急がず、言葉と言葉のあいだにたっぷりと間を取る。相手の本音を見透かして微笑んでいるような、艶と余裕のある色気をにじませ、最後の言葉は静かに、確信をもって言い切る。";
