@@ -194,7 +194,7 @@ export const MoonlitScene = ({ moon, hour = "night" }: MoonlitSceneProps) => {
       // 縦長の画面では、月と水面が両方入るよう横の中心を月の側へ寄せる。
       const portrait = canvas.clientWidth / canvas.clientHeight < 1.2;
       // 横長の低い景色では、月がヘッダーに隠れないよう視点を空の側へ上げる。
-      gl.uniform2f(u.focus, portrait ? .6 : .55, portrait ? .4 : .3);
+      gl.uniform2f(u.focus, portrait ? .6 : .55, portrait ? .4 : .24);
       return true;
     };
 

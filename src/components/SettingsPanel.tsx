@@ -46,14 +46,15 @@ const whisperOptions = (available: boolean): Option<boolean>[] => [
   { value: false, label: "文字だけ", note: "答えは文字だけで受け取ります。" },
 ];
 
-const SettingGroup = <T extends string | boolean>({ title, options, value, onChange }: {
+const SettingGroup = <T extends string | boolean>({ title, titleParts, options, value, onChange }: {
   title: string;
+  titleParts?: string[];
   options: Option<T>[];
   value: T;
   onChange: (value: T) => void;
 }) => (
   <div className="guide-section">
-    <h2>{title}</h2>
+    <h2>{titleParts ? titleParts.map((part) => <span className="setting-title-part" key={part}>{part}</span>) : title}</h2>
     <div className="setting-options" role="radiogroup" aria-label={title}>
       {options.map((option, index) => (
         <button
@@ -104,6 +105,7 @@ export const SettingsPanel = ({ engine, pace, soundOn, ambienceOn, whisperOn, on
 
     <SettingGroup
       title={`${oracleName}の言葉を紡ぐAI`}
+      titleParts={[`${oracleName}の`, "言葉を紡ぐAI"]}
       options={engines.map((option) => ({ value: option.id, label: `${option.label}（${option.model}）`, note: engineNotes[option.id] }))}
       value={engine}
       onChange={onEngineChange}
