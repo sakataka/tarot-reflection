@@ -32,7 +32,7 @@ type PromptBoxProps = {
   onRelight: () => void;
 };
 
-const ordinalJa = ["一", "二", "三", "四", "五", "六", "七"];
+const ordinalJa = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十"];
 
 // 言葉が届くまでの間、占い師が卓の上で何をしているかを順に告げる。最後の二つは繰り返す。
 const waitingSteps = (positionNames: string[]) => [
@@ -441,7 +441,7 @@ type GateProps = {
 };
 
 // 語りの区切りで、次に何が起きるかを示して相談者の合図を待つ。
-const Gate = ({ reading, segment, buttonRef, answerTitle, onOpen }: GateProps) => {
+export const Gate = ({ reading, segment, buttonRef, answerTitle, onOpen }: GateProps) => {
   const flipped = tableCards(reading);
   const next = segment.kind === "card" ? flipped[segment.cardIndex] : null;
   const isRoot = segment.kind === "card" && segment.cardIndex >= reading.cards.length;
@@ -471,3 +471,4 @@ const answerFallback = (segments: NarrationSegment[]) => {
   const sentences = tail.split(/(?<=。)/).filter((sentence) => sentence.trim());
   return sentences.at(-1)?.trim() ?? "";
 };
+
