@@ -340,8 +340,10 @@ export const CardBackGrid = ({
       // 引いた札は、扇から抜き取る間をおいてから置き場へ運ぶ。
       if (slot) return { transform: slotTransform(layout, slot, jr * 1.8), zIndex: cards.length + selected!.selectedOrder, delay: phase === "ready" ? 120 : 0 };
       const target = layout.positions[index];
+      // 弧は保ちつつ、手で配った程度に縁をずらす。札の大きさに合わせて
+      // ずれを抑え、狭い卓でも選びやすさを保つ。同じ札は描画中に動かさない。
       return {
-        transform: `translate(${(target.x + jx * 1.6).toFixed(1)}px, ${(target.y + jy * 2).toFixed(1)}px) rotate(${(target.angle + jr * 0.9).toFixed(2)}deg)`,
+        transform: `translate(${(target.x + jx * layout.cardWidth * 0.045).toFixed(1)}px, ${(target.y + jy * layout.cardWidth * 0.075).toFixed(1)}px) rotate(${(target.angle + jr * 1.6).toFixed(2)}deg)`,
         zIndex: index,
         delay: phase === "dealing" ? dealLead + layout.dealOrder[index] * dealStagger : 0,
       };

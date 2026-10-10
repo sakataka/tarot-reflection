@@ -643,7 +643,7 @@ a.strip-card:hover { color: var(--gold-bright); }
 .card-stage-role { font-size: 12px; color: var(--faint); letter-spacing: .04em; }
 .card-stage-label strong { margin-top: 8px; font-size: 24px; font-weight: 600; letter-spacing: .14em; color: var(--ink); }
 .card-stage-label em { font-family: var(--serif); font-style: normal; font-size: 13px; letter-spacing: .14em; color: var(--muted); }
-/* 札の裏書き：語り終えてから開ける、札の英名と意味の覚え書き */
+/* 札の裏書き：表に返した札に添える、英名と意味の覚え書き */
 .card-notes { margin-top: 10px; animation: ink-in 1s ease both; }
 .card-notes summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; list-style: none; cursor: pointer; font-family: var(--serif); font-size: 12px; letter-spacing: .14em; color: var(--faint); transition: color .2s; }
 .card-notes summary::-webkit-details-marker { display: none; }
@@ -736,7 +736,6 @@ a.strip-card:hover { color: var(--gold-bright); }
 .narration-tail { height: 45vh; }
 .copy-fallback { color: var(--danger); font-family: var(--serif); font-size: 13px; margin: 12px 0; }
 @keyframes ink-in { from { opacity: 0; filter: blur(3px); transform: translateY(6px); } to { opacity: 1; filter: none; transform: none; } }
-.answer-saved { margin-top: 26px; text-align: center; font-family: var(--serif); font-size: 12px; color: var(--faint); letter-spacing: .06em; }
 .reading-end { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 34px; padding-top: 26px; border-top: 1px solid var(--line); animation: ink-in 1s 1.2s ease both; }
 
 /* 案内 */

@@ -320,12 +320,15 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
   }, []);
   useEffect(() => {
     if (!active || finished || instant || performance.now() - lastUserScroll.current < 2500) return;
+    // カードを返したあとは、その札を読める位置に留める。直後に現れる次の
+    // ボタンへ送ると、めくったばかりの札が上の帯に隠れてしまう。
+    if (awaiting && lastEntered?.kind === "card") return;
     const caret = document.querySelector(".oracle-panel .ink-caret, .narration-gate");
     if (!caret) return;
     const bottom = caret.getBoundingClientRect().bottom;
     const limit = window.innerHeight - 96;
     if (bottom > limit) window.scrollBy({ top: bottom - limit + window.innerHeight * 0.25, behavior: "smooth" });
-  }, [cursor, awaitingOrdinal, finished, instant, active]);
+  }, [cursor, awaitingOrdinal, finished, instant, active, lastEnteredId]);
 
   const gateRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -382,7 +385,6 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
           segments={visibleSegments}
           speaking={isSpeaking && !awaiting}
           animate={!instant}
-          showNotes={finished}
           messageHeld={messageHeld}
           messageSlot={voiceOn && spokenText ? <Whisper text={spokenText} play={messageShown} onStart={() => setVoiceStarted(true)} onDone={() => setVoiceDone(true)} /> : null}
         />
@@ -402,8 +404,6 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
           </button>
         </div>
       ) : null}
-
-      {finished && recordId ? <p className="answer-saved">☾ 帳面に綴じました</p> : null}
 
       {streamDone && !recordId ? (
         <div className="oracle-save" role={saveError ? "alert" : "status"}>

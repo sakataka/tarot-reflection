@@ -17,7 +17,7 @@ type NarrationViewProps = {
   speaking?: boolean;
   // 語りに合わせてめくる演出をするか（記録の読み返しでは最初から表）。
   animate?: boolean;
-  // 札の意味（裏書き）を添えるか。語りの最中は出さず、語り終えてから開けるようにする。
+  // 札の意味（裏書き）を添えるか。カードを返すときから、開いた状態で添える。
   showNotes?: boolean;
   // 答えの枠の下に添えるもの（囁きを聴く、など）。
   messageSlot?: ReactNode;
@@ -60,7 +60,7 @@ const CardStage = ({ readingCard, mark, animate, note, showNotes }: {
         <strong>{readingCard.card.nameJa}</strong>
         <em>{orientationLabel[readingCard.orientation]}</em>
         {showNotes ? (
-          <details className="card-notes">
+          <details className="card-notes" open>
             <summary>札の裏書き</summary>
             <p><span lang="en">{readingCard.card.nameEn}</span></p>
             <p className="card-stage-keywords">{meaning.keywords.join("・")}</p>
