@@ -99,7 +99,7 @@ export const SettingsPanel = ({ engine, pace, soundOn, ambienceOn, whisperOn, on
       <div>
         <p className="ornament-kicker">Backstage</p>
         <h1>設定</h1>
-        <p>卓の外の、舞台裏の選択です。選んだものは、このブラウザに覚えておきます。</p>
+        <p>卓の外の、舞台裏の選択です。選んだ設定は、このブラウザに保存されます。</p>
       </div>
     </div>
 

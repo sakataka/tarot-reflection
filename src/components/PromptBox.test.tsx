@@ -26,7 +26,7 @@ describe("narration card gates", () => {
       reading.cards.forEach((_, index) => {
         const markup = renderGate(reading, index);
         expect(markup).not.toContain("undefined");
-        expect(markup).toContain(reading.cards.length === 1 ? "カードをめくる" : index === 0 ? "カードを返していく" : `${ordinals[index]}枚目をめくる`);
+        expect(markup).toContain(reading.cards.length === 1 ? "カードをめくる" : index === 0 ? "カードをめくっていく" : `${ordinals[index]}枚目をめくる`);
       });
     }
   });

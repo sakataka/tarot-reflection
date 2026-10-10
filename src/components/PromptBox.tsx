@@ -449,7 +449,7 @@ export const Gate = ({ reading, segment, buttonRef, answerTitle, onOpen }: GateP
   const isRoot = segment.kind === "card" && segment.cardIndex >= reading.cards.length;
   const count = flipped.length;
   const label = segment.kind === "card"
-    ? isRoot ? "山の底をめくる" : count === 1 ? "カードをめくる" : segment.cardIndex === 0 ? "カードを返していく" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
+    ? isRoot ? "山の底をめくる" : count === 1 ? "カードをめくる" : segment.cardIndex === 0 ? "カードをめくっていく" : `${ordinalJa[segment.cardIndex]}枚目をめくる`
     : segment.kind === "close" ? "では、どういうことか" : `${answerTitle}を聞く`;
   const hint = next && !(count > 1 && segment.kind === "card" && segment.cardIndex === 0)
     ? `${segment.kind === "card" ? cardMark(reading, segment.cardIndex) : ""}・${next.position.name}`
