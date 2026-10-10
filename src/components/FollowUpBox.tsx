@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { requestBackend, streamBackend } from "../backendClient";
 import type { Exchange, Reading } from "../types/tarot";
 import { maxFollowUps, tablePayload, type CardRecord } from "../utils/history";
@@ -12,10 +12,13 @@ import { LetterPaper } from "./LetterPaper";
 import { OraclePortrait } from "./OraclePortrait";
 
 type FollowUpBoxProps = {
+  active: boolean;
   reading: Reading;
   narration: string;
   recordId: string;
   onRecordsChange: () => void;
+  onBusyChange: (busy: boolean) => void;
+  closeButtonRef: RefObject<HTMLButtonElement | null>;
 };
 
 
@@ -41,7 +44,7 @@ export const ExchangeList = ({ exchanges }: { exchanges: readonly Exchange[] }) 
 );
 
 // 聞き返しには任意で補足札を一枚添える。確定済みの札と答えを再試行で失わない。
-export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: FollowUpBoxProps) => {
+export const FollowUpBox = ({ active, reading, narration, recordId, onRecordsChange, onBusyChange, closeButtonRef }: FollowUpBoxProps) => {
   const [exchanges, setExchanges] = useState<Exchange[]>([]);
   const [ask, setAsk] = useState("");
   const [pending, setPending] = useState<Exchange | null>(null);
@@ -49,13 +52,31 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
   const [saveFailed, setSaveFailed] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const busyRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const askRef = useRef<HTMLTextAreaElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+  const saveRef = useRef<HTMLButtonElement>(null);
+  const focusNext = useRef(false);
   const [drawClarifier, setDrawClarifier] = useState(false);
   const [reserved, setReserved] = useState<{ question: string; clarifier: CardRecord | null } | null>(null);
   const remaining = maxFollowUps - exchanges.length;
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // 操作で消えたボタンから、次の入力先・回復操作へ戻す。別の部屋や操作へ移った人からは奪わない。
+  useEffect(() => {
+    if (!active || !focusNext.current || (pending && !saveFailed)) return;
+    focusNext.current = false;
+    const focused = document.activeElement;
+    if (focused !== document.body && focused && !boxRef.current?.contains(focused)) return;
+    const target = saveFailed ? saveRef.current : reserved ? retryRef.current : remaining <= 0 ? closeButtonRef.current : askRef.current;
+    target?.focus();
+    if (target === askRef.current) askRef.current?.setSelectionRange(ask.length, ask.length);
+  }, [active, pending, saveFailed, reserved, ask, remaining, closeButtonRef]);
+
   const save = async (exchange: Exchange) => {
+    setSaving(true);
     setSaveFailed(false);
     setError("");
     try {
@@ -69,7 +90,22 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       playChime();
     } catch {
       setSaveFailed(true);
-      setError("答えは届きましたが、帳面に書き留められませんでした。もう一度綴じてください。");
+      setError("答えは届きましたが、帳面に書き留められませんでした。卓を閉じる前に、もう一度綴じてください。答えを聞き直す必要はありません。");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const retrySave = async () => {
+    if (!pending || busyRef.current) return;
+    busyRef.current = true;
+    focusNext.current = true;
+    onBusyChange(true);
+    try {
+      await save(pending);
+    } finally {
+      busyRef.current = false;
+      onBusyChange(false);
     }
   };
 
@@ -78,6 +114,8 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
     const question = ask.trim();
     if (!question || pending || remaining <= 0 || busyRef.current) return;
     busyRef.current = true;
+    focusNext.current = true;
+    onBusyChange(true);
     const abort = new AbortController();
     abortRef.current = abort;
     setError("");
@@ -120,15 +158,16 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       await save(exchange);
     } catch (caughtError: unknown) {
       if (abort.signal.aborted) return;
-      setError(caughtError instanceof Error ? `言葉が途切れました。（${caughtError.message}）` : "言葉が途切れました。もう一度、聞き返してください。");
+      setError(caughtError instanceof Error ? `言葉が途切れました。問いは残っています。もう一度、聞いてください。（${caughtError.message}）` : "言葉が途切れました。問いは残っています。もう一度、聞いてください。");
       setPending(null);
     } finally {
       busyRef.current = false;
+      onBusyChange(false);
     }
   };
 
   return (
-    <div className="follow-up">
+    <div className="follow-up" ref={boxRef}>
       {remaining > 0 ? (
         <div className="follow-up-heading">
           <OraclePortrait pose="listening" size="small" />
@@ -150,7 +189,7 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
               {splitParagraphs(cleanNarrationText(pending.answer)).map((paragraph, index, paragraphs) => (
                 <p key={index}>
                   {paragraph}
-                  {!saveFailed && index === paragraphs.length - 1 ? <span className="ink-caret" aria-hidden="true" /> : null}
+                  {!saveFailed && !saving && index === paragraphs.length - 1 ? <span className="ink-caret" aria-hidden="true" /> : null}
                 </p>
               ))}
             </div>
@@ -161,14 +200,16 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
       ) : null}
 
       {error ? <p className="copy-fallback" role="alert">{error}</p> : null}
+      {saving ? <p className="answer-saved" role="status">答えを帳面に綴じています…</p> : null}
       {saveFailed && pending ? (
-        <button className="secondary-button" type="button" onClick={() => void save(pending)}>もう一度、帳面に綴じる</button>
+        <button ref={saveRef} className="secondary-button" type="button" onClick={() => void retrySave()}>もう一度、帳面に綴じる</button>
       ) : null}
 
       {remaining > 0 && !pending ? (
-        <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); void send(false); }}>
+        <form className="follow-up-form" onSubmit={(event) => { event.preventDefault(); void send(reserved ? drawClarifier : false); }}>
           <LetterPaper
             className="follow-up-paper"
+            textareaRef={askRef}
             value={ask}
             readOnly={Boolean(reserved)}
             maxLength={maxAskLength}
@@ -176,10 +217,11 @@ export const FollowUpBox = ({ reading, narration, recordId, onRecordsChange }: F
             label={`${oracleName}に聞き返す`}
             onChange={setAsk}
           />
+          {reserved ? <p className="follow-up-retry-note" role="note">この問いは受け付け済みです。{reserved.clarifier ? "補足の一枚もそのままに、" : "問いを変えずに、"}「もう一度、聞く」で続きをたずねられます。</p> : null}
           {reserved?.clarifier ? <ClarifierCard card={reserved.clarifier} /> : null}
           <div className="follow-up-actions">
             {reserved ? (
-              <button className="secondary-button" type="button" disabled={!ask.trim()} onClick={() => void send()}>もう一度、聞く</button>
+              <button ref={retryRef} className="secondary-button" type="submit" disabled={!ask.trim()}>もう一度、聞く</button>
             ) : (
               <>
                 <button className="text-button" type="submit" disabled={!ask.trim()}>このまま聞く</button>

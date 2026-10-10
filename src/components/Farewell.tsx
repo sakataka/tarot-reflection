@@ -40,12 +40,19 @@ export const Farewell = ({ reading, answer, onCancel, onDarken, onRelight }: Far
   const [parting, goodnight] = partingWords[roomHour(new Date())];
   const firstRef = useRef<HTMLButtonElement>(null);
   const relightRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const root = document.getElementById("root");
+    const wasInert = root?.inert ?? false;
+    if (root) root.inert = true;
     firstRef.current?.focus({ preventScroll: true });
     document.documentElement.dataset.farewell = "on";
     return () => {
       delete document.documentElement.dataset.farewell;
+      if (root) root.inert = wasInert;
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, []);
 
@@ -60,6 +67,7 @@ export const Farewell = ({ reading, answer, onCancel, onDarken, onRelight }: Far
 
   useEffect(() => {
     if (stage === "dark") relightRef.current?.focus({ preventScroll: true });
+    else if (stage === "snuffing") dialogRef.current?.focus({ preventScroll: true });
   }, [stage]);
 
   useEffect(() => {
@@ -91,7 +99,24 @@ export const Farewell = ({ reading, answer, onCancel, onDarken, onRelight }: Far
   };
 
   return createPortal(
-    <div className={`farewell is-${stage}`} role="dialog" aria-modal="true" aria-label={`${oracleName}の見送り`}>
+    <div
+      ref={dialogRef}
+      className={`farewell is-${stage}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${oracleName}の見送り`}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const buttons = event.currentTarget.querySelectorAll<HTMLButtonElement>("button:not(:disabled)");
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        if (!first || document.activeElement === event.currentTarget || (event.shiftKey ? document.activeElement === first : document.activeElement === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        }
+      }}
+    >
       {stage === "dark" ? (
         <div className="farewell-dark">
           <MoonGlyph age={moon.age} className="farewell-dark-moon" />

@@ -69,6 +69,8 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
   const [finished, setFinished] = useState(false);
   const [waitingIndex, setWaitingIndex] = useState(0);
   const [leaving, setLeaving] = useState(false);
+  const [followUpBusy, setFollowUpBusy] = useState(false);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   // 「今夜の答え」は、声の準備があれば先に囁き、言い終えてから文字で示す。
   const [voiceReady, setVoiceReady] = useState(false);
   const [voiceDone, setVoiceDone] = useState(false);
@@ -411,11 +413,11 @@ export const PromptBox = ({ reading, active, pace, whisperOn, onRecordsChange, r
           {saveError ? <button className="secondary-button" type="button" onClick={() => { setSaveError(false); setSaveAttempt((count) => count + 1); }}>もう一度、帳面に綴じる</button> : null}
         </div>
       ) : null}
-      {finished && recordId ? <FollowUpBox reading={reading} narration={raw} recordId={recordId} onRecordsChange={onRecordsChange} /> : null}
+      {finished && recordId ? <FollowUpBox active={active && !leaving} reading={reading} narration={raw} recordId={recordId} onRecordsChange={onRecordsChange} onBusyChange={setFollowUpBusy} closeButtonRef={closeButtonRef} /> : null}
 
       {finished ? (
         <div className="reading-end">
-          <button className="secondary-button" type="button" onClick={() => setLeaving(true)}>卓を閉じる</button>
+          <button ref={closeButtonRef} className="secondary-button" type="button" disabled={followUpBusy} onClick={() => setLeaving(true)}>卓を閉じる</button>
         </div>
       ) : null}
 
